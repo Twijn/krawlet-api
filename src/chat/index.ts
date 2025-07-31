@@ -2,16 +2,25 @@ import {Client} from "reconnectedchat";
 
 import commands from "./commands";
 
+const PREFIX = process.env.PREFIX ?? "";
+
 export const rcc = new Client(process.env.CHAT_LICENSE!, {
     defaultName: "&9Krawlet",
     defaultFormattingMode: "minimessage",
 });
 
 rcc.on("command", async cmd => {
+    let commandName = cmd.command.toLowerCase();
+
+    if (PREFIX.length > 0) {
+        if (!commandName.startsWith(PREFIX)) return;
+        commandName = commandName.replace(PREFIX, "");
+    }
+
     const command = commands.find(c =>
-        c.name === cmd.command.toLowerCase() ||
+        c.name === commandName ||
         (
-            c.aliases && c.aliases.includes(cmd.command.toLowerCase())
+            c.aliases && c.aliases.includes(commandName)
         )
     );
 
