@@ -1,0 +1,23 @@
+{
+  "name": "krawlet-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "pnpm run build && pnpm run start",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.5.3"
+  },
+  "private": true,
+  "dependencies": {
+    "dotenv": "^17.2.1",
+    "krist": "^3.1.0",
+    "reconnectedchat": "^3.4.1"
+  }
+}
