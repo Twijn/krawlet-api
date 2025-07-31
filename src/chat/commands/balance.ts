@@ -14,24 +14,30 @@ const command: Command = {
         }
 
         try {
-            let target: User = cmd.user;
-            let targetName: string = target.name;
+            // let target: User = cmd.user;
+            let targetName: string = cmd.user.name;
             let result: PlayerAddressResponse|null = null;
 
+            // if (cmd.args.length > 0) {
+            //     let user = rcc.players.find(p => p.name.toLowerCase() === cmd.args[0].toLowerCase());
+            //     if (user) {
+            //         target = user;
+            //     } else {
+            //         targetName = cmd.args[0];
+            //         result = await getByName(cmd.args[0]);
+            //     }
+            // }
+            //
+            // if (!result) {
+            //     targetName = target.name;
+            //     result = await getByUUID(target.uuid);
+            // }
+
             if (cmd.args.length > 0) {
-                let user = rcc.players.find(p => p.name.toLowerCase() === cmd.args[0].toLowerCase());
-                if (user) {
-                    target = user;
-                } else {
-                    targetName = cmd.args[0];
-                    result = await getByName(cmd.args[0]);
-                }
+                targetName = cmd.args[0];
             }
 
-            if (!result) {
-                targetName = target.name;
-                result = await getByUUID(target.uuid);
-            }
+            result = await getByName(targetName);
 
             let balance = 0;
 
