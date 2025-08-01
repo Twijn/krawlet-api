@@ -6,6 +6,8 @@ import {getByName, getByUUID} from "../../lib/playerAddresses";
 const command: Command = {
     name: "balance",
     aliases: ["bal"],
+    description: "Shows the balance of yourself or another user",
+    usage: "balance [username]",
     execute: async (cmd: ChatboxCommand) => {
         if (cmd.args.length === 0) {
             rcc.tell(cmd.user, "<blue>Retrieving your balance!</blue>").catch(console.error);

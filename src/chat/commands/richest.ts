@@ -9,6 +9,8 @@ const limit = 5;
 const command: Command = {
     name: "richest",
     aliases: ["rich", "baltop"],
+    description: "Shows the richest Kromer addresses",
+    usage: "richest [page]",
     execute: async (cmd: ChatboxCommand) => {
         let page: number = 1;
 

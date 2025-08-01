@@ -7,6 +7,8 @@ const limit = 20;
 
 const command: Command = {
     name: "names",
+    description: "Shows registered names on Kromer",
+    usage: "names [page]",
     execute: async (cmd: ChatboxCommand) => {
         let page: number = 1;
 
