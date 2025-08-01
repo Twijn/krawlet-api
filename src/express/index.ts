@@ -9,7 +9,7 @@ const app = express();
 
 app.use(cors({
     origin: [
-        `http://localhost:${PORT}`,
+        `http://localhost:5173`,
         "https://www.kromer.club",
         "https://krawlet.kromer.club",
     ],
