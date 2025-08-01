@@ -7,17 +7,26 @@
     "dev": "pnpm run build && pnpm run start",
     "build": "tsc",
     "start": "node dist/index.js",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "migrate": "npx sequelize-cli db:migrate",
+    "migrate:undo": "npx sequelize-cli db:migrate:undo"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
     "@types/ws": "^8.18.1",
     "rimraf": "^6.0.1",
+    "sequelize-cli": "^6.6.3",
     "typescript": "^5.5.3"
   },
   "private": true,
   "dependencies": {
+    "cors": "^2.8.5",
     "dotenv": "^17.2.1",
+    "express": "^5.1.0",
     "krist": "^3.1.0",
-    "reconnectedchat": "^3.4.1"
+    "mysql2": "^3.14.3",
+    "reconnectedchat": "^3.4.1",
+    "sequelize": "^6.37.7"
   }
 }

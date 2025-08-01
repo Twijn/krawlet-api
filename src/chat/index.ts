@@ -1,6 +1,7 @@
 import {Client} from "reconnectedchat";
 
 import commands from "./commands";
+import playerManager from "../lib/managers/playerManager";
 
 const PREFIX = process.env.PREFIX ?? "";
 
@@ -33,6 +34,10 @@ rcc.on("command", async cmd => {
         console.error(`Error executing command ${command.name}`);
         console.error(err);
     }
+});
+
+rcc.on("join", async join => {
+    await playerManager.getPlayerFromUser(join.user);
 });
 
 rcc.on("ready", () => {
