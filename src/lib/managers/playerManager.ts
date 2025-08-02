@@ -1,6 +1,7 @@
 import {Player, PlayerWithStatus} from "../models";
 import {User} from "reconnectedchat";
 import {getByUUID} from "../playerAddresses";
+import {rcc} from "../../chat";
 
 const REFRESH_INTERVAL = 3 * 24 * 60 * 60 * 1000; // 3 days
 
@@ -49,7 +50,7 @@ class PlayerManager {
     private wrapPlayer(player: Player): PlayerWithStatus {
         return {
             ...player.raw(),
-            online: true,
+            online: Boolean(rcc.players.find(p => p.uuid === player.minecraftUUID)),
         } as PlayerWithStatus;
     }
 
