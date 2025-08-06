@@ -24,7 +24,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
-    "krist": "^3.1.0",
+    "kromer": "^1.0.1",
     "mysql2": "^3.14.3",
     "reconnectedchat": "^3.4.1",
     "sequelize": "^6.37.7"

@@ -6,8 +6,6 @@ import {rcc} from "../index";
 
 const PREFIX = "\\" + (process.env.PREFIX ?? "");
 
-const limit = 5;
-
 const command: Command = {
     name: "krawlet",
     aliases: ["kromer", "kro"],

@@ -1,5 +1,3 @@
-import { KristApi } from "krist";
+import { KromerApi } from "kromer";
 
-export default new KristApi({
-    syncNode: "https://kromer.reconnected.cc/api/krist/",
-});
+export default new KromerApi();

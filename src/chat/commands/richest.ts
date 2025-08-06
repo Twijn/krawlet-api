@@ -24,7 +24,7 @@ const command: Command = {
 
         const offset = (page - 1) * limit;
 
-        const response = await kromer.getRichAddresses({
+        const response = await kromer.addresses.getRich({
             limit, offset,
         });
 

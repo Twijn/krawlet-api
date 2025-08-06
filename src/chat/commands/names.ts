@@ -22,7 +22,7 @@ const command: Command = {
 
         const offset = (page - 1) * limit;
 
-        const response = await kromer.getNames({
+        const response = await kromer.names.getAll({
             limit, offset,
         });
 
