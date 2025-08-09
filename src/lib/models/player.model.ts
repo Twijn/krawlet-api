@@ -1,4 +1,4 @@
-import { DataTypes, InferAttributes, InferCreationAttributes, Model } from 'sequelize';
+import {CreationOptional, DataTypes, InferAttributes, InferCreationAttributes, Model} from 'sequelize';
 import { sequelize } from './database.js';
 
 export interface RawPlayer {
@@ -6,6 +6,8 @@ export interface RawPlayer {
     minecraftName: string;
 
     kromerAddress: string;
+
+    notifications: string;
 
     createdDate?: string|null;
     updatedDate?: string|null;
@@ -19,6 +21,7 @@ export class Player extends Model<InferAttributes<Player>, InferCreationAttribut
     declare minecraftUUID: string;
     declare minecraftName: string;
     declare kromerAddress: string;
+    declare notifications: CreationOptional<string>;
 
     declare createdAt?: Date;
     declare updatedAt?: Date;
@@ -28,6 +31,7 @@ export class Player extends Model<InferAttributes<Player>, InferCreationAttribut
             minecraftUUID: this.minecraftUUID,
             minecraftName: this.minecraftName,
             kromerAddress: this.kromerAddress,
+            notifications: this.notifications,
             createdDate: this.createdAt ? this.createdAt.toISOString() : null,
             updatedDate: this.updatedAt ? this.updatedAt.toISOString() : null,
         }
@@ -46,6 +50,11 @@ Player.init({
     kromerAddress: {
         type: DataTypes.CHAR(10),
         allowNull: false,
+    },
+    notifications: {
+        type: DataTypes.STRING(1000),
+        allowNull: false,
+        defaultValue: "none",
     },
 }, {
     sequelize,

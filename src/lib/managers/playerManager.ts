@@ -99,6 +99,13 @@ class PlayerManager {
             .map(x => this.getPlayerFromName(x))
             .filter(x => x !== null) as PlayerWithStatus[];
     }
+
+    public getNotifiedPlayers(): PlayerWithStatus[] {
+        return this.players
+            .filter(x => x.notifications !== "none")
+            .filter(x => rcc.players.find(p => p.uuid === x.minecraftUUID) !== undefined)
+            .map(x => this.wrapPlayer(x));
+    }
 }
 
 export default new PlayerManager();

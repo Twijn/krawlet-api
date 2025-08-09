@@ -18,8 +18,8 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0
       kromer:
-        specifier: ^1.0.1
-        version: 1.0.1
+        specifier: ^1.1.1
+        version: 1.1.1
       mysql2:
         specifier: ^3.14.3
         version: 3.14.3
@@ -412,8 +412,8 @@ packages:
   jsonfile@6.1.0:
     resolution: {integrity: sha512-5dgndWOriYSm5cnYaJNhalLNDKOqFwyDB/rr1E9ZsGciGvKPs8R2xYGCacuf3z6K1YKDz182fd+fY3cn3pMqXQ==}
 
-  kromer@1.0.1:
-    resolution: {integrity: sha512-5Muac0EarAECyGklAJ7ZW5D3BAtjgZVOaj5GALWfnzNLjH43wUyx7gMXoqUoi1HBkXbIZ15wV7NW6uJxu9iRMw==}
+  kromer@1.1.1:
+    resolution: {integrity: sha512-RclL5Jl/Lr7bnup6uD9fvTJ6AuJSLl2jYYNiky73jBDVcmcJq9w6wVfFoP7/GSNheqBoNPQ+SxIdw/D0yJQntg==}
 
   lodash@4.17.21:
     resolution: {integrity: sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==}
@@ -1199,7 +1199,7 @@ snapshots:
     optionalDependencies:
       graceful-fs: 4.2.11
 
-  kromer@1.0.1: {}
+  kromer@1.1.1: {}
 
   lodash@4.17.21: {}
 
