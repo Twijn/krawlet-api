@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 
 import playeraddresses from "./playeraddresses";
+import enderstorage from "./enderstorage";
 
 const PORT = process.env.PORT ?? 3000;
 
@@ -18,6 +19,7 @@ app.use(cors({
 }));
 
 app.use("/playeraddresses", playeraddresses);
+app.use("/enderstorage", enderstorage);
 
 app.listen(PORT, () => {
     console.log(`Express server listening on port ${PORT}`);
