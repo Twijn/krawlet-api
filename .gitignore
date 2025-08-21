@@ -17,3 +17,5 @@ Thumbs.db
 .idea
 dist
 .env
+
+enderstorage.json

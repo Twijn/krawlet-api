@@ -1,5 +1,6 @@
 import { Router, Request, Response, json } from "express";
 import {writeFileSync, readFileSync, existsSync} from "fs";
+import authenticate from "../lib/authenticate";
 
 const router = Router();
 
@@ -16,32 +17,7 @@ const loadJsonFromFile = (): unknown => {
 
 let lastJsonData: unknown = loadJsonFromFile();
 
-
-// Simple authentication middleware (you can replace this with your preferred auth method)
-const authenticate = (req: Request, res: Response, next: Function) => {
-    const authHeader = req.headers.authorization;
-
-    // Simple bearer token check - replace with your actual authentication logic
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({
-            ok: false,
-            error: 'Authorization header missing or invalid'
-        });
-    }
-
-    const token = authHeader.substring(7);
-
-    if (token !== process.env.API_TOKEN) {
-        return res.status(401).json({
-            ok: false,
-            error: 'Invalid token'
-        });
-    }
-
-    next();
-};
-
-router.post('/', authenticate, json(), (req: Request, res: Response) => {
+router.post('/', authenticate(process.env.ESTORAGE_API_TOKEN!), json(), (req: Request, res: Response) => {
     try {
         // Store the JSON data
         lastJsonData = req.body;
