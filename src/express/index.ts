@@ -23,6 +23,13 @@ app.use("/playeraddresses", playeraddresses);
 app.use("/enderstorage", enderstorage);
 app.use("/shopsync", shopsync);
 
+app.use((req, res) => {
+    res.status(404).json({
+        ok: false,
+        error: "Endpoint not found",
+    });
+});
+
 app.listen(PORT, () => {
     console.log(`Express server listening on port ${PORT}`);
 });
