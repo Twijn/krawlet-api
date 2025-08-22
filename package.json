@@ -14,6 +14,7 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "@types/object-hash": "^3.0.6",
     "@types/ws": "^8.18.1",
     "rimraf": "^6.0.1",
     "sequelize-cli": "^6.6.3",
@@ -26,6 +27,7 @@
     "express": "^5.1.0",
     "kromer": "^1.2.2",
     "mysql2": "^3.14.3",
+    "object-hash": "^3.0.0",
     "reconnectedchat": "^3.4.1",
     "sequelize": "^6.37.7"
   }
