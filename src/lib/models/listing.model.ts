@@ -173,6 +173,7 @@ export class Listing extends Model<InferAttributes<Listing>, InferCreationAttrib
     declare stock: CreationOptional<number>;
 
     declare prices?: ListingPrice[];
+    declare shop?: Shop;
 
     declare createdAt?: Date;
     declare updatedAt?: Date;
@@ -199,6 +200,7 @@ export class Listing extends Model<InferAttributes<Listing>, InferCreationAttrib
                 address: price.address,
                 requiredMeta: price.requiredMeta,
             })) ?? [],
+            shop: this.shop,
             createdDate: this.createdAt ? this.createdAt.toISOString() : null,
             updatedDate: this.updatedAt ? this.updatedAt.toISOString() : null,
         }
