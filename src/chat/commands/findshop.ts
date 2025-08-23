@@ -13,6 +13,9 @@ const formatListing = (listing: RawListing): string => {
     if (listing.dynamicPrice) {
         result += ` <blue>[D]</blue>`;
     }
+    if (listing.stock === 0) {
+        result += ` <red><bold>[Out of Stock]</bold></red>`;
+    }
 
     if (listing.shop?.locationCoordinates || listing.shop?.locationDescription) {
         const location = `${listing.shop?.locationCoordinates ?? ""} ${listing.shop?.locationDescription ?? ""}`;
