@@ -55,14 +55,14 @@ const command: Command = {
         let result = `<gray>Listings for</gray> <white>${query}</white>`;
 
         if (sellShops.length > 0) {
-            result += `\n<gray>Sell Shops</gray>`;
+            result += `\n<red>Sell Shops</red>`;
             sellShops.forEach((listing, i) => {
                 result += `\n<gray>${i+1}.</gray> ${formatListing(listing)}`;
             });
         }
 
         if (buyShops.length > 0) {
-            result += `\n<gray>Buy Shops</gray>`;
+            result += `\n<blue>Buy Shops</blue>`;
             buyShops.forEach((listing, i) => {
                 result += `\n<gray>${i+1}.</gray> ${formatListing(listing)}`;
             });
