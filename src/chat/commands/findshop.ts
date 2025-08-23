@@ -5,15 +5,18 @@ import {RawListing, searchListings} from "../../lib/models";
 
 const formatListing = (listing: RawListing): string => {
     const prices = listing?.prices?.map(x => `${x.value} ${x.currency}`).join(", ") ?? "";
-    let result = `${listing?.shop?.name} <gray>|</gray> ${prices}`;
+    let result = `${listing.itemDisplayName} <gray>|</gray> ${listing?.shop?.name} <gray>|</gray> ${prices}`;
 
+    if (listing.shopBuysItem) {
+        result += ` <red>[S]</red>`;
+    }
     if (listing.dynamicPrice) {
-        result += ` <blue>Dynamic Price</blue>`;
+        result += ` <blue>[D]</blue>`;
     }
 
     if (listing.shop?.locationCoordinates || listing.shop?.locationDescription) {
         const location = `${listing.shop?.locationCoordinates ?? ""} ${listing.shop?.locationDescription ?? ""}`;
-        result += `<gray> @ ${location}</gray>`;
+        result += `\n    <gray>@ ${location}</gray>`;
     }
 
     return result;
