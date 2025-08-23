@@ -2,7 +2,7 @@ import {CreationOptional, DataTypes, InferAttributes, InferCreationAttributes, M
 import { sequelize } from './database.js';
 import {ShopSyncData, ShopSyncListing} from "../shopSyncValidate";
 import objectHash from "object-hash";
-import {getShopId} from "./shop.model";
+import {getShopId, Shop} from "./shop.model";
 
 const LISTING_EXPIRY_TIME = 1000 * 60; // 1 minute
 
@@ -41,6 +41,25 @@ export function hashListing(shopId: string, listing: ShopSyncListing): string {
     return objectHash(partialListing);
 }
 
+export async function searchListings(query: string): Promise<Listing[]> {
+    const like = {
+        [Op.like]: `%${query}%`
+    }
+    return await Listing.findAll({
+        where: {
+            [Op.or]: {
+                itemName: like,
+                itemDisplayName: like,
+            }
+        },
+        include: [{
+            association: 'prices',
+        }, {
+            association: 'shop',
+        }]
+    })
+}
+
 export async function updatePrices(listingId: string, item: ShopSyncListing): Promise<void> {
     await ListingPrice.destroy({
         where: {
@@ -70,6 +89,8 @@ export async function updateListings(data: ShopSyncData): Promise<void> {
             itemNbt: item.item.nbt,
             itemDisplayName: item.item.displayName,
             itemDescription: item.item.description,
+            shopBuysItem: item.shopBuysItem,
+            noLimit: item.noLimit,
             dynamicPrice: item.dynamicPrice,
             madeOnDemand: item.madeOnDemand,
             requiresInteraction: item.requiresInteraction,
@@ -113,12 +134,16 @@ export interface RawListing {
     itemDisplayName: string|null;
     itemDescription: string|null;
 
+    shopBuysItem?: boolean|null;
+    noLimit?: boolean|null;
+
     dynamicPrice: boolean;
     madeOnDemand: boolean;
     requiresInteraction: boolean;
     stock: number;
 
     prices?: RawListingPrice[];
+    shop?: Shop;
 
     createdDate?: string|null;
     updatedDate?: string|null;
@@ -139,6 +164,9 @@ export class Listing extends Model<InferAttributes<Listing>, InferCreationAttrib
     declare itemDisplayName: string|null;
     declare itemDescription: string|null;
 
+    declare shopBuysItem: CreationOptional<boolean>;
+    declare noLimit: CreationOptional<boolean>;
+
     declare dynamicPrice: CreationOptional<boolean>;
     declare madeOnDemand: CreationOptional<boolean>;
     declare requiresInteraction: CreationOptional<boolean>;
@@ -158,6 +186,8 @@ export class Listing extends Model<InferAttributes<Listing>, InferCreationAttrib
             itemNbt: this.itemNbt,
             itemDisplayName: this.itemDisplayName,
             itemDescription: this.itemDescription,
+            shopBuysItem: this.shopBuysItem,
+            noLimit: this.noLimit,
             dynamicPrice: this.dynamicPrice,
             madeOnDemand: this.madeOnDemand,
             requiresInteraction: this.requiresInteraction,
@@ -208,6 +238,14 @@ Listing.init({
     },
     itemDescription: {
         type: DataTypes.STRING,
+        allowNull: true,
+    },
+    shopBuysItem: {
+        type: DataTypes.BOOLEAN,
+        allowNull: true,
+    },
+    noLimit: {
+        type: DataTypes.BOOLEAN,
         allowNull: true,
     },
     dynamicPrice: {
