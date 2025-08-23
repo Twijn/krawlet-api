@@ -1,9 +1,64 @@
 import { Router, json } from "express";
 import authenticate from "../../lib/authenticate";
 import {ShopSyncData, validateShopSyncData} from "../../lib/shopSyncValidate";
-import {updateShop} from "../../lib/models";
+import {updateShop, getShop, getShops, getListingsByShopId} from "../../lib/models";
 
 const router = Router();
+
+router.get("/", async (req, res) => {
+        try {
+            const shop = await getShops();
+            res.json({
+                ok: true,
+                data: shop
+            });
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({
+                ok: false,
+                error: "Internal server error",
+            });
+        }
+    }
+);
+
+router.get("/:id", async (req, res) => {
+    try {
+        const shop = await getShop(req.params.id);
+        if (shop) {
+            res.json({
+                ok: true,
+                data: shop.raw()
+            });
+        } else {
+            res.status(404).json({
+                ok: false,
+                error: "Shop not found"
+            });
+        }
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            ok: false,
+            error: "Internal server error",
+        });
+    }
+})
+
+router.get("/:id/items", async (req, res) => {
+    try {
+        res.json({
+            ok: true,
+            data: await getListingsByShopId(req.params.id)
+        });
+    } catch(err) {
+        console.error(err);
+        res.status(500).json({
+            ok: false,
+            error: "Internal server error",
+        });
+    }
+});
 
 router.post("/",
     authenticate(process.env.SHOPSYNC_API_TOKEN ?? "123abc"),
@@ -28,11 +83,11 @@ router.post("/",
                 ok: true,
             });
         } catch(err) {
+            console.error(err);
             res.status(500).json({
                 ok: false,
                 error: "Internal server error",
             });
-            console.error(err);
         }
     }
 );

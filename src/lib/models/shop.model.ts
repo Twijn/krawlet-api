@@ -1,4 +1,4 @@
-import { DataTypes, InferAttributes, InferCreationAttributes, Model} from 'sequelize';
+import {DataTypes, InferAttributes, InferCreationAttributes, Model} from 'sequelize';
 import { sequelize } from './database.js';
 import {ShopSyncData} from "../shopSyncValidate";
 import {updateListings} from "./listing.model";
@@ -25,6 +25,25 @@ export interface RawShop {
 
 export function getShopId(data: ShopSyncData): string {
     return data.info.computerID.toString();
+}
+
+export async function getShop(shopId: string): Promise<Shop | null> {
+    return await Shop.findOne({
+        where: {id: shopId},
+        include: [{
+            association: 'items',
+            include: ['prices']
+        }]
+    });
+}
+
+export async function getShops(): Promise<Shop[]> {
+    return await Shop.findAll({
+        include: [{
+            association: 'items',
+            include: ['prices']
+        }],
+    });
 }
 
 export async function updateShop(data: ShopSyncData): Promise<void> {

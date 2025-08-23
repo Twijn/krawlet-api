@@ -4,7 +4,34 @@ import {ShopSyncData, ShopSyncListing} from "../shopSyncValidate";
 import objectHash from "object-hash";
 import {getShopId} from "./shop.model";
 
-const LISTING_EXPIRY_TIME = 1000 * 60 * 60 * 24 * 3; // 3 days
+const LISTING_EXPIRY_TIME = 1000 * 60; // 1 minute
+
+export async function getListings(): Promise<Listing[]> {
+    return await Listing.findAll({
+        include: [{
+            association: 'prices',
+        }],
+    });
+}
+
+export async function getListing(listingId: string): Promise<Listing | null> {
+    return await Listing.findByPk(listingId, {
+        include: [{
+            association: 'prices',
+        }],
+    });
+}
+
+export async function getListingsByShopId(shopId: string): Promise<Listing[]> {
+    return await Listing.findAll({
+        where: {
+            shopId,
+        },
+        include: [{
+            association: 'prices',
+        }],
+    });
+}
 
 export function hashListing(shopId: string, listing: ShopSyncListing): string {
     let partialListing: Partial<ShopSyncListing> & { shopId: string } = {
@@ -21,14 +48,6 @@ export async function updatePrices(listingId: string, item: ShopSyncListing): Pr
         }
     });
     for (const itemPrice of item.prices) {
-        console.log({
-            listingId,
-            value: itemPrice.value,
-            currency: itemPrice.currency,
-            address: itemPrice.address || null,
-            requiredMeta: itemPrice.requiredMeta || null,
-        })
-
         await ListingPrice.create({
             listingId,
             value: itemPrice.value,
@@ -65,10 +84,11 @@ export async function updateListings(data: ShopSyncData): Promise<void> {
         });
 
         if (!created) {
-            await listing.update({
-                ...data,
-                deletedAt: null,
-            });
+            await listing.update(data);
+
+            if (listing.deletedAt) {
+                await listing.restore();
+            }
         }
 
         await updatePrices(listing.id, item);
@@ -76,6 +96,7 @@ export async function updateListings(data: ShopSyncData): Promise<void> {
 
     await Listing.destroy({
         where: {
+            shopId,
             updatedAt: {
                 [Op.lt]: Date.now() - LISTING_EXPIRY_TIME
             }
