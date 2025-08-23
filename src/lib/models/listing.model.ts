@@ -4,7 +4,7 @@ import {ShopSyncData, ShopSyncListing} from "../shopSyncValidate";
 import objectHash from "object-hash";
 import {getShopId, Shop} from "./shop.model";
 
-const LISTING_EXPIRY_TIME = 1000 * 60; // 1 minute
+const LISTING_EXPIRY_TIME = 1000 * 60 * 60 * 5; // 5 minutes
 
 export async function getListings(): Promise<Listing[]> {
     return await Listing.findAll({
@@ -119,7 +119,7 @@ export async function updateListings(data: ShopSyncData): Promise<void> {
         where: {
             shopId,
             updatedAt: {
-                [Op.lt]: Date.now() - LISTING_EXPIRY_TIME
+                [Op.lt]: new Date(Date.now() - LISTING_EXPIRY_TIME)
             }
         },
     });
