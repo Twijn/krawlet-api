@@ -2,6 +2,17 @@ import kromer from "../lib/kromer";
 import playerManager from "../lib/managers/playerManager";
 import {rcc} from "../chat";
 
+import {hook} from "../lib/webhook";
+import {Transaction} from "kromer";
+
+function transactionUrl(transaction: Transaction) {
+    return `[#${transaction.id}](https://kromer.club/transactions/${transaction.id})`;
+}
+
+function addressUrl(address: string, label?: string) {
+    return `[${label ?? address}](https://kromer.club/addresses/${address})`;
+}
+
 const client = kromer.createWsClient(undefined, [
     "transactions",
 ]);
@@ -17,6 +28,28 @@ client.on("error", err => {
 client.on("transaction", transaction => {
     let sentNames: string[] = [];
 
+    let from = transaction.from ?? "unknown";
+    let to = transaction.to;
+
+    const fromPlayer = playerManager.getPlayerFromAddress(from);
+    const toPlayer = playerManager.getPlayerFromAddress(to);
+
+    if (fromPlayer) {
+        from = fromPlayer.minecraftName;
+    }
+    if (toPlayer) {
+        to = toPlayer?.minecraftName;
+    }
+
+    let message = "";
+
+    const errorEntry = transaction.meta?.entries
+        .find(x => x.name.toLowerCase() === "error");
+    const messageEntry = transaction.meta?.entries
+        .find(x => x.name.toLowerCase() === "message");
+
+    hook.batchedSend(`${transactionUrl(transaction)} | ${transaction.from ? addressUrl(transaction.from, from) : "unknown"} -> ${addressUrl(transaction.to, to)} | ${transaction.value.toFixed(2)} KRO${transaction.metadata ? `\n\`${transaction.metadata.replace(/`/g, "\\`")}\`` : ""}`).catch(console.error);
+
     playerManager.getNotifiedPlayers().forEach(player => {
         const fromSelf = transaction.from === player.kromerAddress;
         const toSelf = transaction.to === player.kromerAddress;
@@ -25,25 +58,6 @@ client.on("transaction", transaction => {
                 fromSelf || toSelf
             ))) {
 
-            let from = transaction.from ?? "unknown";
-            let to = transaction.to;
-
-            const fromPlayer = playerManager.getPlayerFromAddress(from);
-            const toPlayer = playerManager.getPlayerFromAddress(to);
-
-            if (fromPlayer) {
-                from = fromPlayer.minecraftName;
-            }
-            if (toPlayer) {
-                to = toPlayer?.minecraftName;
-            }
-
-            let message = "";
-
-            const errorEntry = transaction.meta?.entries
-                .find(x => x.name.toLowerCase() === "error");
-            const messageEntry = transaction.meta?.entries
-                .find(x => x.name.toLowerCase() === "message");
             if (errorEntry) {
                 message = `<dark_red>Error:</dark_red> <red>${errorEntry.value}</red>`;
             } else if (messageEntry) {
@@ -57,7 +71,9 @@ client.on("transaction", transaction => {
         }
     });
 
-    console.log(`Sent transaction (${transaction.id}) notifications to ${sentNames.join(", ")}`);
+    if (sentNames.length > 0) {
+        console.log(`Sent transaction (${transaction.id}) notifications to ${sentNames.join(", ")}`);
+    }
 });
 
 client.connect().catch(console.error);
