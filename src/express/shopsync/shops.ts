@@ -69,7 +69,6 @@ router.post("/",
             if (!validation.isValid) {
                 console.error(`Received invalid response (shop ${req.body?.info?.name})`);
                 console.error(validation.errors);
-                console.error(req.body);
                 return res.status(400).json({
                     ok: false,
                     error: "Invalid ShopSync data",

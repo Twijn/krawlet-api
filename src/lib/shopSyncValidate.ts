@@ -153,20 +153,22 @@ function validateLocation(location: any, fieldPath: string): string[] {
     }
 
     if (location.coordinates !== undefined && location.coordinates !== null) {
-        if (!Array.isArray(location.coordinates) ||
-            (
-                (
-                    typeof location.coordinates !== 'object' ||
-                    Object.keys(location.coordinates).length !== 0
-                ) && (
-                    location.coordinates.length !== 0 &&
-                    (
-                        location.coordinates.length !== 3 ||
-                        !location.coordinates.every((coord: any) => typeof coord === "number" && Number.isInteger(coord))
-                    )
-                )
-            )) {
-            errors.push(`Field '${fieldPath}.coordinates' must be an empty array or array of 3 integers when provided`);
+        const coords = location.coordinates;
+
+        const isValid =
+            // case 1: empty object
+            (typeof coords === "object" && !Array.isArray(coords) && Object.keys(coords).length === 0) ||
+            // case 2: empty array
+            (Array.isArray(coords) && coords.length === 0) ||
+            // case 3: array of 3 integers
+            (Array.isArray(coords) &&
+                coords.length === 3 &&
+                coords.every((c: any) => typeof c === "number" && Number.isInteger(c)));
+
+        if (!isValid) {
+            errors.push(
+                `Field '${fieldPath}.coordinates' must be {}, an empty array, or an array of 3 integers`
+            );
         }
     }
 
