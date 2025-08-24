@@ -67,6 +67,8 @@ router.post("/",
             const validation = validateShopSyncData(req.body);
 
             if (!validation.isValid) {
+                console.error(`Received invalid response (shop ${req.body?.info?.name})`);
+                console.error(validation.errors);
                 return res.status(400).json({
                     ok: false,
                     error: "Invalid ShopSync data",
@@ -78,6 +80,8 @@ router.post("/",
             const shopSyncData: ShopSyncData = req.body;
 
             await updateShop(shopSyncData);
+
+            console.log("Updated shop " + shopSyncData.info.name);
 
             res.json({
                 ok: true,
