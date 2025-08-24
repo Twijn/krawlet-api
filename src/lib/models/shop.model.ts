@@ -47,6 +47,12 @@ export async function getShops(): Promise<Shop[]> {
 }
 
 export async function updateShop(data: ShopSyncData): Promise<void> {
+    let locationCoordinates = null;
+
+    if (Array.isArray(data.info.location?.coordinates) && data.info.location.coordinates.length === 3) {
+        locationCoordinates = data.info.location.coordinates.join(" ");
+    }
+
     await Shop.upsert({
         id: getShopId(data),
         name: data.info.name,
@@ -55,7 +61,7 @@ export async function updateShop(data: ShopSyncData): Promise<void> {
         owner: data.info.owner || null,
         softwareName: data.info.software?.name || null,
         softwareVersion: data.info.software?.version || null,
-        locationCoordinates: data.info.location?.coordinates?.join(" ") || null,
+        locationCoordinates,
         locationDescription: data.info.location?.description || null,
         locationDimension: data.info.location?.dimension || null,
     });
