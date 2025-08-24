@@ -25,7 +25,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
-    "kromer": "^1.2.2",
+    "kromer": "^1.2.3",
     "mysql2": "^3.14.3",
     "object-hash": "^3.0.0",
     "reconnectedchat": "^3.4.1",
