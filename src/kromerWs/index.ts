@@ -10,7 +10,12 @@ function transactionUrl(transaction: Transaction) {
 }
 
 function addressUrl(address: string, label?: string) {
-    return `[${label ?? address}](https://kromer.club/addresses/${address})`;
+    if (!label) {
+        label = address;
+    } else if (label !== address) {
+        label += ` (${address})`;
+    }
+    return `[${label}](https://kromer.club/addresses/${address})`;
 }
 
 const client = kromer.createWsClient(undefined, [
