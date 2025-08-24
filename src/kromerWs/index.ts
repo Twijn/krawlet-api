@@ -5,6 +5,8 @@ import {rcc} from "../chat";
 import {hook} from "../lib/webhook";
 import {Transaction} from "kromer";
 
+const STRIPPED_META_ENTRIES = ["error", "message", "return"];
+
 function transactionUrl(transaction: Transaction) {
     return `[#${transaction.id}](https://kromer.club/transactions/${transaction.id})`;
 }
@@ -53,7 +55,22 @@ client.on("transaction", transaction => {
     const messageEntry = transaction.meta?.entries
         .find(x => x.name.toLowerCase() === "message");
 
-    hook.batchedSend(`${transactionUrl(transaction)} | ${transaction.from ? addressUrl(transaction.from, from) : "unknown"} -> ${addressUrl(transaction.to, to)} | ${transaction.value.toFixed(2)} KRO${transaction.metadata ? `\n\`${transaction.metadata.replace(/`/g, "\\`")}\`` : ""}`).catch(console.error);
+    let metadata = "";
+
+    if (errorEntry) {
+        metadata = ` :x: *${errorEntry.value}*`;
+    } else if (messageEntry) {
+        metadata = ` :speech_balloon: *${messageEntry.value}*`;
+    }
+
+    let strippedEntries = transaction?.meta?.entries ?
+        transaction.meta.entries.filter(x => !STRIPPED_META_ENTRIES.includes(x.name.toLowerCase())) : [];
+    if (strippedEntries.length > 0) {
+        metadata += "\n`" + `${strippedEntries.map(x => `${x.name}${x.value ? `=${x.value}` : ""}`).join(";")}`
+            .replace(/`/g, "\\`") + "`";
+    }
+
+    hook.batchedSend(`${transactionUrl(transaction)} | ${transaction.from ? addressUrl(transaction.from, from) : "unknown"} -> ${addressUrl(transaction.to, to)} | ${transaction.value.toFixed(2)} KRO${metadata}`).catch(console.error);
 
     playerManager.getNotifiedPlayers().forEach(player => {
         const fromSelf = transaction.from === player.kromerAddress;
