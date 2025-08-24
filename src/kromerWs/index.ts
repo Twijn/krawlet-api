@@ -58,10 +58,10 @@ client.on("transaction", transaction => {
     let metadata = "";
 
     if (errorEntry) {
-        metadata = `\n:x: *${errorEntry.value}*`;
+        metadata += `\n:x: *${errorEntry.value}*`;
     }
     if (messageEntry) {
-        metadata = `\n:speech_balloon: *${messageEntry.value}*`;
+        metadata += `\n:speech_balloon: *${messageEntry.value}*`;
     }
 
     let strippedEntries = transaction?.meta?.entries ?
