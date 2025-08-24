@@ -153,7 +153,9 @@ function validateLocation(location: any, fieldPath: string): string[] {
     }
 
     if (location.coordinates !== undefined && location.coordinates !== null) {
-        if (!Array.isArray(location.coordinates) || location.coordinates.length !== 3 || !location.coordinates.every((coord: any) => typeof coord === "number" && Number.isInteger(coord))) {
+        if (location.coordinates.length === 0) {
+            location.coordinates = null;
+        } else if (!Array.isArray(location.coordinates) || location.coordinates.length !== 3 || !location.coordinates.every((coord: any) => typeof coord === "number" && Number.isInteger(coord))) {
             errors.push(`Field '${fieldPath}.coordinates' must be an array of 3 integers when provided`);
         }
     }
