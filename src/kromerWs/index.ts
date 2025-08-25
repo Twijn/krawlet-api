@@ -36,10 +36,10 @@ function sendDiscordMessage(transaction: TransactionWithMeta, data: TransactionD
     let metadata = "";
 
     if (data.entries.error) {
-        metadata += `\n:x: *${data.entries.error}*`;
+        metadata += `\n> :x: *${data.entries.error}*`;
     }
     if (data.entries.message) {
-        metadata += `\n:speech_balloon: *${data.entries.message}*`;
+        metadata += `\n> :speech_balloon: *${data.entries.message}*`;
     }
 
     let strippedEntries = transaction?.meta?.entries ?
