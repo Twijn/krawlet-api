@@ -9,6 +9,7 @@
     "start": "node dist/index.js",
     "clean": "rimraf dist",
     "migrate": "npx sequelize-cli db:migrate",
+    "migrate:create": "npx sequelize-cli migration:generate --name",
     "migrate:undo": "npx sequelize-cli db:migrate:undo"
   },
   "devDependencies": {
