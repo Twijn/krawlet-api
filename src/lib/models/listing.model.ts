@@ -310,7 +310,7 @@ ListingPrice.init({
         onDelete: 'CASCADE',
     },
     value: {
-        type: DataTypes.DECIMAL(15, 2), // Supports large numbers with 2 decimal places
+        type: DataTypes.DECIMAL(15, 3), // Supports large numbers with 3 decimal places
         allowNull: false,
     },
     currency: {
