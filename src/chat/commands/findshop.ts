@@ -1,11 +1,26 @@
 import {Command} from "../../lib/types";
 import {ChatboxCommand} from "reconnectedchat";
 import {rcc} from "../index";
-import {formatListing, searchListings} from "../../lib/models";
+import {formatListing, RawListing, searchListings} from "../../lib/models";
 
 const subArguments = [
     "buy", "b", "sell", "s",
 ]
+
+const PAGE_SIZE = 4;
+
+const parseListing = (listings: RawListing[], page: number): string => {
+    let result = "";
+    const totalPages = Math.ceil(listings.length / PAGE_SIZE);
+    if (page > totalPages) page = totalPages;
+    const start = (page - 1) * PAGE_SIZE;
+    const end = Math.min(start + PAGE_SIZE, listings.length);
+    result += ` <gray>(Page ${page}/${totalPages})</gray>`;
+    listings.slice(start, end).forEach((listing, i) => {
+        result += `\n<gray>${start + i + 1}.</gray> ${formatListing(listing)}`;
+    });
+    return result;
+}
 
 const command: Command = {
     name: "findshop",
@@ -16,6 +31,7 @@ const command: Command = {
         let includeBuy = true;
         let includeSell = true;
 
+        let page = 1;
         if (cmd.args.length > 0 && subArguments.includes(cmd.args[0].toLowerCase())) {
             const setting = cmd.args.shift();
             if (setting === "buy" || setting === "b") {
@@ -25,6 +41,10 @@ const command: Command = {
             } else {
                 return;
             }
+        }
+        if (cmd.args.length > 0 && /^\d+$/.test(cmd.args[cmd.args.length - 1])) {
+            page = parseInt(cmd.args.pop() ?? "1");
+            if (page < 1) page = 1;
         }
 
         const query = cmd.args.join(" ");
@@ -60,9 +80,7 @@ const command: Command = {
             }
 
             if (sellShops.length > 0) {
-                sellShops.forEach((listing, i) => {
-                    result += `\n<gray>${i+1}.</gray> ${formatListing(listing)}`;
-                });
+                result += parseListing(sellShops, page);
             } else if (!includeBuy) {
                 result += "\n<red>No sell shops found with this query!</red>";
             }
@@ -75,9 +93,7 @@ const command: Command = {
             }
 
             if (buyShops.length > 0) {
-                buyShops.forEach((listing, i) => {
-                    result += `\n<gray>${i+1}.</gray> ${formatListing(listing)}`;
-                });
+                result += parseListing(buyShops, page);
             } else if (!includeSell) {
                 result += "\n<red>No buy shops found with this query!</red>"
             }
