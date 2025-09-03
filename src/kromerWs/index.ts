@@ -5,17 +5,9 @@ import {rcc} from "../chat";
 import {hook} from "../lib/webhook";
 import {Transaction, TransactionWithMeta} from "kromer";
 import {HATransactions} from "../lib/HATransactions";
+import formatTransaction, {parseTransactionData, TransactionData} from "../lib/formatTransaction";
 
 const STRIPPED_META_ENTRIES = ["error", "message", "return"];
-
-interface TransactionData {
-    from: string;
-    to: string;
-    entries: {
-        error?: string;
-        message?: string;
-    }
-}
 
 type Handler = (transaction: TransactionWithMeta, data: TransactionData) => void;
 
@@ -54,13 +46,6 @@ function sendDiscordMessage(transaction: TransactionWithMeta, data: TransactionD
 
 function sendInGameMessage(transaction: TransactionWithMeta, data: TransactionData) {
     let sentNames: string[] = [];
-    let message = "";
-
-    if (data.entries.error) {
-        message = `<dark_red>Error:</dark_red> <red>${data.entries.error}</red>`;
-    } else if (data.entries.message) {
-        message = `<blue>Message:</blue> <gray>${data.entries.message}</gray>`;
-    }
 
     playerManager.getNotifiedPlayers().forEach(player => {
         const fromSelf = transaction.from === player.kromerAddress;
@@ -70,9 +55,7 @@ function sendInGameMessage(transaction: TransactionWithMeta, data: TransactionDa
                 fromSelf || toSelf
             ))) {
 
-            rcc.tell(player.minecraftName, `<gray>New transaction:</gray>\n ${data.from} <gray>-></gray> ` +
-                `${data.to} <gray>|</gray> ` +
-                `${transaction.value.toFixed(2)} <gray>KRO</gray> ${message}`.trim()).catch(console.error);
+            rcc.tell(player.minecraftName, `<gray>New transaction:</gray>\n ${formatTransaction(transaction, data)}`).catch(console.error);
             sentNames.push(player.minecraftName);
         }
     });
@@ -90,32 +73,7 @@ const handlers: Handler[] = [
 const haTransactions = new HATransactions(kromer);
 
 haTransactions.on((transaction: TransactionWithMeta) => {
-    let from = transaction.from ?? "unknown";
-    let to = transaction.to;
-
-    const fromPlayer = playerManager.getPlayerFromAddress(from);
-    const toPlayer = playerManager.getPlayerFromAddress(to);
-
-    if (fromPlayer) {
-        from = fromPlayer.minecraftName;
-    }
-    if (toPlayer) {
-        to = toPlayer?.minecraftName;
-    }
-
-    const errorEntry = transaction.meta?.entries
-        ?.find(x => x.name.toLowerCase() === "error");
-    const messageEntry = transaction.meta?.entries
-        ?.find(x => x.name.toLowerCase() === "message");
-
-    const data: TransactionData = {
-        from, to,
-        entries: {
-            error: errorEntry?.value,
-            message: messageEntry?.value,
-        }
-    }
-
+    const data = parseTransactionData(transaction);
     handlers.forEach(handler => {
         try {
             handler(transaction, data);
