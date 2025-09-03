@@ -13,7 +13,7 @@ const command: Command = {
     name: "krawlet",
     aliases: ["kromer", "kro"],
     description: "Shows this menu!",
-    usage: "krawlet",
+    usage: "krawlet [notif [all/self/none]]",
     execute: async (cmd: ChatboxCommand) => {
         if (cmd.args.length > 0) {
             if (["notif", "notification", "notifications"].includes(cmd.args[0].toLowerCase())) {
