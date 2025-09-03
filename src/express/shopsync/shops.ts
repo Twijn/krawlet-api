@@ -11,6 +11,7 @@ router.get("/", async (req, res) => {
             res.json({
                 ok: true,
                 data: shop
+                    .map(s => s.raw()),
             });
         } catch (err) {
             console.error(err);

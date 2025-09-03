@@ -181,6 +181,7 @@ export interface RawListing {
 
     prices?: RawListingPrice[];
     shop?: Shop;
+    addresses?: string[];
 
     createdDate?: string|null;
     updatedDate?: string|null;
@@ -217,6 +218,19 @@ export class Listing extends Model<InferAttributes<Listing>, InferCreationAttrib
     declare deletedAt?: Date|null;
 
     public raw(): RawListing {
+        const prices = this.prices?.map(price => ({
+            id: price.id,
+            value: price.value,
+            currency: price.currency,
+            address: price.address,
+            requiredMeta: price.requiredMeta,
+        })) ?? [];
+
+        const addresses: string[] = this.prices
+                ?.map(price => price?.address)
+                .filter((value, index, self) => typeof value === "string" && self.indexOf(value) === index) as string[]
+            ?? [];
+
         return {
             id: this.id,
             shopId: this.shopId,
@@ -230,13 +244,7 @@ export class Listing extends Model<InferAttributes<Listing>, InferCreationAttrib
             madeOnDemand: this.madeOnDemand,
             requiresInteraction: this.requiresInteraction,
             stock: this.stock,
-            prices: this.prices?.map(price => ({
-                id: price.id,
-                value: price.value,
-                currency: price.currency,
-                address: price.address,
-                requiredMeta: price.requiredMeta,
-            })) ?? [],
+            prices, addresses,
             shop: this.shop,
             createdDate: this.createdAt ? this.createdAt.toISOString() : null,
             updatedDate: this.updatedAt ? this.updatedAt.toISOString() : null,

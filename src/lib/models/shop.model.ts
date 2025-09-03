@@ -1,7 +1,7 @@
 import {DataTypes, InferAttributes, InferCreationAttributes, Model} from 'sequelize';
 import { sequelize } from './database.js';
 import {ShopSyncData} from "../shopSyncValidate";
-import {updateListings} from "./listing.model";
+import {Listing, RawListing, updateListings} from "./listing.model";
 
 export interface RawShop {
     id: string;
@@ -18,6 +18,9 @@ export interface RawShop {
     locationCoordinates: string|null;
     locationDescription: string|null;
     locationDimension: string|null;
+
+    items?: RawListing[];
+    addresses?: string[];
 
     createdDate?: string|null;
     updatedDate?: string|null;
@@ -84,10 +87,24 @@ export class Shop extends Model<InferAttributes<Shop>, InferCreationAttributes<S
     declare locationDescription: string|null;
     declare locationDimension: string|null;
 
+    declare items?: Listing[];
+
     declare createdAt?: Date;
     declare updatedAt?: Date;
 
     public raw(): RawShop {
+        const items = this.items?.map(item => item.raw()) as RawListing[] | [];
+
+        const addresses: string[] = [];
+
+        for (const item of items) {
+            for (const price of item.prices ?? []) {
+                if (price.address && !addresses.includes(price.address)) {
+                    addresses.push(price.address);
+                }
+            }
+        }
+
         return {
             id: this.id,
             name: this.name,
@@ -99,6 +116,7 @@ export class Shop extends Model<InferAttributes<Shop>, InferCreationAttributes<S
             locationCoordinates: this.locationCoordinates,
             locationDescription: this.locationDescription,
             locationDimension: this.locationDimension,
+            items, addresses,
             createdDate: this.createdAt ? this.createdAt.toISOString() : null,
             updatedDate: this.updatedAt ? this.updatedAt.toISOString() : null,
         }
