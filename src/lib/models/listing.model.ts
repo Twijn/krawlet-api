@@ -63,7 +63,7 @@ export async function searchListings(query: string): Promise<Listing[]> {
 const ILLEGAL_CHAR_REGEX = /[^\w!@#$%^&()_+-=\[\]{}|;':",.\/? \n]+/gi;
 
 export const safe = (str: string): string => {
-    return str.replace(ILLEGAL_CHAR_REGEX, '');
+    return str.replace(ILLEGAL_CHAR_REGEX, '').trim();
 }
 
 export const formatListing = (listing: RawListing): string => {
