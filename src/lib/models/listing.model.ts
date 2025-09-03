@@ -73,7 +73,9 @@ export const formatListing = (listing: RawListing): string => {
         displayName = `<hover:show_item:"${listing.itemName}":${Math.max(listing.stock, 1)}${listing.itemNbt ? ":" + listing.itemNbt : ""}>${displayName}</hover>`;
     }
 
-    const prices = listing?.prices?.map(x => `${x.value} ${safe(x.currency)}`).join(", ") ?? "";
+    const prices = listing?.prices?.map(
+        x => `${Number(x.value).toFixed(3).replace(/\.?0$/, "")} ${safe(x.currency)}`
+    ).join(", ") ?? "";
     let result = `${displayName} <gray>|</gray> ${safe(listing?.shop?.name ?? "")} <gray>|</gray> ${safe(prices)}`;
 
     if (listing.stock === 0) {
