@@ -1,29 +1,11 @@
 import {Command} from "../../lib/types";
 import {ChatboxCommand} from "reconnectedchat";
 import {rcc} from "../index";
-import {RawListing, searchListings} from "../../lib/models";
+import {formatListing, RawListing, searchListings} from "../../lib/models";
 
-const formatListing = (listing: RawListing): string => {
-    const prices = listing?.prices?.map(x => `${x.value} ${x.currency}`).join(", ") ?? "";
-    let result = `${listing.itemDisplayName} <gray>|</gray> ${listing?.shop?.name} <gray>|</gray> ${prices}`;
-
-    if (listing.shopBuysItem) {
-        result += ` <red>[S]</red>`;
-    }
-    if (listing.dynamicPrice) {
-        result += ` <blue>[D]</blue>`;
-    }
-    if (listing.stock === 0) {
-        result += ` <red><bold>[Out of Stock]</bold></red>`;
-    }
-
-    if (listing.shop?.locationCoordinates || listing.shop?.locationDescription) {
-        const location = `${listing.shop?.locationCoordinates ?? ""} ${listing.shop?.locationDescription ?? ""}`;
-        result += `\n    <gray>@ ${location}</gray>`;
-    }
-
-    return result;
-}
+const subArguments = [
+    "buy", "b", "sell", "s",
+]
 
 const command: Command = {
     name: "findshop",
@@ -31,6 +13,20 @@ const command: Command = {
     description: "Find a shop that sells an item",
     usage: "findshop <item>",
     execute: async (cmd: ChatboxCommand) => {
+        let includeBuy = true;
+        let includeSell = true;
+
+        if (cmd.args.length > 0 && subArguments.includes(cmd.args[0].toLowerCase())) {
+            const setting = cmd.args.shift();
+            if (setting === "buy" || setting === "b") {
+                includeSell = false;
+            } else if (setting === "sell" || setting === "s") {
+                includeBuy = false;
+            } else {
+                return;
+            }
+        }
+
         const query = cmd.args.join(" ");
 
         if (query.trim().length < 3) {
@@ -40,11 +36,6 @@ const command: Command = {
 
         const listings = (await searchListings(query))
             .map(x => x.raw());
-        
-        if (listings.length === 0) {
-            rcc.tell(cmd.user, "<red>No listings found for that query!</red>").catch(console.error);
-            return;
-        }
 
         listings.sort((a, b) => {
             const priceA = a.prices?.[0]?.value ?? Infinity;
@@ -54,21 +45,42 @@ const command: Command = {
 
         const sellShops = listings.filter(x => x.shopBuysItem);
         const buyShops = listings.filter(x => !x.shopBuysItem);
+        
+        if (listings.length === 0) {
+            rcc.tell(cmd.user, "<red>No listings found for that query!</red>").catch(console.error);
+            return;
+        }
 
         let result = `<gray>Listings for</gray> <white>${query}</white>`;
 
-        if (sellShops.length > 0) {
-            result += `\n<red>Sell Shops</red>`;
-            sellShops.forEach((listing, i) => {
-                result += `\n<gray>${i+1}.</gray> ${formatListing(listing)}`;
-            });
+        // Sell shops
+        if (includeSell) {
+            if (includeBuy && sellShops.length > 0) {
+                result += `\n<red>Sell Shops</red>`;
+            }
+
+            if (sellShops.length > 0) {
+                sellShops.forEach((listing, i) => {
+                    result += `\n<gray>${i+1}.</gray> ${formatListing(listing)}`;
+                });
+            } else if (!includeBuy) {
+                result += "\n<red>No sell shops found with this query!</red>";
+            }
         }
 
-        if (buyShops.length > 0) {
-            result += `\n<blue>Buy Shops</blue>`;
-            buyShops.forEach((listing, i) => {
-                result += `\n<gray>${i+1}.</gray> ${formatListing(listing)}`;
-            });
+        // Buy shops
+        if (includeBuy) {
+            if (includeSell && buyShops.length > 0) {
+                result += `\n<blue>Buy Shops</blue>`;
+            }
+
+            if (buyShops.length > 0) {
+                buyShops.forEach((listing, i) => {
+                    result += `\n<gray>${i+1}.</gray> ${formatListing(listing)}`;
+                });
+            } else if (!includeSell) {
+                result += "\n<red>No buy shops found with this query!</red>"
+            }
         }
 
         rcc.tell(cmd.user, result).catch(console.error);

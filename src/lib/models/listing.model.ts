@@ -4,7 +4,7 @@ import {ShopSyncData, ShopSyncListing} from "../shopSyncValidate";
 import objectHash from "object-hash";
 import {getShopId, Shop} from "./shop.model";
 
-const LISTING_EXPIRY_TIME = 1000 * 60 * 60 * 5; // 5 minutes
+const LISTING_EXPIRY_TIME = 1000 * 60 * 2; // 2 minutes
 
 export async function getListings(): Promise<Listing[]> {
     return await Listing.findAll({
@@ -58,6 +58,43 @@ export async function searchListings(query: string): Promise<Listing[]> {
             association: 'shop',
         }]
     })
+}
+
+const ILLEGAL_CHAR_REGEX = /[^\w!@#$%^&()_+-=\[\]{}|;':",.\/? \n]+/gi;
+
+export const safe = (str: string): string => {
+    return str.replace(ILLEGAL_CHAR_REGEX, '');
+}
+
+export const formatListing = (listing: RawListing): string => {
+    let displayName = safe(listing.itemDisplayName ?? listing.itemName);
+
+    if (listing.itemName) {
+        displayName = `<hover:show_item:"${listing.itemName}":${Math.max(listing.stock, 1)}${listing.itemNbt ? ":" + listing.itemNbt : ""}>${displayName}</hover>`;
+    }
+
+    const prices = listing?.prices?.map(x => `${x.value} ${safe(x.currency)}`).join(", ") ?? "";
+    let result = `${displayName} <gray>|</gray> ${safe(listing?.shop?.name ?? "")} <gray>|</gray> ${safe(prices)}`;
+
+    if (listing.stock === 0) {
+        result += ` <red><bold>[OOS]</bold></red>`;
+    } else {
+        result += ` <green>[x${listing.stock}]</green>`;
+    }
+
+    if (listing.shopBuysItem) {
+        result += ` <red>[S]</red>`;
+    }
+    if (listing.dynamicPrice) {
+        result += ` <blue>[D]</blue>`;
+    }
+
+    if (listing.shop?.locationCoordinates || listing.shop?.locationDescription) {
+        const location = `${listing.shop?.locationCoordinates ?? ""} ${listing.shop?.locationDescription ?? ""}`;
+        result += `\n    <gray>@ ${location}</gray> <gray>|</gray> ${listing.shop?.locationDimension ?? ""}`;
+    }
+
+    return result;
 }
 
 export async function updatePrices(listingId: string, item: ShopSyncListing): Promise<void> {
