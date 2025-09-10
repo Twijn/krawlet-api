@@ -4,7 +4,7 @@ import {ShopSyncData, ShopSyncListing} from "../shopSyncValidate";
 import objectHash from "object-hash";
 import {getShopId, Shop} from "./shop.model";
 
-const LISTING_EXPIRY_TIME = 1000 * 60 * 2; // 2 minutes
+const LISTING_EXPIRY_TIME = 1000 * 60 * 60 * 24; // 1 day
 
 export async function getListings(): Promise<Listing[]> {
     return await Listing.findAll({
