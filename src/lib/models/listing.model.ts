@@ -38,6 +38,7 @@ export function hashListing(shopId: string, listing: ShopSyncListing): string {
         ...listing, shopId,
     };
     delete partialListing.stock;
+    delete partialListing.prices;
     return objectHash(partialListing);
 }
 
