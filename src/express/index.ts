@@ -1,9 +1,12 @@
 import express from "express";
 import cors from "cors";
+import fs from "fs";
 
 import playeraddresses from "./playeraddresses";
 import enderstorage from "./enderstorage";
 import shopsync from "./shopsync";
+
+const packageJson = JSON.parse(fs.readFileSync("package.json", "utf-8"));
 
 const PORT = process.env.PORT ?? 3000;
 
@@ -22,6 +25,16 @@ app.use(cors({
 app.use("/playeraddresses", playeraddresses);
 app.use("/enderstorage", enderstorage);
 app.use("/shopsync", shopsync);
+
+app.get("/", (req, res) => {
+    res.json({
+        ok: true,
+        data: {
+            name: packageJson.name,
+            version: packageJson.version
+        }
+    });
+});
 
 app.use((req, res) => {
     res.status(404).json({
