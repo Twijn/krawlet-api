@@ -89,6 +89,11 @@ router.post("/",
             });
         } catch(err) {
             console.error(err);
+            let data = req.body;
+            try {
+                data = JSON.parse(data);
+            } catch(e) {}
+            console.error(data);
             res.status(500).json({
                 ok: false,
                 error: "Internal server error",
