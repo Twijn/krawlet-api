@@ -10,13 +10,24 @@
     "clean": "rimraf dist",
     "migrate": "npx sequelize-cli db:migrate",
     "migrate:create": "npx sequelize-cli migration:generate --name",
-    "migrate:undo": "npx sequelize-cli db:migrate:undo"
+    "migrate:undo": "npx sequelize-cli db:migrate:undo",
+    "lint": "eslint 'src/**/*.ts' --quiet",
+    "lint:fix": "eslint 'src/**/*.ts' --fix",
+    "format": "prettier --write 'src/**/*.ts'"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/object-hash": "^3.0.6",
     "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^8.43.0",
+    "@typescript-eslint/parser": "^8.43.0",
+    "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^5.5.4",
+    "prettier": "^3.6.2",
     "rimraf": "^6.0.1",
     "sequelize-cli": "^6.6.3",
     "typescript": "^5.5.3"
