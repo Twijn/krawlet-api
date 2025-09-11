@@ -5,6 +5,7 @@ import fs from "fs";
 import playeraddresses from "./playeraddresses";
 import enderstorage from "./enderstorage";
 import shopsync from "./shopsync";
+import knownaddresses from "./knownaddresses";
 
 const packageJson = JSON.parse(fs.readFileSync("package.json", "utf-8"));
 
@@ -25,6 +26,7 @@ app.use(cors({
 app.use("/playeraddresses", playeraddresses);
 app.use("/enderstorage", enderstorage);
 app.use("/shopsync", shopsync);
+app.use("/knownaddresses", knownaddresses);
 
 app.get("/", (req, res) => {
     res.json({

@@ -6,6 +6,7 @@ import {hook} from "../lib/webhook";
 import {Transaction, TransactionWithMeta} from "kromer";
 import {HATransactions} from "../lib/HATransactions";
 import formatTransaction, {parseTransactionData, TransactionData} from "../lib/formatTransaction";
+import walletListeners from "./walletListeners";
 
 const STRIPPED_META_ENTRIES = ["error", "message", "return"];
 
@@ -81,6 +82,58 @@ haTransactions.on((transaction: TransactionWithMeta) => {
             console.error('Error in transaction handler:', error);
         }
     });
+});
+
+export const KRAWLET_PRIVATE_KEY = process.env.KRAWLET_PKEY ?? "test";
+export const krawletAddress = kromer.addresses.decodeAddressFromPrivateKey(KRAWLET_PRIVATE_KEY);
+
+console.log(`Listening for transactions to: ${krawletAddress}`);
+
+haTransactions.on(async (transaction: TransactionWithMeta) => {
+    if (transaction.to !== krawletAddress || transaction.type !== "transfer" || !transaction.from) return;
+
+    console.log(`Received transaction from ${transaction.from}: ${transaction.metadata ?? "no metadata"}`);
+    for (const listener of walletListeners) {
+        try {
+            const result = await listener(transaction as TransactionWithMeta & { from: string });
+
+            if (result) {
+                if (result.ignore) {
+                    continue;
+                }
+
+                const type = result.success ? "message" : "error";
+                const message = result.message || "No message provided";
+
+                console.log(`Sending ${type} to ${transaction.from}: ${message}`);
+
+                await kromer.transactions.send({
+                    privatekey: KRAWLET_PRIVATE_KEY,
+                    to: transaction.from,
+                    amount: transaction.value,
+                    metadata: `${type}=${message}`,
+                });
+
+                return;
+            }
+        } catch (e) {
+            console.error(e);
+            return;
+        }
+    }
+
+    console.log(`Sending [Unknown Operation] to ${transaction.from}`);
+
+    try {
+        await kromer.transactions.send({
+            privatekey: KRAWLET_PRIVATE_KEY,
+            to: transaction.from,
+            amount: transaction.value,
+            metadata: "error=Unknown operation!",
+        });
+    } catch (e) {
+        console.error(e);
+    }
 });
 
 export default haTransactions;
