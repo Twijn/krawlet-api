@@ -1,171 +1,185 @@
-import {DataTypes, InferAttributes, InferCreationAttributes, Model} from 'sequelize';
+import { DataTypes, InferAttributes, InferCreationAttributes, Model } from 'sequelize';
 import { sequelize } from './database.js';
-import {ShopSyncData} from "../shopSyncValidate";
-import {Listing, RawListing, updateListings} from "./listing.model";
+import { ShopSyncData } from '../shopSyncValidate';
+import { Listing, RawListing, updateListings } from './listing.model';
 
 export interface RawShop {
-    id: string;
+  id: string;
 
-    // shop info fields
-    name: string;
-    description: string|null;
-    owner: string|null;
-    computerId: number;
+  // shop info fields
+  name: string;
+  description: string | null;
+  owner: string | null;
+  computerId: number;
 
-    softwareName: string|null;
-    softwareVersion: string|null;
+  softwareName: string | null;
+  softwareVersion: string | null;
 
-    locationCoordinates: string|null;
-    locationDescription: string|null;
-    locationDimension: string|null;
+  locationCoordinates: string | null;
+  locationDescription: string | null;
+  locationDimension: string | null;
 
-    items?: RawListing[];
-    addresses?: string[];
+  items?: RawListing[];
+  addresses?: string[];
 
-    createdDate?: string|null;
-    updatedDate?: string|null;
+  createdDate?: string | null;
+  updatedDate?: string | null;
 }
 
 export function getShopId(data: ShopSyncData): string {
-    return data.info.computerID.toString();
+  return data.info.computerID.toString();
 }
 
 export async function getShop(shopId: string): Promise<Shop | null> {
-    return await Shop.findOne({
-        where: {id: shopId},
-        include: [{
-            association: 'items',
-            include: ['prices']
-        }]
-    });
+  return await Shop.findOne({
+    where: { id: shopId },
+    include: [
+      {
+        association: 'items',
+        include: ['prices'],
+      },
+    ],
+  });
 }
 
 export async function getShops(): Promise<Shop[]> {
-    return await Shop.findAll({
-        include: [{
-            association: 'items',
-            include: ['prices']
-        }],
-    });
+  return await Shop.findAll({
+    include: [
+      {
+        association: 'items',
+        include: ['prices'],
+      },
+    ],
+  });
 }
 
 export async function updateShop(data: ShopSyncData): Promise<void> {
-    let locationCoordinates = null;
+  let locationCoordinates = null;
 
-    if (Array.isArray(data.info.location?.coordinates) && data.info.location.coordinates.length === 3) {
-        locationCoordinates = data.info.location.coordinates.join(" ");
-    }
+  if (
+    Array.isArray(data.info.location?.coordinates) &&
+    data.info.location.coordinates.length === 3
+  ) {
+    locationCoordinates = data.info.location.coordinates.join(' ');
+  }
 
-    await Shop.upsert({
-        id: getShopId(data),
-        name: data.info.name,
-        computerId: data.info.computerID,
-        description: data.info.description || null,
-        owner: data.info.owner || null,
-        softwareName: data.info.software?.name || null,
-        softwareVersion: data.info.software?.version || null,
-        locationCoordinates,
-        locationDescription: data.info.location?.description || null,
-        locationDimension: data.info.location?.dimension || null,
-    });
+  await Shop.upsert({
+    id: getShopId(data),
+    name: data.info.name,
+    computerId: data.info.computerID,
+    description: data.info.description || null,
+    owner: data.info.owner || null,
+    softwareName: data.info.software?.name || null,
+    softwareVersion: data.info.software?.version || null,
+    locationCoordinates,
+    locationDescription: data.info.location?.description || null,
+    locationDimension: data.info.location?.dimension || null,
+  });
 
-    await updateListings(data);
+  await updateListings(data);
 }
 
-export class Shop extends Model<InferAttributes<Shop>, InferCreationAttributes<Shop>> implements RawShop {
-    declare id: string;
+export class Shop
+  extends Model<InferAttributes<Shop>, InferCreationAttributes<Shop>>
+  implements RawShop
+{
+  declare id: string;
 
-    declare name: string;
-    declare description: string|null;
-    declare owner: string|null;
-    declare computerId: number;
+  declare name: string;
+  declare description: string | null;
+  declare owner: string | null;
+  declare computerId: number;
 
-    declare softwareName: string|null;
-    declare softwareVersion: string|null;
+  declare softwareName: string | null;
+  declare softwareVersion: string | null;
 
-    declare locationCoordinates: string|null;
-    declare locationDescription: string|null;
-    declare locationDimension: string|null;
+  declare locationCoordinates: string | null;
+  declare locationDescription: string | null;
+  declare locationDimension: string | null;
 
-    declare items?: Listing[];
+  declare items?: Listing[];
 
-    declare createdAt?: Date;
-    declare updatedAt?: Date;
+  declare createdAt?: Date;
+  declare updatedAt?: Date;
 
-    public raw(): RawShop {
-        const items = this.items?.map(item => item.raw()) as RawListing[] | [];
+  public raw(): RawShop {
+    const items = this.items?.map((item) => item.raw()) as RawListing[] | [];
 
-        const addresses: string[] = [];
+    const addresses: string[] = [];
 
-        for (const item of items) {
-            for (const price of item.prices ?? []) {
-                if (price.address && !addresses.includes(price.address)) {
-                    addresses.push(price.address);
-                }
-            }
+    for (const item of items) {
+      for (const price of item.prices ?? []) {
+        if (price.address && !addresses.includes(price.address)) {
+          addresses.push(price.address);
         }
-
-        return {
-            id: this.id,
-            name: this.name,
-            description: this.description,
-            owner: this.owner,
-            computerId: this.computerId,
-            softwareName: this.softwareName,
-            softwareVersion: this.softwareVersion,
-            locationCoordinates: this.locationCoordinates,
-            locationDescription: this.locationDescription,
-            locationDimension: this.locationDimension,
-            items, addresses,
-            createdDate: this.createdAt ? this.createdAt.toISOString() : null,
-            updatedDate: this.updatedAt ? this.updatedAt.toISOString() : null,
-        }
+      }
     }
+
+    return {
+      id: this.id,
+      name: this.name,
+      description: this.description,
+      owner: this.owner,
+      computerId: this.computerId,
+      softwareName: this.softwareName,
+      softwareVersion: this.softwareVersion,
+      locationCoordinates: this.locationCoordinates,
+      locationDescription: this.locationDescription,
+      locationDimension: this.locationDimension,
+      items,
+      addresses,
+      createdDate: this.createdAt ? this.createdAt.toISOString() : null,
+      updatedDate: this.updatedAt ? this.updatedAt.toISOString() : null,
+    };
+  }
 }
 
-Shop.init({
+Shop.init(
+  {
     id: {
-        type: DataTypes.CHAR(20),
-        primaryKey: true,
+      type: DataTypes.CHAR(20),
+      primaryKey: true,
     },
     name: {
-        type: DataTypes.TEXT,
-        allowNull: false,
+      type: DataTypes.TEXT,
+      allowNull: false,
     },
     description: {
-        type: DataTypes.TEXT,
-        allowNull: true,
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
     owner: {
-        type: DataTypes.TEXT,
-        allowNull: true,
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
     computerId: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
+      type: DataTypes.INTEGER,
+      allowNull: false,
     },
     softwareName: {
-        type: DataTypes.TEXT,
-        allowNull: true,
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
     softwareVersion: {
-        type: DataTypes.TEXT,
-        allowNull: true,
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
     locationCoordinates: {
-        type: DataTypes.TEXT,
-        allowNull: true,
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
     locationDescription: {
-        type: DataTypes.TEXT,
-        allowNull: true,
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
     locationDimension: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-    }
-}, {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+  },
+  {
     sequelize,
     timestamps: true,
-    tableName: "shops",
-});
+    tableName: 'shops',
+  },
+);

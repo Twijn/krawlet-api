@@ -1,6 +1,6 @@
-import {config} from "dotenv";
+import { config } from 'dotenv';
 config();
 
-import("./chat");
-import("./express");
-import("./kromerWs");
+import('./chat');
+import('./express');
+import('./kromerWs');
