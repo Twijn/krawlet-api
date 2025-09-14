@@ -5,7 +5,7 @@ import { formatListing, RawListing, searchListings } from '../../lib/models';
 
 const subArguments = ['buy', 'b', 'sell', 's'];
 
-const PAGE_SIZE = 3;
+const PAGE_SIZE = 2;
 
 const parseListing = (listings: RawListing[], page: number, limit: number = PAGE_SIZE): string => {
   let result = '';
@@ -41,7 +41,7 @@ const command: Command = {
       } else {
         return;
       }
-      limit = 2;
+      limit = 3;
     }
     if (cmd.args.length > 0 && /^\d+$/.test(cmd.args[cmd.args.length - 1])) {
       page = parseInt(cmd.args.pop() ?? '1');
