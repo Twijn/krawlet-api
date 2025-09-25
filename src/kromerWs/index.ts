@@ -119,14 +119,21 @@ haTransactions.on(async (transaction: TransactionWithMeta) => {
         const type = result.success ? 'message' : 'error';
         const message = result.message || 'No message provided';
 
-        console.log(`Sending ${type} to ${transaction.from}: ${message}`);
+        if (!transaction.meta?.entries.find(x => ['message', 'error'].includes(x.name))) {
+          // Transaction was not detected as an automatic refund from Krawlet's transaction
+          // Refund the transaction!
+          
+          console.log(`Sending ${type} to ${transaction.from}: ${message}`);
 
-        await kromer.transactions.send({
-          privatekey: KRAWLET_PRIVATE_KEY,
-          to: transaction.from,
-          amount: transaction.value,
-          metadata: `${type}=${message}`,
-        });
+          await kromer.transactions.send({
+            privatekey: KRAWLET_PRIVATE_KEY,
+            to: transaction.from,
+            amount: transaction.value,
+            metadata: `${type}=${message}`,
+          });
+        } else {
+          console.error(`Failed to refund ${transaction.from} ${transaction.value} KRO`);
+        }
 
         return;
       }
