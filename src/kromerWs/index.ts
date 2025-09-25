@@ -119,10 +119,10 @@ haTransactions.on(async (transaction: TransactionWithMeta) => {
         const type = result.success ? 'message' : 'error';
         const message = result.message || 'No message provided';
 
-        if (!transaction.meta?.entries.find(x => ['message', 'error'].includes(x.name))) {
+        if (!transaction.meta?.entries.find((x) => ['message', 'error'].includes(x.name))) {
           // Transaction was not detected as an automatic refund from Krawlet's transaction
           // Refund the transaction!
-          
+
           console.log(`Sending ${type} to ${transaction.from}: ${message}`);
 
           await kromer.transactions.send({
