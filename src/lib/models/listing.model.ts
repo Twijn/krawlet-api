@@ -5,13 +5,12 @@ import {
   InferCreationAttributes,
   Model,
   Op,
+  Transaction,
 } from 'sequelize';
 import { sequelize } from './database.js';
 import { ShopSyncData, ShopSyncListing } from '../shopSyncValidate';
 import objectHash from 'object-hash';
 import { getShopId, Shop } from './shop.model';
-
-const LISTING_EXPIRY_TIME = 1000 * 60 * 60 * 24; // 1 day
 
 export async function getListings(): Promise<Listing[]> {
   return await Listing.findAll({
@@ -118,70 +117,80 @@ export const formatListing = (listing: RawListing): string => {
   return result;
 };
 
-export async function updatePrices(listingId: string, item: ShopSyncListing): Promise<void> {
+export async function updatePrices(
+  listingId: string,
+  item: ShopSyncListing,
+  transaction?: Transaction,
+): Promise<void> {
   await ListingPrice.destroy({
     where: {
       listingId,
     },
+    transaction,
   });
   for (const itemPrice of item.prices) {
-    await ListingPrice.create({
-      listingId,
-      value: itemPrice.value,
-      currency: itemPrice.currency,
-      address: itemPrice.address || null,
-      requiredMeta: itemPrice.requiredMeta || null,
-    });
+    await ListingPrice.create(
+      {
+        listingId,
+        value: itemPrice.value,
+        currency: itemPrice.currency,
+        address: itemPrice.address || null,
+        requiredMeta: itemPrice.requiredMeta || null,
+      },
+      { transaction },
+    );
   }
 }
 
 export async function updateListings(data: ShopSyncData): Promise<void> {
   const shopId = getShopId(data);
+  const t = await sequelize.transaction();
+  try {
+    // Update or create current listings
+    for (const item of data.items) {
+      const hash = hashListing(shopId, item);
 
-  for (const item of data.items) {
-    const hash = hashListing(shopId, item);
+      const data = {
+        shopId,
+        hash,
+        itemName: item.item.name,
+        itemNbt: item.item.nbt,
+        itemDisplayName: item.item.displayName,
+        itemDescription: item.item.description,
+        shopBuysItem: item.shopBuysItem,
+        noLimit: item.noLimit,
+        dynamicPrice: item.dynamicPrice,
+        madeOnDemand: item.madeOnDemand,
+        requiresInteraction: item.requiresInteraction,
+        stock: item.stock ?? 0,
+        updatedAt: new Date(),
+      };
 
-    const data = {
-      shopId,
-      hash,
-      itemName: item.item.name,
-      itemNbt: item.item.nbt,
-      itemDisplayName: item.item.displayName,
-      itemDescription: item.item.description,
-      shopBuysItem: item.shopBuysItem,
-      noLimit: item.noLimit,
-      dynamicPrice: item.dynamicPrice,
-      madeOnDemand: item.madeOnDemand,
-      requiresInteraction: item.requiresInteraction,
-      stock: item.stock ?? 0,
-      updatedAt: new Date(),
-    };
-
-    const [listing, created] = await Listing.findOrCreate({
-      where: { hash },
-      defaults: data,
-      paranoid: false,
-    });
-
-    if (!created) {
-      await listing.update(data);
-
-      if (listing.deletedAt) {
-        await listing.restore();
-      }
+      await Listing.upsert(data, { returning: true, transaction: t });
+      const listing = await Listing.findOne({
+        where: { shopId, hash },
+        attributes: ['id'],
+        transaction: t,
+      });
+      if (!listing?.id) throw new Error('Failed to upsert/find listing id');
+      await updatePrices(listing.id, item, t);
     }
 
-    await updatePrices(listing.id, item);
-  }
-
-  await Listing.destroy({
-    where: {
-      shopId,
-      updatedAt: {
-        [Op.lt]: new Date(Date.now() - LISTING_EXPIRY_TIME),
+    await t.commit();
+    // After committing all upserts/prices, delete obsolete listings separately
+    const currentHashes = data.items.map((item) => hashListing(shopId, item));
+    await Listing.destroy({
+      where: {
+        shopId,
+        hash: {
+          [Op.notIn]: currentHashes,
+        },
       },
-    },
-  });
+    });
+  } catch (err) {
+    await t.rollback();
+    throw err;
+  }
 }
 
 export interface RawListing {
@@ -240,7 +249,6 @@ export class Listing
 
   declare createdAt?: Date;
   declare updatedAt?: Date;
-  declare deletedAt?: Date | null;
 
   public raw(): RawListing {
     const prices =
@@ -349,7 +357,6 @@ Listing.init(
   {
     sequelize,
     timestamps: true,
-    paranoid: true,
     tableName: 'listings',
   },
 );
