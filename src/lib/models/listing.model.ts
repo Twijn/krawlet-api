@@ -13,27 +13,34 @@ import objectHash from 'object-hash';
 import { getShopId, Shop } from './shop.model';
 
 export async function getListings(): Promise<Listing[]> {
-  return await Listing.findAll({
+  console.time('getListings');
+  const listings = await Listing.findAll({
     include: [
       {
         association: 'prices',
       },
     ],
   });
+  console.timeEnd('getListings');
+  return listings;
 }
 
 export async function getListing(listingId: string): Promise<Listing | null> {
-  return await Listing.findByPk(listingId, {
+  console.time('getListing');
+  const listing = await Listing.findByPk(listingId, {
     include: [
       {
         association: 'prices',
       },
     ],
   });
+  console.timeEnd('getListing');
+  return listing;
 }
 
 export async function getListingsByShopId(shopId: string): Promise<Listing[]> {
-  return await Listing.findAll({
+  console.time('getListingsByShopId');
+  const listings = await Listing.findAll({
     where: {
       shopId,
     },
@@ -43,6 +50,8 @@ export async function getListingsByShopId(shopId: string): Promise<Listing[]> {
       },
     ],
   });
+  console.timeEnd('getListingsByShopId');
+  return listings;
 }
 
 export function hashListing(shopId: string, listing: ShopSyncListing): string {
@@ -56,10 +65,11 @@ export function hashListing(shopId: string, listing: ShopSyncListing): string {
 }
 
 export async function searchListings(query: string): Promise<Listing[]> {
+  console.time('searchListings');
   const like = {
     [Op.like]: `%${query}%`,
   };
-  return await Listing.findAll({
+  const listings = await Listing.findAll({
     where: {
       [Op.or]: {
         itemName: like,
@@ -75,6 +85,8 @@ export async function searchListings(query: string): Promise<Listing[]> {
       },
     ],
   });
+  console.timeEnd('searchListings');
+  return listings;
 }
 
 const ILLEGAL_CHAR_REGEX = /[^\w!@#$%^&()_+-=\[\]{}|;':",.\/? \n]+/gi;
@@ -128,6 +140,7 @@ export async function updatePrices(
     },
     transaction,
   });
+
   for (const itemPrice of item.prices) {
     await ListingPrice.create(
       {
@@ -143,12 +156,17 @@ export async function updatePrices(
 }
 
 export async function updateListings(data: ShopSyncData): Promise<void> {
+  console.time('updateListings');
   const shopId = getShopId(data);
+  console.log(`Starting update for shop ${shopId} with ${data.items.length} items`);
+
   const t = await sequelize.transaction();
   try {
+    console.time('updateListings:transaction');
     // Update or create current listings
     for (const item of data.items) {
       const hash = hashListing(shopId, item);
+      console.log(`Processing item ${item.item.name} with hash ${hash}`);
 
       const data = {
         shopId,
@@ -176,10 +194,14 @@ export async function updateListings(data: ShopSyncData): Promise<void> {
       await updatePrices(listing.id, item, t);
     }
 
+    console.log('Committing transaction...');
     await t.commit();
+    console.timeEnd('updateListings:transaction');
+
     // After committing all upserts/prices, delete obsolete listings separately
+    console.time('updateListings:cleanup');
     const currentHashes = data.items.map((item) => hashListing(shopId, item));
-    await Listing.destroy({
+    const deleted = await Listing.destroy({
       where: {
         shopId,
         hash: {
@@ -187,9 +209,14 @@ export async function updateListings(data: ShopSyncData): Promise<void> {
         },
       },
     });
+    console.log(`Cleaned up ${deleted} obsolete listings`);
+    console.timeEnd('updateListings:cleanup');
   } catch (err) {
+    console.log('Error occurred, rolling back transaction:', err);
     await t.rollback();
     throw err;
+  } finally {
+    console.timeEnd('updateListings');
   }
 }
 
