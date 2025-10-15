@@ -12,10 +12,9 @@ const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf-8'));
 const PORT = process.env.PORT ?? 3000;
 
 const app = express();
-
 app.use(
   cors({
-    origin: [`http://localhost:5173`, 'https://www.kromer.club', 'https://krawlet.kromer.club'],
+    origin: '*',
     methods: ['GET', 'POST'],
     credentials: true,
   }),
