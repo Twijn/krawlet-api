@@ -4,3 +4,4 @@ config();
 import('./chat');
 import('./express');
 import('./kromerWs');
+import('./discord');

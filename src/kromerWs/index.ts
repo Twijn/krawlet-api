@@ -7,6 +7,7 @@ import { Transaction, TransactionWithMeta } from 'kromer';
 import { HATransactions } from '../lib/HATransactions';
 import formatTransaction, { parseTransactionData, TransactionData } from '../lib/formatTransaction';
 import walletListeners from './walletListeners';
+import { formatKromerBalance } from '../lib/formatKromer';
 
 const STRIPPED_META_ENTRIES = ['error', 'message', 'return'];
 
@@ -50,7 +51,7 @@ function sendDiscordMessage(transaction: TransactionWithMeta, data: TransactionD
 
   hook
     .batchedSend(
-      `${transactionUrl(transaction)} | ${transaction.from ? addressUrl(transaction.from, data.from) : 'unknown'} -> ${addressUrl(transaction.to, data.to)} | ${transaction.value.toFixed(2)} KRO${metadata}`,
+      `${transactionUrl(transaction)} | ${transaction.from ? addressUrl(transaction.from, data.from) : 'unknown'} -> ${addressUrl(transaction.to, data.to)} | ${formatKromerBalance(transaction.value)}${metadata}`,
     )
     .catch(console.error);
 }
@@ -132,7 +133,9 @@ haTransactions.on(async (transaction: TransactionWithMeta) => {
             metadata: `${type}=${message}`,
           });
         } else {
-          console.error(`Failed to refund ${transaction.from} ${transaction.value} KRO`);
+          console.error(
+            `Failed to refund ${transaction.from} ${formatKromerBalance(transaction.value)}`,
+          );
         }
 
         return;

@@ -13,7 +13,10 @@ class PlayerManager {
   }
 
   constructor() {
-    this.updatePlayers().catch(console.error);
+    // Skip database operations during command deployment
+    if (!process.env.DEPLOYING_COMMANDS) {
+      this.updatePlayers().catch(console.error);
+    }
   }
 
   public async getPlayerFromUser(user: User): Promise<Player | null> {

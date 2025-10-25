@@ -3,6 +3,7 @@ import { ChatboxCommand, User } from 'reconnectedchat';
 import { rcc } from '../index';
 import { getByName, getByUUID } from '../../lib/playerAddresses';
 import kromer from '../../lib/kromer';
+import { formatKromerBalance } from '../../lib/formatKromer';
 
 const command: Command = {
   name: 'balance',
@@ -22,7 +23,7 @@ const command: Command = {
         rcc
           .tell(
             cmd.user,
-            `<gray>Address</gray> ${address.address} <gray>has</gray> ${address.balance} <gray>KRO</gray>`,
+            `<gray>Address</gray> ${address.address} <gray>has</gray> ${formatKromerBalance(address.balance)}`,
           )
           .catch(console.error);
         rcc
@@ -67,7 +68,7 @@ const command: Command = {
       rcc
         .tell(
           cmd.user,
-          `<gray>Player</gray> ${targetName} <gray>has</gray> ${balance} <gray>KRO</gray>`,
+          `<gray>Player</gray> ${targetName} <gray>has</gray> ${formatKromerBalance(balance)}`,
         )
         .catch(console.error);
 

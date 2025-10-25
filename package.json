@@ -13,7 +13,8 @@
     "migrate:undo": "npx sequelize-cli db:migrate:undo",
     "lint": "eslint src/**/*.ts --quiet",
     "lint:fix": "eslint src/**/*.ts --fix",
-    "format": "prettier --write src/**/*.ts"
+    "format": "prettier --write src/**/*.ts",
+    "deploy-commands": "npx tsx src/discord/putCommands.ts"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
@@ -36,9 +37,10 @@
   "private": true,
   "dependencies": {
     "cors": "^2.8.5",
+    "discord.js": "^14.24.0",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
-    "kromer": "^1.2.3",
+    "kromer": "^1.5.1",
     "mysql2": "^3.14.3",
     "object-hash": "^3.0.0",
     "reconnectedchat": "^3.4.1",

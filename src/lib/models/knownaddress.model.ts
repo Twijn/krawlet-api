@@ -112,7 +112,10 @@ const refreshAddresses = async () => {
   console.log('Known addresses refreshed');
 };
 
-setTimeout(refreshAddresses, 2000);
+// Skip database operations during command deployment
+if (!process.env.DEPLOYING_COMMANDS) {
+  setTimeout(refreshAddresses, 2000);
+}
 
 KnownAddress.init(
   {

@@ -1,13 +1,11 @@
 import express from 'express';
 import cors from 'cors';
-import fs from 'fs';
 
 import playeraddresses from './playeraddresses';
 import enderstorage from './enderstorage';
 import shopsync from './shopsync';
 import knownaddresses from './knownaddresses';
-
-const packageJson = JSON.parse(fs.readFileSync('package.json', 'utf-8'));
+import { getPackageName, getPackageVersion } from '../lib/packageData';
 
 const PORT = process.env.PORT ?? 3000;
 
@@ -29,8 +27,8 @@ app.get('/', (req, res) => {
   res.json({
     ok: true,
     data: {
-      name: packageJson.name,
-      version: packageJson.version,
+      name: getPackageName(),
+      version: getPackageVersion(),
     },
   });
 });

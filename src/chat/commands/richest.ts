@@ -1,8 +1,9 @@
 import { Command } from '../../lib/types';
 import { ChatboxCommand } from 'reconnectedchat';
-import kromer from '../../lib/kromer';
 import { rcc } from '../index';
 import playerManager from '../../lib/managers/playerManager';
+import { formatKromerBalance } from '../../lib/formatKromer';
+import { getRichAddressesExcludingServerwelf } from '../../lib/richAddressesHelper';
 
 const limit = 5;
 
@@ -24,7 +25,7 @@ const command: Command = {
 
     const offset = (page - 1) * limit;
 
-    const response = await kromer.addresses.getRich({
+    const response = await getRichAddressesExcludingServerwelf({
       limit,
       offset,
     });
@@ -36,9 +37,9 @@ const command: Command = {
       const player = playerManager.getPlayerFromAddress(addr.address);
       const paddedNum = (i + offset + 1).toString().padStart(2, '0');
       if (player) {
-        message += `\n<gray>${paddedNum}.</gray> <hover:show_text:'<gray>${addr.address}'>${player.minecraftName}</hover><gray>:</gray> ${addr.balance} <gray>KRO</gray>`;
+        message += `\n<gray>${paddedNum}.</gray> <hover:show_text:'<gray>${addr.address}'>${player.minecraftName}</hover><gray>:</gray> ${formatKromerBalance(addr.balance)}`;
       } else {
-        message += `\n<gray>${paddedNum}.</gray> ${addr.address}<gray>:</gray> ${addr.balance} <gray>KRO</gray>`;
+        message += `\n<gray>${paddedNum}.</gray> ${addr.address}<gray>:</gray> ${formatKromerBalance(addr.balance)}`;
       }
     }
 

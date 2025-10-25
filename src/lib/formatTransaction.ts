@@ -1,6 +1,7 @@
 import { Transaction } from 'kromer';
 import playerManager from './managers/playerManager';
 import kromer from './kromer';
+import { formatKromerBalance } from './formatKromer';
 
 export interface TransactionData {
   from: string;
@@ -60,6 +61,6 @@ export default (transaction: Transaction, data?: TransactionData): string => {
   return (
     `<gray>${transaction.id.toLocaleString()}.</gray> ${data.from} <gray>-></gray> ` +
     `${data.to} <gray>|</gray> ` +
-    `${transaction.value.toFixed(2)} <gray>KRO</gray> ${message}`.trim()
+    `${formatKromerBalance(transaction.value)} ${message}`.trim()
   );
 };

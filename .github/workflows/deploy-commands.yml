@@ -1,0 +1,46 @@
+name: Deploy Discord Commands
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/discord/commands/**'
+      - 'src/discord/putCommands.ts'
+      - '.github/workflows/deploy-commands.yml'
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  deploy-commands:
+    name: Deploy Discord Slash Commands
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build project
+        run: pnpm build
+
+      - name: Deploy Discord commands
+        run: |
+          echo "🚀 Deploying Discord slash commands..."
+          pnpm deploy-commands
+          echo "✅ Discord commands deployed successfully!"
+        env:
+          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+          NODE_ENV: production
