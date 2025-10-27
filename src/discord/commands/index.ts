@@ -2,6 +2,7 @@ import AddressCommand from './AddressCommand';
 import BalanceCommand from './BalanceCommand';
 import BaltopCommand from './BaltopCommand';
 import { DiscordCommand } from './helpers/DiscordCommand';
+import FindShopCommand from './FindShopCommand';
 import MOTDCommand from './MOTDCommand';
 import NamesCommand from './NamesCommand';
 import PlayerCommand from './PlayerCommand';
@@ -12,6 +13,7 @@ export const commands: DiscordCommand[] = [
   new AddressCommand(),
   new BalanceCommand(),
   new BaltopCommand(),
+  new FindShopCommand(),
   new MOTDCommand(),
   new NamesCommand(),
   new PlayerCommand(),
