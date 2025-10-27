@@ -145,9 +145,17 @@ export function validateShopSyncData(data: any): { isValid: boolean; errors: str
     }
   }
 
-  // Validate items array
-  if (!Array.isArray(data.items)) {
-    errors.push("Field 'items' is required and must be an array");
+  // Validate items array (also accept empty object and convert to empty array)
+  if (typeof data.items === 'object' && !Array.isArray(data.items)) {
+    // Convert empty object to empty array
+    if (Object.keys(data.items).length === 0) {
+      data.items = [];
+    } else {
+      errors.push("Field 'items' must be an array or an empty object");
+      return { isValid: false, errors };
+    }
+  } else if (!Array.isArray(data.items)) {
+    errors.push("Field 'items' is required and must be an array or an empty object");
     return { isValid: false, errors };
   }
 
