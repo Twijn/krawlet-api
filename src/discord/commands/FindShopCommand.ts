@@ -105,41 +105,130 @@ export default class FindShopCommand implements DiscordCommand {
 
     const rawShop = shop.toJSON() as RawShop;
 
-    // Build shop info embed
-    const embed = new EmbedBuilder().setTitle(`🏪 ${rawShop.name}`).setColor(0x00ff00);
+    const items = rawShop.items ?? [];
 
-    if (rawShop.description) {
-      embed.setDescription(rawShop.description);
+    items.sort((a, b) => {
+      const priceA = a.prices?.[0]?.value ?? Infinity;
+      const priceB = b.prices?.[0]?.value ?? Infinity;
+      return Number(priceA) - Number(priceB);
+    });
+
+    if (items.length === 0) {
+      // Show basic shop info without pagination if no items
+      const embed = new EmbedBuilder().setTitle(`🏪 ${rawShop.name}`).setColor(0xff9900);
+
+      embed.setDescription('This shop has no items listed.');
+
+      const fields: { name: string; value: string; inline?: boolean }[] = [
+        {
+          name: 'Computer ID',
+          value: code(rawShop.computerId),
+          inline: true,
+        },
+      ];
+
+      if (rawShop.owner) {
+        fields.push({ name: 'Owner', value: code(rawShop.owner), inline: true });
+      }
+
+      if (rawShop.locationCoordinates || rawShop.locationDescription || rawShop.locationDimension) {
+        let locationValue = '';
+        if (rawShop.locationCoordinates) {
+          locationValue += `📍 ${rawShop.locationCoordinates}`;
+        }
+        if (rawShop.locationDescription) {
+          locationValue += ` - ${rawShop.locationDescription}`;
+        }
+        if (rawShop.locationDimension) {
+          locationValue += `\n${rawShop.locationDimension}`;
+        }
+        fields.push({
+          name: 'Location',
+          value: code(locationValue.trim()),
+          inline: false,
+        });
+      }
+
+      embed.addFields(fields);
+
+      const software =
+        `Shop is using ${rawShop.softwareName ?? 'Unknown'} v${rawShop.softwareVersion ?? ''}`.trim();
+
+      await interaction.editReply({
+        embeds: [addStandardFooter(embed, software)],
+      });
+      return;
     }
 
-    // Add basic info
+    // Sort items by price
+    items.sort((a, b) => {
+      const priceA = a.prices?.[0]?.value ?? Infinity;
+      const priceB = b.prices?.[0]?.value ?? Infinity;
+      return Number(priceA) - Number(priceB);
+    });
+
+    // Create paginated view
+    const ITEMS_PER_PAGE = 10;
+    const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
+
+    const pages: PaginationPage[] = [];
+    for (let page = 0; page < totalPages; page++) {
+      pages.push({
+        embed: this.createShopItemsPage(rawShop, items, page, ITEMS_PER_PAGE),
+      });
+    }
+
+    const paginator = new GenericPaginator(pages, {
+      title: `🏪 ${rawShop.name}`,
+      color: 0x00ff00,
+    });
+
+    await paginator.sendPaginatedMessage(interaction);
+  }
+
+  private createShopItemsPage(
+    shop: RawShop,
+    items: RawListing[],
+    page: number,
+    itemsPerPage: number,
+  ): EmbedBuilder {
+    const start = page * itemsPerPage;
+    const end = Math.min(start + itemsPerPage, items.length);
+    const pageItems = items.slice(start, end);
+
+    const embed = new EmbedBuilder().setColor(0x00ff00);
+
+    // Shop description
+    if (shop.description) {
+      embed.setDescription(shop.description);
+    }
+
+    // Add basic info as fields
     const fields: { name: string; value: string; inline?: boolean }[] = [
       {
         name: 'Computer ID',
-        value: code(rawShop.computerId),
+        value: code(shop.computerId),
         inline: true,
       },
     ];
 
-    if (rawShop.owner) {
-      fields.push({ name: 'Owner', value: code(rawShop.owner), inline: true });
+    if (shop.owner) {
+      fields.push({ name: 'Owner', value: code(shop.owner), inline: true });
     }
 
-    // Items count
-    const itemCount = rawShop.items?.length ?? 0;
-    fields.push({ name: 'Items Listed', value: code(itemCount), inline: true });
+    fields.push({ name: 'Total Items', value: code(items.length), inline: true });
 
     // Location info
-    if (rawShop.locationCoordinates || rawShop.locationDescription || rawShop.locationDimension) {
+    if (shop.locationCoordinates || shop.locationDescription || shop.locationDimension) {
       let locationValue = '';
-      if (rawShop.locationCoordinates) {
-        locationValue += `📍 ${rawShop.locationCoordinates}`;
+      if (shop.locationCoordinates) {
+        locationValue += `📍 ${shop.locationCoordinates}`;
       }
-      if (rawShop.locationDescription) {
-        locationValue += ` - ${rawShop.locationDescription}`;
+      if (shop.locationDescription) {
+        locationValue += ` - ${shop.locationDescription}`;
       }
-      if (rawShop.locationDimension) {
-        locationValue += `\n${rawShop.locationDimension}`;
+      if (shop.locationDimension) {
+        locationValue += `\n${shop.locationDimension}`;
       }
       fields.push({
         name: 'Location',
@@ -148,15 +237,62 @@ export default class FindShopCommand implements DiscordCommand {
       });
     }
 
-    // Software info
-    const software =
-      `Shop is using ${rawShop.softwareName ?? 'Unknown'} v${rawShop.softwareVersion ?? ''}`.trim();
-
     embed.addFields(fields);
 
-    await interaction.editReply({
-      embeds: [addStandardFooter(embed, software)],
+    // Create table for items
+    const rows: string[][] = [];
+
+    for (let i = 0; i < pageItems.length; i++) {
+      const item = pageItems[i];
+
+      const itemName = item.itemDisplayName || item.itemName || 'Unknown';
+      const price = item.prices?.[0]
+        ? `${formatKromerAmount(Number(item.prices[0].value))} ${item.prices[0].currency}`
+        : 'N/A';
+
+      let stock = '';
+      if (item.stock === 0) {
+        stock = 'OOS';
+      } else if (item.noLimit || item.madeOnDemand) {
+        stock = '∞';
+      } else {
+        stock = item.stock.toString();
+      }
+
+      let flags = '';
+      if (item.shopBuysItem) flags += '[S] ';
+      if (item.dynamicPrice) flags += '[D] ';
+      if (item.madeOnDemand) flags += '[M] ';
+
+      rows.push([itemName.substring(0, 20), price, stock, flags.trim()]);
+    }
+
+    const table = createTextTable(['Item', 'Price', 'Stock', 'Flags'], rows, [
+      'left',
+      'right',
+      'right',
+      'left',
+    ]);
+    embed.addFields({
+      name: `Items ${start + 1}-${end} of ${items.length}`,
+      value: table,
     });
+
+    // Add legend
+    embed.addFields({
+      name: 'Legend',
+      value: '[S] = Shop buys | [D] = Dynamic price | [M] = Made on demand | OOS = Out of stock',
+      inline: false,
+    });
+
+    // Software info in footer
+    const software =
+      `Shop is using ${shop.softwareName ?? 'Unknown'} v${shop.softwareVersion ?? ''}`.trim();
+
+    // Set footer directly - GenericPaginator will add the standard footer
+    embed.setFooter({ text: software });
+
+    return embed;
   }
 
   private async handleItemSearch(
