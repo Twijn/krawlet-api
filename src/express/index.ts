@@ -5,6 +5,7 @@ import playeraddresses from './playeraddresses';
 import enderstorage from './enderstorage';
 import shopsync from './shopsync';
 import knownaddresses from './knownaddresses';
+import turtles from './turtles';
 import { getPackageName, getPackageVersion } from '../lib/packageData';
 
 const PORT = process.env.PORT ?? 3000;
@@ -22,6 +23,7 @@ app.use('/playeraddresses', playeraddresses);
 app.use('/enderstorage', enderstorage);
 app.use('/shopsync', shopsync);
 app.use('/knownaddresses', knownaddresses);
+app.use('/turtles', turtles);
 
 app.get('/', (req, res) => {
   res.json({

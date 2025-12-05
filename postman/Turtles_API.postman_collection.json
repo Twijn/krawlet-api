@@ -1,0 +1,133 @@
+{
+  "info": {
+    "_postman_id": "turtles-api-collection",
+    "name": "Krawlet API - Turtles",
+    "description": "API endpoints for ComputerCraft turtle tracking and management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "turtleId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Get All Turtles",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/turtles",
+          "host": ["{{baseUrl}}"],
+          "path": ["turtles"]
+        },
+        "description": "Retrieve a list of all registered turtles with their stats and positions."
+      },
+      "response": []
+    },
+    {
+      "name": "Get Turtle by ID",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/turtles/{{turtleId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["turtles", "{{turtleId}}"]
+        },
+        "description": "Retrieve a specific turtle by its ID."
+      },
+      "response": []
+    },
+    {
+      "name": "Create/Update Turtle",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"label\": \"Mining Turtle #1\",\n  \"stats\": {\n    \"blocks_mined\": 100,\n    \"debris_found\": 5,\n    \"deposits\": 3,\n    \"ores_collected\": 42,\n    \"custom_stat\": 123\n  },\n  \"relativePosition\": {\n    \"x\": 10,\n    \"y\": -5,\n    \"z\": 20\n  },\n  \"absolutePosition\": {\n    \"x\": 1000,\n    \"y\": 64,\n    \"z\": -500\n  },\n  \"fuel\": 5000\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/turtles/{{turtleId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["turtles", "{{turtleId}}"]
+        },
+        "description": "Create a new turtle or update an existing one. Stats can be any key-value pairs where values are numbers."
+      },
+      "response": []
+    },
+    {
+      "name": "Update Turtle Stats",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"blocks_mined\": 150,\n  \"debris_found\": 8,\n  \"new_custom_stat\": 999\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/turtles/{{turtleId}}/stats",
+          "host": ["{{baseUrl}}"],
+          "path": ["turtles", "{{turtleId}}", "stats"]
+        },
+        "description": "Update only the stats for a turtle. Any stat name can be used - they are stored as flexible key-value pairs."
+      },
+      "response": []
+    },
+    {
+      "name": "Update Turtle Position",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"relativePosition\": {\n    \"x\": 15,\n    \"y\": -10,\n    \"z\": 25\n  },\n  \"absolutePosition\": {\n    \"x\": 1005,\n    \"y\": 59,\n    \"z\": -495\n  }\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/turtles/{{turtleId}}/position",
+          "host": ["{{baseUrl}}"],
+          "path": ["turtles", "{{turtleId}}", "position"]
+        },
+        "description": "Update only the position for a turtle. Both relative and absolute positions can be updated."
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Turtle",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/turtles/{{turtleId}}",
+          "host": ["{{baseUrl}}"],
+          "path": ["turtles", "{{turtleId}}"]
+        },
+        "description": "Delete a turtle and all its associated stats."
+      },
+      "response": []
+    }
+  ]
+}
