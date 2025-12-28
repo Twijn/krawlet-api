@@ -75,19 +75,35 @@ local function httpRequest(method, path, body)
     local headers = {
         ["Content-Type"] = "application/json",
     }
+    local bodyStr = body and textutils.serialiseJSON(body) or nil
 
-    local response
+    local response, err, errResponse
     if method == "GET" then
-        response = http.get(url, headers)
+        response, err, errResponse = http.get(url, headers)
     elseif method == "POST" then
-        response = http.post(url, textutils.serialiseJSON(body), headers)
-    elseif method == "PATCH" then
-        -- CC doesn't have native PATCH, use POST with method override or custom request
-        headers["X-HTTP-Method-Override"] = "PATCH"
-        response = http.post(url, textutils.serialiseJSON(body), headers)
-    elseif method == "DELETE" then
-        headers["X-HTTP-Method-Override"] = "DELETE"
-        response = http.post(url, "{}", headers)
+        response, err, errResponse = http.post(url, bodyStr, headers)
+    elseif method == "PATCH" or method == "DELETE" or method == "PUT" then
+        -- CC:Tweaked supports http.request for custom methods
+        response, err, errResponse = http.request({
+            url = url,
+            method = method,
+            headers = headers,
+            body = bodyStr or "{}",
+        })
+        -- http.request returns immediately, we need to wait for the response
+        if response == true then
+            -- Wait for http_success or http_failure event
+            local event, eventUrl, handle
+            repeat
+                event, eventUrl, handle = os.pullEvent()
+            until (event == "http_success" or event == "http_failure") and eventUrl == url
+            if event == "http_success" then
+                response = handle
+            else
+                response = nil
+                errResponse = handle
+            end
+        end
     end
 
     if response then
@@ -100,7 +116,17 @@ local function httpRequest(method, path, body)
         return { ok = false, error = "Failed to parse response" }
     end
 
-    return { ok = false, error = "Request failed" }
+    -- Try to get error message from error response
+    if errResponse then
+        local content = errResponse.readAll()
+        errResponse.close()
+        local success, data = pcall(textutils.unserialiseJSON, content)
+        if success and data.error then
+            return { ok = false, error = data.error }
+        end
+    end
+
+    return { ok = false, error = err or "Request failed" }
 end
 
 local function ensureInitialized()
@@ -380,6 +406,35 @@ function module.fetchAll()
     end
 
     return nil
+end
+
+---Delete the current turtle from the server
+---@return boolean # True if deletion was successful
+---@return string|nil # Error message if deletion failed
+function module.delete()
+    ensureInitialized()
+
+    local response = httpRequest("DELETE", "/turtles/" .. module._id)
+
+    if response and response.ok then
+        return true
+    end
+
+    return false, response and response.error or "Unknown error"
+end
+
+---Delete a specific turtle by ID from the server
+---@param id string|number The turtle ID to delete
+---@return boolean # True if deletion was successful
+---@return string|nil # Error message if deletion failed
+function module.deleteById(id)
+    local response = httpRequest("DELETE", "/turtles/" .. id)
+
+    if response and response.ok then
+        return true
+    end
+
+    return false, response and response.error or "Unknown error"
 end
 
 -- ======= Auto-Sync =======
