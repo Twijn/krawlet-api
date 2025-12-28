@@ -21,10 +21,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`Ready! Logged in as ${readyClient.user.tag}`);
-  console.log(`Loaded ${commands.length} commands:`);
-  commands.forEach((command) => {
-    console.log(`  - /${command.data.name}`);
-  });
+  console.log(`Loaded ${commands.length} commands: ${commands.map((x) => x.data.name).join(', ')}`);
 });
 
 // Handle interactions (both commands and autocomplete)
