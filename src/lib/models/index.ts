@@ -30,3 +30,4 @@ export * from './shop.model';
 export * from './knownaddress.model';
 export * from './turtle.model';
 export * from './turtlestat.model';
+export * from './changelog.model';

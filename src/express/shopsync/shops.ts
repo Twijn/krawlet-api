@@ -2,6 +2,12 @@ import { Router, json } from 'express';
 import authenticate from '../../lib/authenticate';
 import { ShopSyncData, validateShopSyncData } from '../../lib/shopSyncValidate';
 import { updateShop, getShop, getShops, getListingsByShopId } from '../../lib/models';
+import {
+  recordValidationFailure,
+  recordSuccessfulPost,
+  detectAndRecordShopChanges,
+  detectAndRecordItemChanges,
+} from './reporter';
 
 const router = Router();
 
@@ -70,6 +76,10 @@ router.post(
       if (!validation.isValid) {
         console.error(`Received invalid response (shop ${req.body?.info?.name})`);
         console.error(validation.errors);
+
+        // Record validation failure
+        recordValidationFailure(req.body, validation.errors);
+
         return res.status(400).json({
           ok: false,
           error: 'Invalid ShopSync data',
@@ -80,7 +90,14 @@ router.post(
       // Data is valid
       const shopSyncData: ShopSyncData = req.body;
 
+      // Detect changes before updating (for reporting)
+      await detectAndRecordShopChanges(shopSyncData);
+      await detectAndRecordItemChanges(shopSyncData);
+
       await updateShop(shopSyncData);
+
+      // Record successful POST
+      recordSuccessfulPost(shopSyncData);
 
       console.log('Updated shop ' + shopSyncData.info.name);
 
