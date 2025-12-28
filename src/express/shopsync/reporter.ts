@@ -436,6 +436,9 @@ export async function detectAndRecordItemChanges(
         // Existing item - check for updates
         const changes: ShopChangeField[] = [];
 
+        // Helper to normalize boolean values (null/undefined -> false)
+        const normalizeBool = (val: boolean | null | undefined): boolean => val === true;
+
         // Stock changes
         if (existing.stock !== (item.stock ?? 0)) {
           changes.push({
@@ -446,7 +449,7 @@ export async function detectAndRecordItemChanges(
         }
 
         // Dynamic price changes
-        if (existing.dynamicPrice !== (item.dynamicPrice ?? false)) {
+        if (normalizeBool(existing.dynamicPrice) !== normalizeBool(item.dynamicPrice)) {
           changes.push({
             field: 'dynamicPrice',
             previousValue: existing.dynamicPrice,
@@ -455,7 +458,7 @@ export async function detectAndRecordItemChanges(
         }
 
         // Made on demand changes
-        if (existing.madeOnDemand !== (item.madeOnDemand ?? false)) {
+        if (normalizeBool(existing.madeOnDemand) !== normalizeBool(item.madeOnDemand)) {
           changes.push({
             field: 'madeOnDemand',
             previousValue: existing.madeOnDemand,
@@ -464,7 +467,7 @@ export async function detectAndRecordItemChanges(
         }
 
         // No limit changes
-        if (existing.noLimit !== (item.noLimit ?? false)) {
+        if (normalizeBool(existing.noLimit) !== normalizeBool(item.noLimit)) {
           changes.push({
             field: 'noLimit',
             previousValue: existing.noLimit,
@@ -473,7 +476,7 @@ export async function detectAndRecordItemChanges(
         }
 
         // Shop buys item changes
-        if (existing.shopBuysItem !== (item.shopBuysItem ?? false)) {
+        if (normalizeBool(existing.shopBuysItem) !== normalizeBool(item.shopBuysItem)) {
           changes.push({
             field: 'shopBuysItem',
             previousValue: existing.shopBuysItem,
@@ -482,7 +485,9 @@ export async function detectAndRecordItemChanges(
         }
 
         // Requires interaction changes
-        if (existing.requiresInteraction !== (item.requiresInteraction ?? false)) {
+        if (
+          normalizeBool(existing.requiresInteraction) !== normalizeBool(item.requiresInteraction)
+        ) {
           changes.push({
             field: 'requiresInteraction',
             previousValue: existing.requiresInteraction,
