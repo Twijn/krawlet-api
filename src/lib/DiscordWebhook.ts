@@ -43,6 +43,9 @@ export interface Payload {
   content: string;
   username?: string;
   avatar_url?: string;
+  allowed_mentions?: {
+    parse?: ('users' | 'roles' | 'everyone')[];
+  };
 }
 
 export interface BatchMessage {
@@ -113,6 +116,7 @@ export class DiscordWebhook {
       username: options?.username || this.defaultOptions.username,
       avatar_url: options?.avatarURL || this.defaultOptions.avatarURL,
       content,
+      allowed_mentions: { parse: [] }, // Disable all mention parsing
     };
 
     const res = await fetch(this.url + (wait ? '?wait=true' : ''), {

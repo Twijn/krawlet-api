@@ -11,6 +11,14 @@ import { formatKromerBalance } from '../lib/formatKromer';
 
 const STRIPPED_META_ENTRIES = ['error', 'message', 'return'];
 
+/**
+ * Sanitizes text for use inside Discord inline code blocks.
+ * Backticks cannot be escaped inside code blocks, so we replace them.
+ */
+function sanitizeForInlineCode(text: string): string {
+  return text.replace(/`/g, "'");
+}
+
 type Handler = (transaction: TransactionWithMeta, data: TransactionData) => void;
 
 function transactionUrl(transaction: Transaction) {
@@ -42,9 +50,8 @@ function sendDiscordMessage(transaction: TransactionWithMeta, data: TransactionD
   if (strippedEntries.length > 0) {
     metadata +=
       '\n`' +
-      `${strippedEntries.map((x) => `${x.name}${x.value ? `=${x.value}` : ''}`).join(';')}`.replace(
-        /`/g,
-        '\\`',
+      sanitizeForInlineCode(
+        strippedEntries.map((x) => `${x.name}${x.value ? `=${x.value}` : ''}`).join(';'),
       ) +
       '`';
   }
