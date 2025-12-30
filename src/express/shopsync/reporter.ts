@@ -128,9 +128,51 @@ function trimArray<T>(arr: T[]): void {
   }
 }
 
+/**
+ * Format a price object for human-readable display
+ */
+function formatPrice(price: { value: number; currency: string; address?: string | null }): string {
+  const valueStr = Number(price.value)
+    .toFixed(3)
+    .replace(/\.?0+$/, '');
+  let result = `${valueStr} ${price.currency}`;
+  if (price.address) {
+    result += ` (${price.address})`;
+  }
+  return result;
+}
+
+/**
+ * Convert a value to a human-readable string for storage in change logs
+ */
 function stringifyValue(value: unknown): string | null {
   if (value === null || value === undefined) return null;
   if (typeof value === 'string') return value;
+
+  // Format boolean values as Yes/No for consistency
+  if (typeof value === 'boolean') {
+    return value ? 'Yes' : 'No';
+  }
+
+  // Format price arrays in human-readable format
+  if (Array.isArray(value)) {
+    // Check if this looks like a prices array
+    if (
+      value.length > 0 &&
+      typeof value[0] === 'object' &&
+      value[0] !== null &&
+      'value' in value[0] &&
+      'currency' in value[0]
+    ) {
+      return value
+        .map((p) => formatPrice(p as { value: number; currency: string; address?: string | null }))
+        .join(', ');
+    }
+    // For other arrays, use JSON
+    return JSON.stringify(value);
+  }
+
+  // For other objects, use JSON
   return JSON.stringify(value);
 }
 
@@ -185,22 +227,23 @@ function comparePrices(
 ): ShopChangeField[] {
   const changes: ShopChangeField[] = [];
 
-  // Normalize prices: convert value to number, sort by currency
+  // Normalize prices: convert value to number (rounded to 3 decimals), normalize currency and address
   const normalizePrice = (p: {
     value: number | string;
     currency: string;
     address?: string | null;
   }) => ({
-    value: Number(p.value),
-    currency: p.currency,
-    address: p.address || null,
+    // Round to 3 decimal places to avoid floating point comparison issues
+    value: Math.round(Number(p.value) * 1000) / 1000,
+    currency: (p.currency || '').trim().toUpperCase(),
+    address: (p.address || null)?.trim() || null,
   });
 
   const oldPricesSorted = (existingPrices || [])
     .map(normalizePrice)
     .sort((a, b) => a.currency.localeCompare(b.currency));
 
-  const newPricesSorted = newPrices
+  const newPricesSorted = (newPrices || [])
     .map(normalizePrice)
     .sort((a, b) => a.currency.localeCompare(b.currency));
 
@@ -452,7 +495,7 @@ export async function detectAndRecordItemChanges(
         if (normalizeBool(existing.dynamicPrice) !== normalizeBool(item.dynamicPrice)) {
           changes.push({
             field: 'dynamicPrice',
-            previousValue: existing.dynamicPrice,
+            previousValue: existing.dynamicPrice ?? false,
             newValue: item.dynamicPrice ?? false,
           });
         }
@@ -461,7 +504,7 @@ export async function detectAndRecordItemChanges(
         if (normalizeBool(existing.madeOnDemand) !== normalizeBool(item.madeOnDemand)) {
           changes.push({
             field: 'madeOnDemand',
-            previousValue: existing.madeOnDemand,
+            previousValue: existing.madeOnDemand ?? false,
             newValue: item.madeOnDemand ?? false,
           });
         }
@@ -470,7 +513,7 @@ export async function detectAndRecordItemChanges(
         if (normalizeBool(existing.noLimit) !== normalizeBool(item.noLimit)) {
           changes.push({
             field: 'noLimit',
-            previousValue: existing.noLimit,
+            previousValue: existing.noLimit ?? false,
             newValue: item.noLimit ?? false,
           });
         }
@@ -479,7 +522,7 @@ export async function detectAndRecordItemChanges(
         if (normalizeBool(existing.shopBuysItem) !== normalizeBool(item.shopBuysItem)) {
           changes.push({
             field: 'shopBuysItem',
-            previousValue: existing.shopBuysItem,
+            previousValue: existing.shopBuysItem ?? false,
             newValue: item.shopBuysItem ?? false,
           });
         }
@@ -490,7 +533,7 @@ export async function detectAndRecordItemChanges(
         ) {
           changes.push({
             field: 'requiresInteraction',
-            previousValue: existing.requiresInteraction,
+            previousValue: existing.requiresInteraction ?? false,
             newValue: item.requiresInteraction ?? false,
           });
         }
