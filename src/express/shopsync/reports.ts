@@ -203,11 +203,12 @@ router.get('/price-changes', async (req, res) => {
     if (req.query.since) options.since = new Date(req.query.since as string);
     if (req.query.until) options.until = new Date(req.query.until as string);
 
-    const history = await getPriceChangeLogs(options);
+    const { rows, total } = await getPriceChangeLogs(options);
     res.json({
       ok: true,
-      count: history.length,
-      data: history,
+      count: rows.length,
+      total,
+      data: rows,
     });
   } catch (err) {
     console.error(err);

@@ -548,6 +548,7 @@ Get price/property change records (persistent database only).
 {
   "ok": true,
   "count": 2,
+  "total": 1847,
   "data": [
     {
       "id": 1,
@@ -565,18 +566,20 @@ Get price/property change records (persistent database only).
 }
 ```
 
-| Field             | Type           | Description                            |
-| ----------------- | -------------- | -------------------------------------- |
-| `id`              | number         | Database record ID                     |
-| `shopId`          | string         | Unique shop identifier                 |
-| `shopName`        | string         | Name of the shop                       |
-| `itemName`        | string         | Minecraft item ID                      |
-| `itemDisplayName` | string         | Display name of the item               |
-| `itemHash`        | string         | Unique hash for this listing           |
-| `field`           | string         | Name of the changed property           |
-| `previousValue`   | string \| null | JSON-stringified previous value        |
-| `newValue`        | string \| null | JSON-stringified new value             |
-| `createdAt`       | string         | ISO timestamp when change was recorded |
+| Field             | Type           | Description                                                        |
+| ----------------- | -------------- | ------------------------------------------------------------------ |
+| `count`           | number         | Number of items in the current page                                |
+| `total`           | number         | Total number of records matching the query (ignoring limit/offset) |
+| `id`              | number         | Database record ID                                                 |
+| `shopId`          | string         | Unique shop identifier                                             |
+| `shopName`        | string         | Name of the shop                                                   |
+| `itemName`        | string         | Minecraft item ID                                                  |
+| `itemDisplayName` | string         | Display name of the item                                           |
+| `itemHash`        | string         | Unique hash for this listing                                       |
+| `field`           | string         | Name of the changed property                                       |
+| `previousValue`   | string \| null | JSON-stringified previous value                                    |
+| `newValue`        | string \| null | JSON-stringified new value                                         |
+| `createdAt`       | string         | ISO timestamp when change was recorded                             |
 
 ---
 

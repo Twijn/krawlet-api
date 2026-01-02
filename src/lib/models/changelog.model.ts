@@ -294,12 +294,14 @@ export async function getPriceChangeLogs(
     if (options.until) where.createdAt[Op.lte] = options.until;
   }
 
-  return PriceChangeLog.findAll({
+  const { count: total, rows } = await PriceChangeLog.findAndCountAll({
     where,
     order: [['createdAt', 'DESC']],
     limit: options.limit,
     offset: options.offset,
   });
+
+  return { rows, total };
 }
 
 export async function getChangeLogStats() {
