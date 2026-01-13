@@ -122,7 +122,7 @@ router.get('/', (req, res) => {
 // Serve v1 docs at /docs/v1
 router.get(
   '/v1',
-  swaggerUi.serve[0],
+  ...swaggerUi.serve,
   swaggerUi.setup(openapiSpec, {
     customCss: `
     .swagger-ui .topbar { display: none }
