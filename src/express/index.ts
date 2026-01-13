@@ -11,6 +11,24 @@ import { getPackageName, getPackageVersion } from '../lib/packageData';
 const PORT = process.env.PORT ?? 3000;
 
 const app = express();
+
+// Middleware to track elapsed time
+app.use((req, res, next) => {
+  const startTime = Date.now();
+
+  // Override res.json to include elapsed time
+  const originalJson = res.json.bind(res);
+  res.json = function (body: any) {
+    const elapsed = Date.now() - startTime;
+    if (body && typeof body === 'object' && !Array.isArray(body)) {
+      body.elapsed = elapsed;
+    }
+    return originalJson(body);
+  };
+
+  next();
+});
+
 app.use(
   cors({
     origin: '*',
