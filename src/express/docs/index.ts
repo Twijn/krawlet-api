@@ -11,6 +11,9 @@ const openapiPath = join(process.cwd(), 'openapi.yaml');
 const openapiFile = readFileSync(openapiPath, 'utf8');
 const openapiSpec = YAML.parse(openapiFile);
 
+// Serve swagger-ui static assets at root level for Apache proxy compatibility
+router.use(swaggerUi.serve);
+
 // Documentation index page
 router.get('/', (req, res) => {
   const html = `
@@ -122,7 +125,6 @@ router.get('/', (req, res) => {
 // Serve v1 docs at /docs/v1
 router.get(
   '/v1',
-  ...swaggerUi.serve,
   swaggerUi.setup(openapiSpec, {
     customCss: `
     .swagger-ui .topbar { display: none }
