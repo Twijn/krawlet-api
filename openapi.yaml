@@ -1,0 +1,1093 @@
+openapi: 3.0.3
+info:
+  title: Krawlet API
+  version: 1.0.0
+  description: |
+    REST API for the Krawlet Minecraft economy tracking system.
+
+    ## Authentication
+    Most endpoints support optional API key authentication via Bearer token. 
+    Include your API key in the `Authorization` header:
+    ```
+    Authorization: Bearer kraw_your_api_key_here
+    ```
+
+    ## Rate Limiting
+    - Anonymous requests: 100 requests/hour
+    - Free tier: 1,000 requests/hour
+    - Premium tier: 5,000 requests/hour
+
+    Rate limit information is included in response headers:
+    - `X-RateLimit-Limit`: Maximum requests per hour
+    - `X-RateLimit-Remaining`: Requests remaining in current window
+    - `X-RateLimit-Reset`: Unix timestamp when the limit resets
+
+  contact:
+    name: Krawlet API Support
+    url: https://github.com/Twijn/krawlet-api
+
+servers:
+  - url: /v1
+    description: Production API v1
+
+security:
+  - ApiKeyAuth: []
+  - {}
+
+tags:
+  - name: Players
+    description: Player data and address lookups
+  - name: Shops
+    description: Shop information and inventory
+  - name: Items
+    description: Item listings and prices
+  - name: Turtles
+    description: Turtle tracking and statistics
+  - name: Addresses
+    description: Known blockchain addresses
+  - name: Storage
+    description: Ender storage data management
+  - name: Reports
+    description: ShopSync reports and change logs
+  - name: Health
+    description: API health checks
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      description: Check if the API is operational
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                data:
+                  status: 'ok'
+                  timestamp: '2026-01-12T10:30:00.000Z'
+                meta:
+                  timestamp: '2026-01-12T10:30:00.000Z'
+                  elapsed: 5
+                  version: '1.0.0'
+                  requestId: 'abc-123'
+                  rateLimit:
+                    limit: 1000
+                    remaining: 999
+                    reset: 1736686200
+
+  /players:
+    get:
+      tags: [Players]
+      summary: Get players
+      description: Retrieve players by addresses, names, UUIDs, or get all players
+      parameters:
+        - name: addresses
+          in: query
+          description: Comma-separated list of blockchain addresses
+          schema:
+            type: string
+          example: 'k123abc,k456def'
+        - name: names
+          in: query
+          description: Comma-separated list of player names
+          schema:
+            type: string
+          example: 'Player1,Player2'
+        - name: uuids
+          in: query
+          description: Comma-separated list of player UUIDs
+          schema:
+            type: string
+          example: 'uuid1,uuid2'
+      responses:
+        '200':
+          description: List of players
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Player'
+
+  /shops:
+    get:
+      tags: [Shops]
+      summary: Get all shops
+      description: Retrieve a list of all shops with their items and addresses
+      responses:
+        '200':
+          description: List of shops
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Shop'
+
+    post:
+      tags: [Shops]
+      summary: Create or update shop
+      description: Submit ShopSync data to create or update a shop (requires ShopSync authentication)
+      security:
+        - ShopSyncAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShopSyncData'
+      responses:
+        '201':
+          description: Shop updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /shops/{id}:
+    get:
+      tags: [Shops]
+      summary: Get shop by ID
+      description: Retrieve detailed information about a specific shop
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Shop ID (computer ID)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Shop details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Shop'
+        '404':
+          description: Shop not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /shops/{id}/items:
+    get:
+      tags: [Shops]
+      summary: Get shop items
+      description: Retrieve all items/listings for a specific shop
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Shop ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of items
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Item'
+
+  /items:
+    get:
+      tags: [Items]
+      summary: Get all items
+      description: Retrieve all item listings with prices
+      responses:
+        '200':
+          description: List of items
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Item'
+
+  /turtles:
+    get:
+      tags: [Turtles]
+      summary: Get all turtles
+      description: Retrieve all registered turtles with their stats
+      responses:
+        '200':
+          description: List of turtles
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Turtle'
+
+  /turtles/{id}:
+    get:
+      tags: [Turtles]
+      summary: Get turtle by ID
+      description: Retrieve detailed information about a specific turtle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Turtle ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Turtle details
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Turtle'
+        '404':
+          description: Turtle not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags: [Turtles]
+      summary: Create or update turtle
+      description: Register a new turtle or update existing turtle information
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Turtle ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TurtleUpdate'
+      responses:
+        '200':
+          description: Turtle updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Turtle'
+        '201':
+          description: Turtle created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Turtle'
+
+    delete:
+      tags: [Turtles]
+      summary: Delete turtle
+      description: Remove a turtle from the system
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Turtle ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Turtle deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Turtle not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /turtles/{id}/stats:
+    patch:
+      tags: [Turtles]
+      summary: Update turtle stats
+      description: Update statistics for a specific turtle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Turtle ID
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties:
+                type: number
+              example:
+                blocks_mined: 1500
+                fuel_consumed: 3200
+      responses:
+        '200':
+          description: Stats updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Turtle'
+        '404':
+          description: Turtle not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /addresses:
+    get:
+      tags: [Addresses]
+      summary: Get known addresses
+      description: Retrieve list of all known blockchain addresses
+      responses:
+        '200':
+          description: List of known addresses
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/KnownAddress'
+
+  /storage:
+    get:
+      tags: [Storage]
+      summary: Get ender storage data
+      description: Retrieve the last stored ender storage data
+      responses:
+        '200':
+          description: Ender storage data
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          data:
+                            type: object
+                          retrievedAt:
+                            type: string
+                            format: date-time
+        '404':
+          description: No storage data available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags: [Storage]
+      summary: Store ender storage data
+      description: Submit new ender storage data (requires authentication)
+      security:
+        - EnderStorageAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Data stored successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reports/stats:
+    get:
+      tags: [Reports]
+      summary: Get report statistics
+      description: Retrieve overall statistics for ShopSync reports
+      responses:
+        '200':
+          description: Report statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /reports/validation-failures:
+    get:
+      tags: [Reports]
+      summary: Get validation failures
+      description: Retrieve recent validation failures
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of records to return
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Validation failures
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /reports/successful-posts:
+    get:
+      tags: [Reports]
+      summary: Get successful posts
+      description: Retrieve recent successful ShopSync posts
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of records to return
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Successful posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /reports/shop-changes:
+    get:
+      tags: [Reports]
+      summary: Get shop changes
+      description: Retrieve recent shop change events
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of records to return
+          schema:
+            type: integer
+            default: 50
+        - name: shopId
+          in: query
+          description: Filter by shop ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Shop changes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /reports/item-changes:
+    get:
+      tags: [Reports]
+      summary: Get item changes
+      description: Retrieve recent item change events
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of records to return
+          schema:
+            type: integer
+            default: 50
+        - name: shopId
+          in: query
+          description: Filter by shop ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Item changes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /reports/shop-change-logs:
+    get:
+      tags: [Reports]
+      summary: Get shop change logs
+      description: Retrieve shop change logs from database
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+        - name: shopId
+          in: query
+          schema:
+            type: string
+        - name: since
+          in: query
+          description: ISO 8601 date string
+          schema:
+            type: string
+            format: date-time
+        - name: until
+          in: query
+          description: ISO 8601 date string
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Shop change logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /reports/item-change-logs:
+    get:
+      tags: [Reports]
+      summary: Get item change logs
+      description: Retrieve item change logs from database
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+        - name: shopId
+          in: query
+          schema:
+            type: string
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: until
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Item change logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /reports/price-change-logs:
+    get:
+      tags: [Reports]
+      summary: Get price change logs
+      description: Retrieve price change logs from database
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          schema:
+            type: integer
+        - name: shopId
+          in: query
+          schema:
+            type: string
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: until
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Price change logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API Key
+      description: 'API key authentication. Format: Bearer kraw_your_key_here'
+
+    ShopSyncAuth:
+      type: http
+      scheme: bearer
+      description: ShopSync authentication token
+
+    EnderStorageAuth:
+      type: http
+      scheme: bearer
+      description: Ender storage authentication token
+
+  schemas:
+    SuccessResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          description: Response data (varies by endpoint)
+        meta:
+          type: object
+          required:
+            - timestamp
+            - elapsed
+            - version
+            - requestId
+          properties:
+            timestamp:
+              type: string
+              format: date-time
+              description: Server timestamp
+            elapsed:
+              type: integer
+              description: Request processing time in milliseconds
+            version:
+              type: string
+              description: API version
+              example: '1.0.0'
+            requestId:
+              type: string
+              format: uuid
+              description: Unique request identifier
+            rateLimit:
+              type: object
+              description: Rate limit information (when authenticated)
+              properties:
+                limit:
+                  type: integer
+                  description: Maximum requests per hour
+                remaining:
+                  type: integer
+                  description: Remaining requests in window
+                reset:
+                  type: integer
+                  description: Unix timestamp when limit resets
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+        - meta
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          required:
+            - code
+            - message
+          properties:
+            code:
+              type: string
+              description: Error code
+              enum:
+                - VALIDATION_ERROR
+                - UNAUTHORIZED
+                - INVALID_API_KEY
+                - RATE_LIMIT_EXCEEDED
+                - NOT_FOUND
+                - INTERNAL_ERROR
+                - BAD_REQUEST
+            message:
+              type: string
+              description: Human-readable error message
+            details:
+              type: object
+              description: Additional error details
+        meta:
+          type: object
+          properties:
+            timestamp:
+              type: string
+              format: date-time
+            elapsed:
+              type: integer
+            version:
+              type: string
+            requestId:
+              type: string
+              format: uuid
+
+    Player:
+      type: object
+      properties:
+        name:
+          type: string
+        uuid:
+          type: string
+        addresses:
+          type: array
+          items:
+            type: string
+
+    Shop:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        owner:
+          type: string
+          nullable: true
+        computerId:
+          type: integer
+        softwareName:
+          type: string
+          nullable: true
+        softwareVersion:
+          type: string
+          nullable: true
+        locationCoordinates:
+          type: string
+          nullable: true
+        locationDescription:
+          type: string
+          nullable: true
+        locationDimension:
+          type: string
+          nullable: true
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+        addresses:
+          type: array
+          items:
+            type: string
+        createdDate:
+          type: string
+          format: date-time
+          nullable: true
+        updatedDate:
+          type: string
+          format: date-time
+          nullable: true
+
+    Item:
+      type: object
+      properties:
+        id:
+          type: string
+        shopId:
+          type: string
+        itemName:
+          type: string
+        itemNbt:
+          type: string
+          nullable: true
+        itemDisplayName:
+          type: string
+          nullable: true
+        itemDescription:
+          type: string
+          nullable: true
+        shopBuysItem:
+          type: boolean
+        noLimit:
+          type: boolean
+        dynamicPrice:
+          type: boolean
+        madeOnDemand:
+          type: boolean
+        requiresInteraction:
+          type: boolean
+        stock:
+          type: integer
+        prices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Price'
+        addresses:
+          type: array
+          items:
+            type: string
+
+    Price:
+      type: object
+      properties:
+        id:
+          type: string
+        value:
+          type: number
+          format: double
+        currency:
+          type: string
+        address:
+          type: string
+          nullable: true
+        requiredMeta:
+          type: string
+          nullable: true
+
+    Turtle:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+          nullable: true
+        relativePosition:
+          type: object
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+            z:
+              type: number
+        absolutePosition:
+          type: object
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+            z:
+              type: number
+        fuel:
+          type: integer
+          nullable: true
+        stats:
+          type: object
+          additionalProperties:
+            type: number
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TurtleUpdate:
+      type: object
+      properties:
+        label:
+          type: string
+        relativePosition:
+          type: object
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+            z:
+              type: number
+        absolutePosition:
+          type: object
+          properties:
+            x:
+              type: number
+            y:
+              type: number
+            z:
+              type: number
+        fuel:
+          type: integer
+        stats:
+          type: object
+          additionalProperties:
+            type: number
+
+    KnownAddress:
+      type: object
+      properties:
+        address:
+          type: string
+        name:
+          type: string
+
+    ShopSyncData:
+      type: object
+      description: Full ShopSync data structure for shop creation/updates
+      required:
+        - info
+        - items
+      properties:
+        info:
+          type: object
+          required:
+            - name
+            - computerID
+          properties:
+            name:
+              type: string
+            description:
+              type: string
+            owner:
+              type: string
+            computerID:
+              type: integer
+            software:
+              type: object
+              properties:
+                name:
+                  type: string
+                version:
+                  type: string
+            location:
+              type: object
+              properties:
+                coordinates:
+                  type: array
+                  items:
+                    type: number
+                  minItems: 3
+                  maxItems: 3
+                description:
+                  type: string
+                dimension:
+                  type: string
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - prices
+            properties:
+              name:
+                type: string
+              nbt:
+                type: string
+              displayName:
+                type: string
+              description:
+                type: string
+              shopBuysItem:
+                type: boolean
+              noLimit:
+                type: boolean
+              dynamicPrice:
+                type: boolean
+              madeOnDemand:
+                type: boolean
+              requiresInteraction:
+                type: boolean
+              stock:
+                type: integer
+              prices:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - value
+                    - currency
+                  properties:
+                    value:
+                      type: number
+                    currency:
+                      type: string
+                    address:
+                      type: string
+                    requiredMeta:
+                      type: string

@@ -21,6 +21,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/object-hash": "^3.0.6",
+    "@types/swagger-ui-express": "^4.1.8",
     "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.43.0",
     "@typescript-eslint/parser": "^8.43.0",
@@ -45,6 +46,8 @@
     "mysql2": "^3.14.3",
     "object-hash": "^3.0.0",
     "reconnectedchat": "^3.4.1",
-    "sequelize": "^6.37.7"
+    "sequelize": "^6.37.7",
+    "swagger-ui-express": "^5.0.1",
+    "yaml": "^2.8.2"
   }
 }

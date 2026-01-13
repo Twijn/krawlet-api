@@ -1,4 +1,8 @@
 import { Router } from 'express';
+import swaggerUi from 'swagger-ui-express';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+import YAML from 'yaml';
 import { requestIdMiddleware } from './middleware/requestId';
 import { responseFormatterMiddleware } from './middleware/responseFormatter';
 import { optionalApiKeyAuth } from './middleware/apiKeyAuth';
@@ -14,6 +18,27 @@ import reportsRouter from './routes/reports';
 import healthRouter from './routes/health';
 
 const router = Router();
+
+// Load OpenAPI spec
+const openapiPath = join(__dirname, '../../../openapi.yaml');
+const openapiFile = readFileSync(openapiPath, 'utf8');
+const openapiSpec = YAML.parse(openapiFile);
+
+// Serve OpenAPI docs at /v1/docs (without rate limiting or auth)
+router.use('/docs', swaggerUi.serve);
+router.get(
+  '/docs',
+  swaggerUi.setup(openapiSpec, {
+    customCss: `
+      .swagger-ui .topbar { display: none }
+      .swagger-ui { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+      .swagger-ui .info .title { font-size: 2.5rem; }
+      .swagger-ui .scheme-container { background: #fafafa; padding: 1rem; border-radius: 4px; }
+    `,
+    customSiteTitle: 'Krawlet API Documentation',
+    customfavIcon: '/favicon.ico',
+  }),
+);
 
 // Apply V1 middleware in order
 router.use(requestIdMiddleware);
@@ -45,7 +70,8 @@ router.get('/', (req, res) => {
       '/v1/reports',
       '/v1/health',
     ],
-    documentation: 'https://github.com/Twijn/krawlet-api',
+    documentation: '/v1/docs',
+    github: 'https://github.com/Twijn/krawlet-api',
   });
 });
 
