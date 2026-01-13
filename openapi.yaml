@@ -27,9 +27,9 @@ info:
     url: https://github.com/Twijn/krawlet-api
 
 servers:
-  - url: https://api.krawlet.cc/v1
-    description: Production API v1
-  - url: http://localhost:3321/api/v1
+  - url: https://api.krawlet.cc
+    description: Production API
+  - url: http://localhost:3321/api
     description: Local development
 
 security:
@@ -55,7 +55,7 @@ tags:
     description: API health checks
 
 paths:
-  /health:
+  /v1/health:
     get:
       tags: [Health]
       summary: Health check
@@ -82,7 +82,7 @@ paths:
                     remaining: 999
                     reset: 1736686200
 
-  /players:
+  /v1/players:
     get:
       tags: [Players]
       summary: Get players
@@ -121,7 +121,7 @@ paths:
                         items:
                           $ref: '#/components/schemas/Player'
 
-  /shops:
+  /v1/shops:
     get:
       tags: [Shops]
       summary: Get all shops
@@ -173,7 +173,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /shops/{id}:
+  /v1/shops/{id}:
     get:
       tags: [Shops]
       summary: Get shop by ID
@@ -231,7 +231,7 @@ paths:
                         items:
                           $ref: '#/components/schemas/Item'
 
-  /items:
+  /v1/items:
     get:
       tags: [Items]
       summary: Get all items
@@ -251,7 +251,7 @@ paths:
                         items:
                           $ref: '#/components/schemas/Item'
 
-  /turtles:
+  /v1/turtles:
     get:
       tags: [Turtles]
       summary: Get all turtles
@@ -271,7 +271,7 @@ paths:
                         items:
                           $ref: '#/components/schemas/Turtle'
 
-  /turtles/{id}:
+  /v1/turtles/{id}:
     get:
       tags: [Turtles]
       summary: Get turtle by ID
@@ -410,7 +410,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /addresses:
+  /v1/addresses:
     get:
       tags: [Addresses]
       summary: Get known addresses
@@ -430,7 +430,7 @@ paths:
                         items:
                           $ref: '#/components/schemas/KnownAddress'
 
-  /storage:
+  /v1/storage:
     get:
       tags: [Storage]
       summary: Get ender storage data
@@ -486,7 +486,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /reports/stats:
+  /v1/reports/stats:
     get:
       tags: [Reports]
       summary: Get report statistics
@@ -499,7 +499,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
 
-  /reports/validation-failures:
+  /v1/reports/validation-failures:
     get:
       tags: [Reports]
       summary: Get validation failures
@@ -519,7 +519,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
 
-  /reports/successful-posts:
+  /v1/reports/successful-posts:
     get:
       tags: [Reports]
       summary: Get successful posts
@@ -539,7 +539,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
 
-  /reports/shop-changes:
+  /v1/reports/shop-changes:
     get:
       tags: [Reports]
       summary: Get shop changes
@@ -564,7 +564,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
 
-  /reports/item-changes:
+  /v1/reports/item-changes:
     get:
       tags: [Reports]
       summary: Get item changes
@@ -589,7 +589,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
 
-  /reports/shop-change-logs:
+  /v1/reports/shop-change-logs:
     get:
       tags: [Reports]
       summary: Get shop change logs
@@ -627,7 +627,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
 
-  /reports/item-change-logs:
+  /v1/reports/item-change-logs:
     get:
       tags: [Reports]
       summary: Get item change logs
@@ -663,7 +663,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
 
-  /reports/price-change-logs:
+  /v1/reports/price-change-logs:
     get:
       tags: [Reports]
       summary: Get price change logs
