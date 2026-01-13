@@ -31,3 +31,4 @@ export * from './knownaddress.model';
 export * from './turtle.model';
 export * from './turtlestat.model';
 export * from './changelog.model';
+export * from './apikey.model';

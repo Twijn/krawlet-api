@@ -1,0 +1,771 @@
+{
+  "info": {
+    "name": "Krawlet API V1",
+    "_postman_id": "krawlet-api-v1-2026",
+    "description": "Complete API collection for Krawlet API V1 with rate limiting, authentication, and standardized responses.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "kraw_your_api_key_here",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Root & Health",
+      "item": [
+        {
+          "name": "API Root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "Get API information and available endpoint groups"
+          }
+        },
+        {
+          "name": "V1 Root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1"]
+            },
+            "description": "Get V1 API endpoints list"
+          }
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "health"]
+            },
+            "description": "Basic health check with database connectivity"
+          }
+        },
+        {
+          "name": "Detailed Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/health/detailed",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "health", "detailed"]
+            },
+            "description": "Detailed health check including memory and database status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Players",
+      "item": [
+        {
+          "name": "Get All Players",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/players",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "players"]
+            },
+            "description": "Get all players in the system"
+          }
+        },
+        {
+          "name": "Get Players by Addresses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/players?addresses=k1234567,k7654321",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "players"],
+              "query": [
+                {
+                  "key": "addresses",
+                  "value": "k1234567,k7654321",
+                  "description": "Comma-separated list of Krist addresses"
+                }
+              ]
+            },
+            "description": "Get players by their Krist addresses"
+          }
+        },
+        {
+          "name": "Get Players by Names",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/players?names=player1,player2",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "players"],
+              "query": [
+                {
+                  "key": "names",
+                  "value": "player1,player2",
+                  "description": "Comma-separated list of player names"
+                }
+              ]
+            },
+            "description": "Get players by their names"
+          }
+        },
+        {
+          "name": "Get Players by UUIDs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/players?uuids=uuid1,uuid2",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "players"],
+              "query": [
+                {
+                  "key": "uuids",
+                  "value": "uuid1,uuid2",
+                  "description": "Comma-separated list of UUIDs"
+                }
+              ]
+            },
+            "description": "Get players by their UUIDs"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Shops",
+      "item": [
+        {
+          "name": "Get All Shops",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/shops",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "shops"]
+            },
+            "description": "Get all shops"
+          }
+        },
+        {
+          "name": "Get Shop by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/shops/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "shops", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Shop ID"
+                }
+              ]
+            },
+            "description": "Get a specific shop by ID"
+          }
+        },
+        {
+          "name": "Get Shop Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/shops/:id/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "shops", ":id", "items"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Shop ID"
+                }
+              ]
+            },
+            "description": "Get all items for a specific shop"
+          }
+        },
+        {
+          "name": "Update Shop (Authenticated)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{SHOPSYNC_TOKEN}}",
+                "description": "ShopSync API Token"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"info\": {\n    \"name\": \"Test Shop\",\n    \"description\": \"A test shop\",\n    \"owner\": \"testowner\",\n    \"location\": {\n      \"coordinates\": \"100,64,200\",\n      \"description\": \"Town Center\"\n    },\n    \"software\": \"ShopSync v1.0\",\n    \"multiShop\": false\n  },\n  \"items\": [\n    {\n      \"item\": {\n        \"name\": \"minecraft:diamond\",\n        \"displayName\": \"Diamond\",\n        \"nbt\": null\n      },\n      \"prices\": {\n        \"sell\": 10,\n        \"buy\": 5\n      },\n      \"stock\": 100\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/shops",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "shops"]
+            },
+            "description": "Create or update a shop (requires ShopSync authentication)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Items",
+      "item": [
+        {
+          "name": "Get All Items",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "items"]
+            },
+            "description": "Get all items/listings across all shops"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Turtles",
+      "item": [
+        {
+          "name": "Get All Turtles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/turtles",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "turtles"]
+            },
+            "description": "Get all turtles with their stats"
+          }
+        },
+        {
+          "name": "Get Turtle by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/turtles/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "turtles", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "12345",
+                  "description": "Turtle computer ID"
+                }
+              ]
+            },
+            "description": "Get a specific turtle by ID"
+          }
+        },
+        {
+          "name": "Create/Update Turtle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Mining Turtle #1\",\n  \"relativePosition\": {\n    \"x\": 10,\n    \"y\": 64,\n    \"z\": 20\n  },\n  \"absolutePosition\": {\n    \"x\": 1010,\n    \"y\": 64,\n    \"z\": 1020\n  },\n  \"fuel\": 5000,\n  \"stats\": {\n    \"blocksMined\": 1234,\n    \"itemsCollected\": 567\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/turtles/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "turtles", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "12345",
+                  "description": "Turtle computer ID"
+                }
+              ]
+            },
+            "description": "Create or update a turtle"
+          }
+        },
+        {
+          "name": "Update Turtle Stats",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"blocksMined\": 1500,\n  \"itemsCollected\": 700\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/turtles/:id/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "turtles", ":id", "stats"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "12345",
+                  "description": "Turtle computer ID"
+                }
+              ]
+            },
+            "description": "Update turtle statistics"
+          }
+        },
+        {
+          "name": "Update Turtle Position",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"relativePosition\": {\n    \"x\": 15,\n    \"y\": 65,\n    \"z\": 25\n  },\n  \"absolutePosition\": {\n    \"x\": 1015,\n    \"y\": 65,\n    \"z\": 1025\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/turtles/:id/position",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "turtles", ":id", "position"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "12345",
+                  "description": "Turtle computer ID"
+                }
+              ]
+            },
+            "description": "Update turtle position"
+          }
+        },
+        {
+          "name": "Delete Turtle",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/turtles/:id",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "turtles", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "12345",
+                  "description": "Turtle computer ID"
+                }
+              ]
+            },
+            "description": "Delete a turtle and its stats"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Known Addresses",
+      "item": [
+        {
+          "name": "Get Known Addresses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/addresses",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "addresses"]
+            },
+            "description": "Get all known Krist addresses"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ender Storage",
+      "item": [
+        {
+          "name": "Get Ender Storage Data",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/storage",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "storage"]
+            },
+            "description": "Get the latest ender storage data"
+          }
+        },
+        {
+          "name": "Update Ender Storage (Authenticated)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{ESTORAGE_TOKEN}}",
+                "description": "Ender Storage API Token"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [\n    {\n      \"name\": \"minecraft:diamond\",\n      \"count\": 64\n    }\n  ],\n  \"timestamp\": \"2026-01-12T00:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/v1/storage",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "storage"]
+            },
+            "description": "Update ender storage data (requires authentication)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports & Analytics",
+      "item": [
+        {
+          "name": "Get Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/reports/stats",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "reports", "stats"]
+            },
+            "description": "Get overall statistics about ShopSync data"
+          }
+        },
+        {
+          "name": "Get Validation Failures",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/reports/validation-failures?limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "reports", "validation-failures"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Max number of records to return"
+                }
+              ]
+            },
+            "description": "Get validation failure records"
+          }
+        },
+        {
+          "name": "Get Successful Posts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/reports/successful-posts?limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "reports", "successful-posts"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Max number of records to return"
+                }
+              ]
+            },
+            "description": "Get successful ShopSync POST records"
+          }
+        },
+        {
+          "name": "Get Shop Changes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/reports/shop-changes?limit=10&shopId=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "reports", "shop-changes"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Max number of records to return"
+                },
+                {
+                  "key": "shopId",
+                  "value": "1",
+                  "description": "Filter by shop ID",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get shop change records from memory"
+          }
+        },
+        {
+          "name": "Get Item Changes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/reports/item-changes?limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "reports", "item-changes"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Max number of records to return"
+                },
+                {
+                  "key": "shopId",
+                  "value": "1",
+                  "description": "Filter by shop ID",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get item change records from memory"
+          }
+        },
+        {
+          "name": "Get Shop Change Logs (DB)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/reports/shop-change-logs?limit=10&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "reports", "shop-change-logs"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "description": "Max number of records to return"
+                },
+                {
+                  "key": "offset",
+                  "value": "0",
+                  "description": "Pagination offset"
+                },
+                {
+                  "key": "shopId",
+                  "value": "1",
+                  "description": "Filter by shop ID",
+                  "disabled": true
+                },
+                {
+                  "key": "since",
+                  "value": "2026-01-01T00:00:00.000Z",
+                  "description": "ISO date for start of range",
+                  "disabled": true
+                },
+                {
+                  "key": "until",
+                  "value": "2026-01-31T23:59:59.999Z",
+                  "description": "ISO date for end of range",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get shop change logs from database"
+          }
+        },
+        {
+          "name": "Get Item Change Logs (DB)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/reports/item-change-logs?limit=10&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "reports", "item-change-logs"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "shopId",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "since",
+                  "value": "2026-01-01T00:00:00.000Z",
+                  "disabled": true
+                },
+                {
+                  "key": "until",
+                  "value": "2026-01-31T23:59:59.999Z",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get item change logs from database"
+          }
+        },
+        {
+          "name": "Get Price Change Logs (DB)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/reports/price-change-logs?limit=10&offset=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "reports", "price-change-logs"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "shopId",
+                  "value": "1",
+                  "disabled": true
+                },
+                {
+                  "key": "since",
+                  "value": "2026-01-01T00:00:00.000Z",
+                  "disabled": true
+                },
+                {
+                  "key": "until",
+                  "value": "2026-01-31T23:59:59.999Z",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Get price change logs from database"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication Examples",
+      "item": [
+        {
+          "name": "Anonymous Request (100/hour)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/players",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "players"]
+            },
+            "description": "Example of anonymous request with 100 requests/hour limit. Check X-RateLimit-* headers."
+          }
+        },
+        {
+          "name": "Authenticated Request (1000/hour)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{apiKey}}",
+                "description": "API Key for authentication"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/players",
+              "host": ["{{baseUrl}}"],
+              "path": ["v1", "players"]
+            },
+            "description": "Example of authenticated request with 1000 requests/hour limit. Check X-RateLimit-* headers."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Legacy Endpoints (Compatibility)",
+      "item": [
+        {
+          "name": "Legacy - All Players",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/playeraddresses/all",
+              "host": ["{{baseUrl}}"],
+              "path": ["playeraddresses", "all"]
+            },
+            "description": "Legacy endpoint - still works for backward compatibility"
+          }
+        },
+        {
+          "name": "Legacy - Players by Address",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/playeraddresses/address/:addresses",
+              "host": ["{{baseUrl}}"],
+              "path": ["playeraddresses", "address", ":addresses"],
+              "variable": [
+                {
+                  "key": "addresses",
+                  "value": "k1234567,k7654321"
+                }
+              ]
+            },
+            "description": "Legacy endpoint - still works for backward compatibility"
+          }
+        }
+      ]
+    }
+  ]
+}
