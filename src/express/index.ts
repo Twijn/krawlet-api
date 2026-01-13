@@ -10,10 +10,7 @@ import { getPackageName, getPackageVersion } from '../lib/packageData';
 
 // Import V1 router
 import v1Router from './v1';
-import { rateLimiterMiddleware } from './v1/middleware/rateLimiter';
-import { optionalApiKeyAuth } from './v1/middleware/apiKeyAuth';
-import { requestIdMiddleware } from './v1/middleware/requestId';
-import { responseFormatterMiddleware } from './v1/middleware/responseFormatter';
+import docsRouter from './docs';
 
 const PORT = process.env.PORT ?? 3000;
 
@@ -27,14 +24,11 @@ app.use(
   }),
 );
 
-// Apply rate limiting to ALL routes (legacy and V1)
-app.use(requestIdMiddleware);
-app.use(responseFormatterMiddleware);
-app.use(optionalApiKeyAuth);
-app.use(rateLimiterMiddleware);
+// Mount docs
+app.use('/docs', docsRouter);
 
 // Mount V1 API
-app.use('/v1', v1Router);
+app.use('/api/v1', v1Router);
 
 // Legacy endpoints (keep unchanged)
 app.use('/playeraddresses', playeraddresses);
@@ -48,6 +42,8 @@ app.get('/', (req, res) => {
     ok: true,
     data: {
       name: getPackageName(),
+      apiVersions: ['/api/v1'],
+      documentation: '/docs',
       version: getPackageVersion(),
       apiVersion: 'v1',
       endpoints: {
