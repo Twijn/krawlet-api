@@ -27,31 +27,48 @@ app.use(
 // Mount docs
 app.use('/docs', docsRouter);
 
-// Mount V1 API
-app.use('/api/v1', v1Router);
+// Create /api router for all API endpoints
+const apiRouter = express.Router();
 
-// Legacy endpoints (keep unchanged)
-app.use('/playeraddresses', playeraddresses);
-app.use('/enderstorage', enderstorage);
-app.use('/shopsync', shopsync);
-app.use('/knownaddresses', knownaddresses);
-app.use('/turtles', turtles);
-
-app.get('/', (req, res) => {
+// API info endpoint at /api root
+apiRouter.get('/', (req, res) => {
   res.json({
     ok: true,
     data: {
       name: getPackageName(),
-      apiVersions: ['/api/v1'],
-      documentation: '/docs',
       version: getPackageVersion(),
-      apiVersion: 'v1',
+      apiVersions: ['v1'],
+      documentation: '/docs',
       endpoints: {
-        legacy: ['/playeraddresses', '/enderstorage', '/shopsync', '/knownaddresses', '/turtles'],
-        v1: '/v1',
+        v1: '/api/v1',
+        legacy: [
+          '/api/playeraddresses',
+          '/api/enderstorage',
+          '/api/shopsync',
+          '/api/knownaddresses',
+          '/api/turtles',
+        ],
       },
     },
   });
+});
+
+// Mount V1 API
+apiRouter.use('/v1', v1Router);
+
+// Legacy endpoints under /api
+apiRouter.use('/playeraddresses', playeraddresses);
+apiRouter.use('/enderstorage', enderstorage);
+apiRouter.use('/shopsync', shopsync);
+apiRouter.use('/knownaddresses', knownaddresses);
+apiRouter.use('/turtles', turtles);
+
+// Mount the /api router
+app.use('/api', apiRouter);
+
+// Redirect root to docs
+app.get('/', (req, res) => {
+  res.redirect('/docs');
 });
 
 app.use((req, res) => {
