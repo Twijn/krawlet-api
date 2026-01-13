@@ -91,13 +91,13 @@ paths:
           description: Comma-separated list of addresses
           schema:
             type: string
-          example: 'ktwijnmall,kkrawletii'
+          example: 'ks0d5iqb6p'
         - name: names
           in: query
           description: Comma-separated list of player names
           schema:
             type: string
-          example: 'Twijn,ivcr'
+          example: 'Twijn'
         - name: uuids
           in: query
           description: Comma-separated list of player UUIDs
