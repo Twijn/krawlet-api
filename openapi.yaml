@@ -27,7 +27,7 @@ info:
     url: https://github.com/Twijn/krawlet-api
 
 servers:
-  - url: /v1
+  - url: /api/v1
     description: Production API v1
 
 security:
@@ -44,7 +44,7 @@ tags:
   - name: Turtles
     description: Turtle tracking and statistics
   - name: Addresses
-    description: Known blockchain addresses
+    description: Known Kromer addresses
   - name: Storage
     description: Ender storage data management
   - name: Reports
@@ -88,22 +88,22 @@ paths:
       parameters:
         - name: addresses
           in: query
-          description: Comma-separated list of blockchain addresses
+          description: Comma-separated list of addresses
           schema:
             type: string
-          example: 'k123abc,k456def'
+          example: 'ktwijnmall,kkrawletii'
         - name: names
           in: query
           description: Comma-separated list of player names
           schema:
             type: string
-          example: 'Player1,Player2'
+          example: 'Twijn,ivcr'
         - name: uuids
           in: query
           description: Comma-separated list of player UUIDs
           schema:
             type: string
-          example: 'uuid1,uuid2'
+          example: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
       responses:
         '200':
           description: List of players
@@ -412,7 +412,7 @@ paths:
     get:
       tags: [Addresses]
       summary: Get known addresses
-      description: Retrieve list of all known blockchain addresses
+      description: Retrieve list of all known addresses
       responses:
         '200':
           description: List of known addresses
