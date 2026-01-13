@@ -96,7 +96,7 @@ router.get('/', (req, res) => {
       
       <div class="version">
         <h2>
-          <a href="/docs/v1">Version 1</a>
+          <a href="/v1">Version 1</a>
           <span class="badge">STABLE</span>
         </h2>
         <p>REST API with authentication, rate limiting, and comprehensive endpoints for shop tracking, item management, and player data.</p>
@@ -110,7 +110,7 @@ router.get('/', (req, res) => {
 
       <div class="footer">
         <a href="https://github.com/Twijn/krawlet-api" target="_blank">GitHub</a> · 
-        <a href="/api/v1">API Root</a>
+        <a href="https://api.krawlet.cc/v1" target="_blank">API Root</a>
       </div>
     </body>
     </html>

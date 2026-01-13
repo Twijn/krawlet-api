@@ -27,8 +27,10 @@ info:
     url: https://github.com/Twijn/krawlet-api
 
 servers:
-  - url: /api/v1
+  - url: https://api.krawlet.cc/v1
     description: Production API v1
+  - url: http://localhost:3321/api/v1
+    description: Local development
 
 security:
   - ApiKeyAuth: []
