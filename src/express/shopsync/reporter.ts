@@ -637,16 +637,20 @@ export async function detectAndRecordItemChanges(
       // Log price/property changes
       for (const item of updated) {
         for (const change of item.changes) {
-          await PriceChangeLog.create({
-            shopId,
-            shopName: data.info.name,
-            itemName: item.name,
-            itemDisplayName: item.displayName,
-            itemHash: item.hash,
-            field: change.field,
-            previousValue: stringifyValue(change.previousValue),
-            newValue: stringifyValue(change.newValue),
-          });
+          // Only log actual price changes to price_change_logs
+          // Stock and other property changes should not be in price change logs
+          if (change.field === 'prices') {
+            await PriceChangeLog.create({
+              shopId,
+              shopName: data.info.name,
+              itemName: item.name,
+              itemDisplayName: item.displayName,
+              itemHash: item.hash,
+              field: change.field,
+              previousValue: stringifyValue(change.previousValue),
+              newValue: stringifyValue(change.newValue),
+            });
+          }
         }
       }
     } catch (err) {
