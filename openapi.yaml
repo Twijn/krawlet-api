@@ -29,7 +29,7 @@ info:
 servers:
   - url: https://api.krawlet.cc
     description: Production API
-  - url: http://localhost:3321/api
+  - url: http://localhost:3330/api
     description: Local development
 
 security:
@@ -37,22 +37,37 @@ security:
   - {}
 
 tags:
+  - name: Health
+    description: API health checks
   - name: Players
     description: Player data and address lookups
+  - name: Addresses
+    description: Known Kromer addresses
   - name: Shops
     description: Shop information and inventory
   - name: Items
     description: Item listings and prices
-  - name: Turtles
-    description: Turtle tracking and statistics
-  - name: Addresses
-    description: Known Kromer addresses
   - name: Storage
     description: Ender storage data management
   - name: Reports
     description: ShopSync reports and change logs
-  - name: Health
-    description: API health checks
+
+x-tagGroups:
+  - name: Getting Started
+    tags:
+      - Health
+  - name: Core API
+    tags:
+      - Players
+      - Addresses
+  - name: Shop Data
+    tags:
+      - Shops
+      - Items
+  - name: Data Management
+    tags:
+      - Storage
+      - Reports
 
 paths:
   /v1/health:
@@ -86,29 +101,56 @@ paths:
     get:
       tags: [Players]
       summary: Get players
-      description: Retrieve players by addresses, names, UUIDs, or get all players
+      description: |
+        Retrieve players by addresses, names, UUIDs, or get all players.
+
+        **Usage patterns:**
+        - By address: `?addresses=ks0d5iqb6p` or `?addresses=ks0d5iqb6p,k12345678`
+        - By name: `?names=Twijn` or `?names=Twijn,Player2`
+        - By UUID: `?uuids=d98440d6-5117-4ac8-bd50-70b086101e3e`
+        - All players: No query parameters
+
+        Query parameters are mutually exclusive in practice but can technically be combined.
       parameters:
         - name: addresses
           in: query
-          description: Comma-separated list of addresses
+          description: Comma-separated list of Kromer addresses to look up
           schema:
             type: string
-          example: 'ks0d5iqb6p'
+          examples:
+            single:
+              value: 'ks0d5iqb6p'
+              summary: Single address lookup
+            multiple:
+              value: 'ks0d5iqb6p,k12345678'
+              summary: Multiple addresses
         - name: names
           in: query
-          description: Comma-separated list of player names
+          description: Comma-separated list of player names (case-insensitive)
           schema:
             type: string
-          example: 'Twijn'
+          examples:
+            single:
+              value: 'Twijn'
+              summary: Single player name
+            multiple:
+              value: 'Twijn,Player2'
+              summary: Multiple player names
         - name: uuids
           in: query
           description: Comma-separated list of player UUIDs
           schema:
             type: string
-          example: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
+          examples:
+            single:
+              value: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
+              summary: Single UUID lookup
+            multiple:
+              value: 'd98440d6-5117-4ac8-bd50-70b086101e3e,a1234567-89ab-cdef-0123-456789abcdef'
+              summary: Multiple UUIDs
       responses:
         '200':
-          description: List of players
+          description: List of players matching the query
           content:
             application/json:
               schema:
@@ -120,6 +162,46 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/Player'
+              examples:
+                byAddress:
+                  summary: Player by address
+                  value:
+                    success: true
+                    data:
+                      - name: 'Twijn'
+                        uuid: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
+                        addresses: ['ks0d5iqb6p']
+                    meta:
+                      timestamp: '2026-01-13T10:30:00.000Z'
+                      elapsed: 12
+                      version: '1.0.0'
+                      requestId: 'abc-123'
+                byName:
+                  summary: Player by name
+                  value:
+                    success: true
+                    data:
+                      - name: 'Twijn'
+                        uuid: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
+                        addresses: ['ks0d5iqb6p']
+                    meta:
+                      timestamp: '2026-01-13T10:30:00.000Z'
+                      elapsed: 8
+                      version: '1.0.0'
+                      requestId: 'def-456'
+                byUuid:
+                  summary: Player by UUID
+                  value:
+                    success: true
+                    data:
+                      - name: 'Twijn'
+                        uuid: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
+                        addresses: ['ks0d5iqb6p']
+                    meta:
+                      timestamp: '2026-01-13T10:30:00.000Z'
+                      elapsed: 10
+                      version: '1.0.0'
+                      requestId: 'ghi-789'
 
   /v1/shops:
     get:
@@ -250,165 +332,6 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/Item'
-
-  /v1/turtles:
-    get:
-      tags: [Turtles]
-      summary: Get all turtles
-      description: Retrieve all registered turtles with their stats
-      responses:
-        '200':
-          description: List of turtles
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Turtle'
-
-  /v1/turtles/{id}:
-    get:
-      tags: [Turtles]
-      summary: Get turtle by ID
-      description: Retrieve detailed information about a specific turtle
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: Turtle ID
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Turtle details
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/Turtle'
-        '404':
-          description: Turtle not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-    post:
-      tags: [Turtles]
-      summary: Create or update turtle
-      description: Register a new turtle or update existing turtle information
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: Turtle ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TurtleUpdate'
-      responses:
-        '200':
-          description: Turtle updated
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/Turtle'
-        '201':
-          description: Turtle created
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/Turtle'
-
-    delete:
-      tags: [Turtles]
-      summary: Delete turtle
-      description: Remove a turtle from the system
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: Turtle ID
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Turtle deleted
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '404':
-          description: Turtle not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
-  /turtles/{id}/stats:
-    patch:
-      tags: [Turtles]
-      summary: Update turtle stats
-      description: Update statistics for a specific turtle
-      parameters:
-        - name: id
-          in: path
-          required: true
-          description: Turtle ID
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties:
-                type: number
-              example:
-                blocks_mined: 1500
-                fuel_consumed: 3200
-      responses:
-        '200':
-          description: Stats updated
-          content:
-            application/json:
-              schema:
-                allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
-                  - type: object
-                    properties:
-                      data:
-                        $ref: '#/components/schemas/Turtle'
-        '404':
-          description: Turtle not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
 
   /v1/addresses:
     get:
