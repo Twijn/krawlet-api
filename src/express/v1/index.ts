@@ -37,7 +37,7 @@ router.get('/', (req, res) => {
       '/api/v1/players',
       '/api/v1/shops',
       '/api/v1/items',
-      '/api/v1/turtles',
+      '/api/v1/addresses',
       '/api/v1/storage',
       '/api/v1/reports',
       '/api/v1/health',

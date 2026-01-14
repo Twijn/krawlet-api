@@ -106,7 +106,6 @@ router.get('/', (req, res) => {
         <ul class="features">
           <li>Shop and item tracking</li>
           <li>Player address management</li>
-          <li>Turtle monitoring and statistics</li>
           <li>Reports and analytics</li>
         </ul>
       </div>
