@@ -66,6 +66,13 @@ apiRouter.use('/turtles', turtles);
 // Mount the /api router
 app.use('/api', apiRouter);
 
+// Mount legacy endpoints at root level as well
+app.use('/playeraddresses', playeraddresses);
+app.use('/enderstorage', enderstorage);
+app.use('/shopsync', shopsync);
+app.use('/knownaddresses', knownaddresses);
+app.use('/turtles', turtles);
+
 // Redirect root to docs
 app.get('/', (req, res) => {
   res.redirect('/docs');
