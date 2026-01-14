@@ -7,7 +7,6 @@ import { rateLimiterMiddleware } from './middleware/rateLimiter';
 import playersRouter from './routes/players';
 import shopsRouter from './routes/shops';
 import itemsRouter from './routes/items';
-import turtlesRouter from './routes/turtles';
 import addressesRouter from './routes/addresses';
 import storageRouter from './routes/storage';
 import reportsRouter from './routes/reports';
@@ -25,7 +24,6 @@ router.use(rateLimiterMiddleware);
 router.use('/players', playersRouter);
 router.use('/shops', shopsRouter);
 router.use('/items', itemsRouter);
-router.use('/turtles', turtlesRouter);
 router.use('/addresses', addressesRouter);
 router.use('/storage', storageRouter);
 router.use('/reports', reportsRouter);
@@ -40,7 +38,6 @@ router.get('/', (req, res) => {
       '/api/v1/shops',
       '/api/v1/items',
       '/api/v1/turtles',
-      '/api/v1/addresses',
       '/api/v1/storage',
       '/api/v1/reports',
       '/api/v1/health',
