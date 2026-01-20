@@ -42,7 +42,7 @@ router.get('/', (req, res) => {
       '/v1/reports',
       '/v1/health',
     ],
-    documentation: 'https://krawlet.cc/v1',
+    documentation: 'https://krawlet.cc/docs/v1',
     github: 'https://github.com/Twijn/krawlet-api',
   });
 });

@@ -12,11 +12,11 @@ const openapiFile = readFileSync(openapiPath, 'utf8');
 const openapiSpec = YAML.parse(openapiFile);
 
 // Serve the OpenAPI spec as JSON
-router.get('/v1/openapi.json', (req, res) => {
+router.get('/docs/v1/openapi.json', (req, res) => {
   res.json(openapiSpec);
 });
 
-// Documentation index page
+// Documentation index page at root
 router.get('/', (req, res) => {
   const html = `
     <!DOCTYPE html>
@@ -101,7 +101,7 @@ router.get('/', (req, res) => {
       
       <div class="version">
         <h2>
-          <a href="./v1">Version 1</a>
+          <a href="/docs/v1">Version 1</a>
           <span class="badge">STABLE</span>
         </h2>
         <p>REST API with authentication, rate limiting, and comprehensive endpoints for shop tracking, item management, and player data.</p>
@@ -123,7 +123,12 @@ router.get('/', (req, res) => {
   res.send(html);
 });
 
-// Swagger UI options with proper base path for reverse proxy
+// Redirect /docs to current stable version
+router.get('/docs', (req, res) => {
+  res.redirect('/docs/v1');
+});
+
+// Swagger UI options
 const swaggerOptions = {
   customCss: `
     .swagger-ui .topbar { display: none }
@@ -133,10 +138,10 @@ const swaggerOptions = {
   `,
   customSiteTitle: 'Krawlet API v1 Documentation',
   explorer: false,
-  swaggerUrl: '/v1/openapi.json',
+  swaggerUrl: '/docs/v1/openapi.json',
 };
 
 // Serve v1 docs at /docs/v1
-router.use('/v1', swaggerUi.serve, swaggerUi.setup(null, swaggerOptions));
+router.use('/docs/v1', swaggerUi.serve, swaggerUi.setup(null, swaggerOptions));
 
 export default router;

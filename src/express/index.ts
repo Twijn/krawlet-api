@@ -30,10 +30,10 @@ app.use(
   }),
 );
 
-// Mount docs
-app.use('/docs', docsRouter);
+// Mount docs at root (krawlet.cc/)
+app.use('/', docsRouter);
 
-// Create /api router for all API endpoints
+// Create /api router for all API endpoints (api.krawlet.cc/)
 const apiRouter = express.Router();
 
 // API info endpoint at /api root
@@ -66,18 +66,6 @@ apiRouter.use('/turtles', turtles);
 // Mount the /api router
 app.use('/api', apiRouter);
 
-// Mount legacy endpoints at root level as well
-app.use('/playeraddresses', playeraddresses);
-app.use('/enderstorage', enderstorage);
-app.use('/shopsync', shopsync);
-app.use('/knownaddresses', knownaddresses);
-app.use('/turtles', turtles);
-
-// Redirect root to docs
-app.get('/', (req, res) => {
-  res.redirect('/docs');
-});
-
 app.use((req, res) => {
   res.status(404).json({
     ok: false,
@@ -87,5 +75,6 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Express server listening on port ${PORT}`);
+  console.log(`Documentation available at http://localhost:${PORT}/`);
   console.log(`V1 API available at http://localhost:${PORT}/api/v1`);
 });
