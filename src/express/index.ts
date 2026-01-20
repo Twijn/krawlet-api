@@ -44,16 +44,10 @@ apiRouter.get('/', (req, res) => {
       name: getPackageName(),
       version: getPackageVersion(),
       apiVersions: ['v1'],
-      documentation: '/docs',
+      documentation: 'https://krawlet.cc',
       endpoints: {
-        v1: '/api/v1',
-        legacy: [
-          '/api/playeraddresses',
-          '/api/enderstorage',
-          '/api/shopsync',
-          '/api/knownaddresses',
-          '/api/turtles',
-        ],
+        v1: '/v1',
+        legacy: ['/playeraddresses', '/enderstorage', '/shopsync', '/knownaddresses', '/turtles'],
       },
     },
   });
@@ -93,5 +87,5 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Express server listening on port ${PORT}`);
-  console.log(`V1 API available at http://localhost:${PORT}/v1`);
+  console.log(`V1 API available at http://localhost:${PORT}/api/v1`);
 });
