@@ -119,8 +119,13 @@ router.get('/', (req, res) => {
 });
 
 // Serve v1 docs at /docs/v1
+// Handle the trailing slash redirect ourselves to avoid swagger-ui's internal path redirect
+router.get('/v1', (req, res) => {
+  res.redirect('./v1/');
+});
+
 router.use(
-  '/v1',
+  '/v1/',
   swaggerUi.serve,
   swaggerUi.setup(openapiSpec, {
     customCss: `

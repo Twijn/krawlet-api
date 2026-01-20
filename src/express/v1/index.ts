@@ -34,15 +34,15 @@ router.get('/', (req, res) => {
   res.success({
     version: 'v1',
     endpoints: [
-      '/api/v1/players',
-      '/api/v1/shops',
-      '/api/v1/items',
-      '/api/v1/addresses',
-      '/api/v1/storage',
-      '/api/v1/reports',
-      '/api/v1/health',
+      '/v1/players',
+      '/v1/shops',
+      '/v1/items',
+      '/v1/addresses',
+      '/v1/storage',
+      '/v1/reports',
+      '/v1/health',
     ],
-    documentation: '/docs/v1',
+    documentation: 'https://krawlet.cc/v1',
     github: 'https://github.com/Twijn/krawlet-api',
   });
 });
