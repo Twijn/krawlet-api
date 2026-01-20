@@ -16,19 +16,7 @@ const PORT = process.env.PORT ?? 3000;
 
 const app = express();
 
-app.use(
-  cors({
-    origin: [
-      /^https?:\/\/(.*\.)?krawlet\.cc$/,
-      /^https?:\/\/(.*\.)?kromer\.club$/,
-      'http://localhost:3000',
-      'http://localhost:3330',
-      'http://localhost:5173',
-    ],
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    credentials: true,
-  }),
-);
+app.use(cors());
 
 // Mount docs at root (krawlet.cc/)
 app.use('/', docsRouter);
