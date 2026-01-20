@@ -741,14 +741,35 @@ components:
     Player:
       type: object
       properties:
-        name:
+        minecraftUUID:
           type: string
-        uuid:
+          format: uuid
+          description: Player's Minecraft UUID
+          example: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
+        minecraftName:
           type: string
-        addresses:
-          type: array
-          items:
-            type: string
+          description: Player's Minecraft username
+          example: 'Twijn'
+        kromerAddress:
+          type: string
+          description: 10-character Kromer address
+          example: 'ks0d5iqb6p'
+        notifications:
+          type: string
+          enum: [none, self, all]
+          description: Notification preference
+          example: 'none'
+        createdDate:
+          type: string
+          format: date-time
+          nullable: true
+        updatedDate:
+          type: string
+          format: date-time
+          nullable: true
+        online:
+          type: boolean
+          description: Whether the player is currently online
 
     Shop:
       type: object
@@ -817,8 +838,10 @@ components:
           nullable: true
         shopBuysItem:
           type: boolean
+          nullable: true
         noLimit:
           type: boolean
+          nullable: true
         dynamicPrice:
           type: boolean
         madeOnDemand:
@@ -835,6 +858,14 @@ components:
           type: array
           items:
             type: string
+        createdDate:
+          type: string
+          format: date-time
+          nullable: true
+        updatedDate:
+          type: string
+          format: date-time
+          nullable: true
 
     Price:
       type: object
@@ -856,10 +887,31 @@ components:
     KnownAddress:
       type: object
       properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [official, shop, gamble, service, company]
+          description: Type of known address
         address:
           type: string
+          description: 10-character Kromer address
+        imageSrc:
+          type: string
+          nullable: true
+          description: Optional image URL
         name:
           type: string
+        description:
+          type: string
+        createdDate:
+          type: string
+          format: date-time
+          nullable: true
+        updatedDate:
+          type: string
+          format: date-time
+          nullable: true
 
     ShopSyncData:
       type: object

@@ -96,7 +96,7 @@ router.get('/', (req, res) => {
       
       <div class="version">
         <h2>
-          <a href="/v1">Version 1</a>
+          <a href="./v1">Version 1</a>
           <span class="badge">STABLE</span>
         </h2>
         <p>REST API with authentication, rate limiting, and comprehensive endpoints for shop tracking, item management, and player data.</p>
