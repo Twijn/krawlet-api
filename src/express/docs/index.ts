@@ -11,6 +11,11 @@ const openapiPath = join(process.cwd(), 'openapi.yaml');
 const openapiFile = readFileSync(openapiPath, 'utf8');
 const openapiSpec = YAML.parse(openapiFile);
 
+// Serve the OpenAPI spec as JSON
+router.get('/v1/openapi.json', (req, res) => {
+  res.json(openapiSpec);
+});
+
 // Documentation index page
 router.get('/', (req, res) => {
   const html = `
@@ -118,25 +123,20 @@ router.get('/', (req, res) => {
   res.send(html);
 });
 
-// Serve v1 docs at /docs/v1
-// Handle the trailing slash redirect ourselves to avoid swagger-ui's internal path redirect
-router.get('/v1', (req, res) => {
-  res.redirect('./v1/');
-});
-
-router.use(
-  '/v1/',
-  swaggerUi.serve,
-  swaggerUi.setup(openapiSpec, {
-    customCss: `
+// Swagger UI options with proper base path for reverse proxy
+const swaggerOptions = {
+  customCss: `
     .swagger-ui .topbar { display: none }
     .swagger-ui { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
     .swagger-ui .info .title { font-size: 2.5rem; }
     .swagger-ui .scheme-container { background: #fafafa; padding: 1rem; border-radius: 4px; }
   `,
-    customSiteTitle: 'Krawlet API v1 Documentation',
-    customfavIcon: '/favicon.ico',
-  }),
-);
+  customSiteTitle: 'Krawlet API v1 Documentation',
+  explorer: false,
+  swaggerUrl: '/v1/openapi.json',
+};
+
+// Serve v1 docs at /docs/v1
+router.use('/v1', swaggerUi.serve, swaggerUi.setup(null, swaggerOptions));
 
 export default router;
