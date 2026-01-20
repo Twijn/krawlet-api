@@ -108,7 +108,7 @@ router.get('/shop-changes', async (req, res) => {
     const result: any = { ok: true };
 
     if (source === 'memory' || source === 'both') {
-      const recent = getShopChanges(limit, shopId);
+      const recent = await getShopChanges(limit, shopId);
       result.recent = recent;
       result.recentCount = recent.length;
     }
@@ -155,7 +155,7 @@ router.get('/item-changes', async (req, res) => {
     const result: any = { ok: true };
 
     if (source === 'memory' || source === 'both') {
-      const recent = getItemChanges(limit, shopId);
+      const recent = await getItemChanges(limit, shopId);
       result.recent = recent;
       result.recentCount = recent.length;
     }
@@ -261,8 +261,8 @@ router.get('/all', async (req, res) => {
         stats: await getReporterStats(),
         validationFailures: getValidationFailures(limit),
         successfulPosts: getSuccessfulPosts(limit),
-        shopChanges: getShopChanges(limit),
-        itemChanges: getItemChanges(limit),
+        shopChanges: await getShopChanges(limit),
+        itemChanges: await getItemChanges(limit),
       },
     });
   } catch (err) {

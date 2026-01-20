@@ -53,12 +53,12 @@ router.get('/successful-posts', (req, res) => {
 });
 
 // GET /v1/reports/shop-changes - Get shop changes
-router.get('/shop-changes', (req, res) => {
+router.get('/shop-changes', async (req, res) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
     const shopId = req.query.shopId as string | undefined;
 
-    const records = getShopChanges(limit, shopId);
+    const records = await getShopChanges(limit, shopId);
     return res.success({
       count: records.length,
       records,
@@ -70,12 +70,12 @@ router.get('/shop-changes', (req, res) => {
 });
 
 // GET /v1/reports/item-changes - Get item changes
-router.get('/item-changes', (req, res) => {
+router.get('/item-changes', async (req, res) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
     const shopId = req.query.shopId as string | undefined;
 
-    const records = getItemChanges(limit, shopId);
+    const records = await getItemChanges(limit, shopId);
     return res.success({
       count: records.length,
       records,

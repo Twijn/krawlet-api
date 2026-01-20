@@ -19,6 +19,8 @@ export interface RawShop {
   locationDescription: string | null;
   locationDimension: string | null;
 
+  hidden: boolean;
+
   items?: RawListing[];
   addresses?: string[];
 
@@ -30,8 +32,30 @@ export function getShopId(data: ShopSyncData): string {
   return data.info.computerID.toString();
 }
 
+/**
+ * Check if a shop should be visible in API responses.
+ * Shops are hidden if:
+ * 1. The hidden field is true, OR
+ * 2. The shop hasn't been updated in over 1 month (30 days)
+ */
+export function isShopVisible(shop: Shop): boolean {
+  if (shop.hidden) {
+    return false;
+  }
+
+  // Check if shop is older than 1 month (30 days)
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+
+  if (shop.updatedAt && shop.updatedAt < oneMonthAgo) {
+    return false;
+  }
+
+  return true;
+}
+
 export async function getShop(shopId: string): Promise<Shop | null> {
-  return await Shop.findOne({
+  const shop = await Shop.findOne({
     where: { id: shopId },
     include: [
       {
@@ -40,10 +64,16 @@ export async function getShop(shopId: string): Promise<Shop | null> {
       },
     ],
   });
+
+  if (shop && !isShopVisible(shop)) {
+    return null;
+  }
+
+  return shop;
 }
 
 export async function getShops(): Promise<Shop[]> {
-  return await Shop.findAll({
+  const shops = await Shop.findAll({
     include: [
       {
         association: 'items',
@@ -51,6 +81,9 @@ export async function getShops(): Promise<Shop[]> {
       },
     ],
   });
+
+  // Filter out hidden and old shops
+  return shops.filter(isShopVisible);
 }
 
 export async function updateShop(data: ShopSyncData): Promise<void> {
@@ -74,6 +107,7 @@ export async function updateShop(data: ShopSyncData): Promise<void> {
     locationCoordinates,
     locationDescription: data.info.location?.description || null,
     locationDimension: data.info.location?.dimension || null,
+    hidden: false, // New shops are not hidden by default
   });
 
   await updateListings(data);
@@ -96,6 +130,8 @@ export class Shop
   declare locationCoordinates: string | null;
   declare locationDescription: string | null;
   declare locationDimension: string | null;
+
+  declare hidden: boolean;
 
   declare items?: Listing[];
 
@@ -126,6 +162,7 @@ export class Shop
       locationCoordinates: this.locationCoordinates,
       locationDescription: this.locationDescription,
       locationDimension: this.locationDimension,
+      hidden: this.hidden,
       items,
       addresses,
       createdDate: this.createdAt ? this.createdAt.toISOString() : null,
@@ -175,6 +212,11 @@ Shop.init(
     locationDimension: {
       type: DataTypes.TEXT,
       allowNull: true,
+    },
+    hidden: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
   },
   {

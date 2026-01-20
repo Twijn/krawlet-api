@@ -677,19 +677,69 @@ export function getSuccessfulPosts(limit?: number): SuccessfulPostRecord[] {
   return limit ? records.slice(0, limit) : records;
 }
 
-export function getShopChanges(limit?: number, shopId?: string): ShopChangeRecord[] {
+export async function getShopChanges(limit?: number, shopId?: string): Promise<ShopChangeRecord[]> {
   let records = [...shopChanges].reverse();
   if (shopId) {
     records = records.filter((r) => r.shopId === shopId);
   }
+
+  // Filter out records from hidden or old shops
+  const { Shop } = await import('../../lib/models/shop.model');
+  const shopIds = [...new Set(records.map((r) => r.shopId))];
+  const shops = await Shop.findAll({
+    where: {
+      id: shopIds,
+    },
+  });
+
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+
+  const visibleShopIds = new Set(
+    shops
+      .filter((shop) => {
+        if (shop.hidden) return false;
+        if (shop.updatedAt && shop.updatedAt < oneMonthAgo) return false;
+        return true;
+      })
+      .map((shop) => shop.id),
+  );
+
+  records = records.filter((r) => visibleShopIds.has(r.shopId));
+
   return limit ? records.slice(0, limit) : records;
 }
 
-export function getItemChanges(limit?: number, shopId?: string): ItemChangeRecord[] {
+export async function getItemChanges(limit?: number, shopId?: string): Promise<ItemChangeRecord[]> {
   let records = [...itemChanges].reverse();
   if (shopId) {
     records = records.filter((r) => r.shopId === shopId);
   }
+
+  // Filter out records from hidden or old shops
+  const { Shop } = await import('../../lib/models/shop.model');
+  const shopIds = [...new Set(records.map((r) => r.shopId))];
+  const shops = await Shop.findAll({
+    where: {
+      id: shopIds,
+    },
+  });
+
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+
+  const visibleShopIds = new Set(
+    shops
+      .filter((shop) => {
+        if (shop.hidden) return false;
+        if (shop.updatedAt && shop.updatedAt < oneMonthAgo) return false;
+        return true;
+      })
+      .map((shop) => shop.id),
+  );
+
+  records = records.filter((r) => visibleShopIds.has(r.shopId));
+
   return limit ? records.slice(0, limit) : records;
 }
 

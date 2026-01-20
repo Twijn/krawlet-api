@@ -244,12 +244,36 @@ export async function getShopChangeLogs(options: ChangeLogQueryOptions = {}) {
     if (options.until) where.createdAt[Op.lte] = options.until;
   }
 
-  return ShopChangeLog.findAll({
+  const logs = await ShopChangeLog.findAll({
     where,
     order: [['createdAt', 'DESC']],
     limit: options.limit,
     offset: options.offset,
   });
+
+  // Filter out logs from hidden or old shops
+  const { Shop } = await import('./shop.model');
+  const shopIds = [...new Set(logs.map((log) => log.shopId))];
+  const shops = await Shop.findAll({
+    where: {
+      id: shopIds,
+    },
+  });
+
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+
+  const visibleShopIds = new Set(
+    shops
+      .filter((shop) => {
+        if (shop.hidden) return false;
+        if (shop.updatedAt && shop.updatedAt < oneMonthAgo) return false;
+        return true;
+      })
+      .map((shop) => shop.id),
+  );
+
+  return logs.filter((log) => visibleShopIds.has(log.shopId));
 }
 
 export async function getItemChangeLogs(
@@ -269,12 +293,36 @@ export async function getItemChangeLogs(
     if (options.until) where.createdAt[Op.lte] = options.until;
   }
 
-  return ItemChangeLog.findAll({
+  const logs = await ItemChangeLog.findAll({
     where,
     order: [['createdAt', 'DESC']],
     limit: options.limit,
     offset: options.offset,
   });
+
+  // Filter out logs from hidden or old shops
+  const { Shop } = await import('./shop.model');
+  const shopIds = [...new Set(logs.map((log) => log.shopId))];
+  const shops = await Shop.findAll({
+    where: {
+      id: shopIds,
+    },
+  });
+
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+
+  const visibleShopIds = new Set(
+    shops
+      .filter((shop) => {
+        if (shop.hidden) return false;
+        if (shop.updatedAt && shop.updatedAt < oneMonthAgo) return false;
+        return true;
+      })
+      .map((shop) => shop.id),
+  );
+
+  return logs.filter((log) => visibleShopIds.has(log.shopId));
 }
 
 export async function getPriceChangeLogs(
@@ -301,7 +349,31 @@ export async function getPriceChangeLogs(
     offset: options.offset,
   });
 
-  return { rows, total };
+  // Filter out logs from hidden or old shops
+  const { Shop } = await import('./shop.model');
+  const shopIds = [...new Set(rows.map((log) => log.shopId))];
+  const shops = await Shop.findAll({
+    where: {
+      id: shopIds,
+    },
+  });
+
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+
+  const visibleShopIds = new Set(
+    shops
+      .filter((shop) => {
+        if (shop.hidden) return false;
+        if (shop.updatedAt && shop.updatedAt < oneMonthAgo) return false;
+        return true;
+      })
+      .map((shop) => shop.id),
+  );
+
+  const filteredRows = rows.filter((log) => visibleShopIds.has(log.shopId));
+
+  return { rows: filteredRows, total: filteredRows.length };
 }
 
 export async function getChangeLogStats() {

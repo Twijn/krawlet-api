@@ -19,10 +19,26 @@ export async function getListings(): Promise<Listing[]> {
       {
         association: 'prices',
       },
+      {
+        association: 'shop',
+        required: true,
+      },
     ],
   });
+
+  // Filter out listings from hidden or old shops
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+
+  const filteredListings = listings.filter((listing) => {
+    if (!listing.shop) return false;
+    if (listing.shop.hidden) return false;
+    if (listing.shop.updatedAt && listing.shop.updatedAt < oneMonthAgo) return false;
+    return true;
+  });
+
   console.timeEnd('getListings');
-  return listings;
+  return filteredListings;
 }
 
 export async function getListing(listingId: string): Promise<Listing | null> {
@@ -32,14 +48,45 @@ export async function getListing(listingId: string): Promise<Listing | null> {
       {
         association: 'prices',
       },
+      {
+        association: 'shop',
+        required: true,
+      },
     ],
   });
+
+  if (listing && listing.shop) {
+    const oneMonthAgo = new Date();
+    oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+
+    if (listing.shop.hidden || (listing.shop.updatedAt && listing.shop.updatedAt < oneMonthAgo)) {
+      console.timeEnd('getListing');
+      return null;
+    }
+  }
+
   console.timeEnd('getListing');
   return listing;
 }
 
 export async function getListingsByShopId(shopId: string): Promise<Listing[]> {
   console.time('getListingsByShopId');
+
+  // First check if the shop is visible
+  const shop = await Shop.findByPk(shopId);
+  if (!shop) {
+    console.timeEnd('getListingsByShopId');
+    return [];
+  }
+
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+
+  if (shop.hidden || (shop.updatedAt && shop.updatedAt < oneMonthAgo)) {
+    console.timeEnd('getListingsByShopId');
+    return [];
+  }
+
   const listings = await Listing.findAll({
     where: {
       shopId,
@@ -82,11 +129,24 @@ export async function searchListings(query: string): Promise<Listing[]> {
       },
       {
         association: 'shop',
+        required: true,
       },
     ],
   });
+
+  // Filter out listings from hidden or old shops
+  const oneMonthAgo = new Date();
+  oneMonthAgo.setDate(oneMonthAgo.getDate() - 30);
+
+  const filteredListings = listings.filter((listing) => {
+    if (!listing.shop) return false;
+    if (listing.shop.hidden) return false;
+    if (listing.shop.updatedAt && listing.shop.updatedAt < oneMonthAgo) return false;
+    return true;
+  });
+
   console.timeEnd('searchListings');
-  return listings;
+  return filteredListings;
 }
 
 const ILLEGAL_CHAR_REGEX = /[^\w!@#$%^&()_+-=\[\]{}|;':",.\/? \n]+/gi;
