@@ -33,6 +33,13 @@ app.use(
 // Mount docs at root (krawlet.cc/)
 app.use('/', docsRouter);
 
+// Legacy endpoints at root level (for backward compatibility)
+app.use('/playeraddresses', playeraddresses);
+app.use('/enderstorage', enderstorage);
+app.use('/shopsync', shopsync);
+app.use('/knownaddresses', knownaddresses);
+app.use('/turtles', turtles);
+
 // Create /api router for all API endpoints (api.krawlet.cc/)
 const apiRouter = express.Router();
 
