@@ -20,6 +20,7 @@ app.use(
   cors({
     origin: [
       /^https?:\/\/(.*\.)?krawlet\.cc$/,
+      /^https?:\/\/(.*\.)?kromer\.club$/,
       'http://localhost:3000',
       'http://localhost:3330',
       'http://localhost:5173',
