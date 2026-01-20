@@ -18,7 +18,12 @@ const app = express();
 
 app.use(
   cors({
-    origin: '*',
+    origin: [
+      /^https?:\/\/(.*\.)?krawlet\.cc$/,
+      'http://localhost:3000',
+      'http://localhost:3330',
+      'http://localhost:5173',
+    ],
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
   }),
