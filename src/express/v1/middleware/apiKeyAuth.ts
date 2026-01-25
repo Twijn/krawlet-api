@@ -70,8 +70,14 @@ export const optionalApiKeyAuth = async (req: Request, res: Response, next: Next
     // Attach API key info to request
     request.apiKey = {
       id: apiKey.id,
+      name: apiKey.name,
+      email: apiKey.email,
       tier: apiKey.tier,
       rateLimit: apiKey.rateLimit,
+      isActive: apiKey.isActive,
+      requestCount: apiKey.requestCount,
+      lastUsedAt: apiKey.lastUsedAt,
+      createdAt: apiKey.createdAt,
     };
 
     // Update usage (async, don't wait)

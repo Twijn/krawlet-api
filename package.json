@@ -12,6 +12,7 @@
     "migrate:create": "npx sequelize-cli migration:generate --name",
     "migrate:undo": "npx sequelize-cli db:migrate:undo",
     "gen-apikey": "npx tsx src/scripts/generateApiKey.ts",
+    "apikey-info": "npx tsx src/scripts/getApiKeyInfo.ts",
     "lint": "eslint src/**/*.ts --quiet",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write src/**/*.ts",

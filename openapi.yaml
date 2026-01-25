@@ -51,6 +51,8 @@ tags:
     description: Ender storage data management
   - name: Reports
     description: ShopSync reports and change logs
+  - name: API Key
+    description: API key information and usage statistics
 
 x-tagGroups:
   - name: Getting Started
@@ -68,6 +70,9 @@ x-tagGroups:
     tags:
       - Storage
       - Reports
+  - name: Account
+    tags:
+      - API Key
 
 paths:
   /v1/health:
@@ -622,6 +627,196 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
 
+  /v1/apikey:
+    get:
+      tags: [API Key]
+      summary: Get current API key info
+      description: |
+        Retrieve information about your current API key, including usage statistics.
+
+        **Requires authentication:** This endpoint requires a valid API key.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: usage
+          in: query
+          description: Set to 'false' to skip fetching detailed usage statistics
+          schema:
+            type: string
+            enum: ['true', 'false']
+            default: 'true'
+      responses:
+        '200':
+          description: API key information
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ApiKeyInfo'
+              example:
+                success: true
+                data:
+                  id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+                  name: 'My Application'
+                  email: 'user@example.com'
+                  tier: 'free'
+                  rateLimit: 1000
+                  isActive: true
+                  requestCount: 1234
+                  lastUsedAt: '2026-01-25T10:30:00.000Z'
+                  createdAt: '2026-01-12T10:00:00.000Z'
+                  usage:
+                    totalRequests: 1234
+                    last24h: 50
+                    last7d: 350
+                    last30d: 1200
+                    blockedRequests: 5
+                    avgResponseTimeMs: 45.23
+                    topEndpoints:
+                      - path: '/v1/players'
+                        count: 500
+                      - path: '/v1/shops'
+                        count: 300
+                meta:
+                  timestamp: '2026-01-25T10:30:00.000Z'
+                  elapsed: 25
+                  version: '1.0.0'
+                  requestId: 'abc-123'
+        '401':
+          description: Unauthorized - API key required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: 'UNAUTHORIZED'
+                  message: 'API key required to access this endpoint'
+
+  /v1/apikey/usage:
+    get:
+      tags: [API Key]
+      summary: Get detailed usage statistics
+      description: |
+        Retrieve detailed usage statistics for your API key.
+
+        **Requires authentication:** This endpoint requires a valid API key.
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Usage statistics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ApiKeyUsage'
+              example:
+                success: true
+                data:
+                  totalRequests: 1234
+                  last24h: 50
+                  last7d: 350
+                  last30d: 1200
+                  blockedRequests: 5
+                  avgResponseTimeMs: 45.23
+                  topEndpoints:
+                    - path: '/v1/players'
+                      count: 500
+                    - path: '/v1/shops'
+                      count: 300
+                meta:
+                  timestamp: '2026-01-25T10:30:00.000Z'
+                  elapsed: 15
+                  version: '1.0.0'
+                  requestId: 'def-456'
+        '401':
+          description: Unauthorized - API key required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/apikey/logs:
+    get:
+      tags: [API Key]
+      summary: Get recent request logs
+      description: |
+        Retrieve recent request logs for your API key.
+
+        **Requires authentication:** This endpoint requires a valid API key.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of logs to return (max 100)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Request logs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          count:
+                            type: integer
+                          logs:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/RequestLog'
+              example:
+                success: true
+                data:
+                  count: 2
+                  logs:
+                    - requestId: 'req-123'
+                      timestamp: '2026-01-25T10:30:00.000Z'
+                      method: 'GET'
+                      path: '/v1/players'
+                      responseStatus: 200
+                      responseTimeMs: 45
+                      wasBlocked: false
+                      blockReason: null
+                    - requestId: 'req-124'
+                      timestamp: '2026-01-25T10:29:00.000Z'
+                      method: 'GET'
+                      path: '/v1/shops'
+                      responseStatus: 200
+                      responseTimeMs: 32
+                      wasBlocked: false
+                      blockReason: null
+                meta:
+                  timestamp: '2026-01-25T10:30:00.000Z'
+                  elapsed: 20
+                  version: '1.0.0'
+                  requestId: 'ghi-789'
+        '401':
+          description: Unauthorized - API key required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -912,6 +1107,115 @@ components:
           type: string
           format: date-time
           nullable: true
+
+    ApiKeyInfo:
+      type: object
+      description: API key information with optional usage statistics
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique API key ID
+        name:
+          type: string
+          description: Name/description of the API key
+        email:
+          type: string
+          nullable: true
+          description: Email associated with the key
+        tier:
+          type: string
+          enum: [free, premium]
+          description: API key tier
+        rateLimit:
+          type: integer
+          description: Maximum requests per hour
+        isActive:
+          type: boolean
+          description: Whether the key is currently active
+        requestCount:
+          type: integer
+          description: Total number of requests made with this key
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last time the key was used
+        createdAt:
+          type: string
+          format: date-time
+          description: When the key was created
+        usage:
+          $ref: '#/components/schemas/ApiKeyUsage'
+
+    ApiKeyUsage:
+      type: object
+      description: Detailed API key usage statistics
+      properties:
+        totalRequests:
+          type: integer
+          description: Total number of logged requests
+        last24h:
+          type: integer
+          description: Requests in the last 24 hours
+        last7d:
+          type: integer
+          description: Requests in the last 7 days
+        last30d:
+          type: integer
+          description: Requests in the last 30 days
+        blockedRequests:
+          type: integer
+          description: Number of blocked requests (rate limited)
+        avgResponseTimeMs:
+          type: number
+          nullable: true
+          description: Average response time in milliseconds
+        topEndpoints:
+          type: array
+          description: Top 5 most used endpoints
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+                description: Endpoint path
+              count:
+                type: integer
+                description: Number of requests
+
+    RequestLog:
+      type: object
+      description: Individual request log entry
+      properties:
+        requestId:
+          type: string
+          description: Unique request identifier
+        timestamp:
+          type: string
+          format: date-time
+          description: When the request was made
+        method:
+          type: string
+          description: HTTP method
+        path:
+          type: string
+          description: Request path
+        responseStatus:
+          type: integer
+          nullable: true
+          description: HTTP response status code
+        responseTimeMs:
+          type: number
+          nullable: true
+          description: Response time in milliseconds
+        wasBlocked:
+          type: boolean
+          description: Whether the request was blocked
+        blockReason:
+          type: string
+          nullable: true
+          description: Reason for blocking (if blocked)
 
     ShopSyncData:
       type: object

@@ -188,7 +188,84 @@ Retry-After: 3600
 
 ## Key Management
 
-### Viewing Key Information
+### Viewing Key Information (CLI)
+
+Use the `apikey-info` script to view API key details and usage:
+
+```bash
+# List all API keys
+pnpm apikey-info -- --list
+
+# Lookup by ID
+pnpm apikey-info -- --id "a1b2c3d4-e5f6-..."
+
+# Lookup by raw key
+pnpm apikey-info -- --key "kraw_abc123..."
+
+# Lookup by name (partial match)
+pnpm apikey-info -- --name "My App"
+
+# Skip detailed usage statistics
+pnpm apikey-info -- --id "a1b2c3d4-..." --no-usage
+
+# View help
+pnpm apikey-info -- --help
+```
+
+### Viewing Key Information (API)
+
+You can also retrieve your API key information via the API:
+
+```bash
+# Get full key info with usage statistics
+curl -H "Authorization: Bearer kraw_your_key" \
+  https://api.krawlet.cc/v1/apikey
+
+# Get key info without usage stats
+curl -H "Authorization: Bearer kraw_your_key" \
+  "https://api.krawlet.cc/v1/apikey?usage=false"
+
+# Get only usage statistics
+curl -H "Authorization: Bearer kraw_your_key" \
+  https://api.krawlet.cc/v1/apikey/usage
+
+# Get recent request logs (default 50, max 100)
+curl -H "Authorization: Bearer kraw_your_key" \
+  "https://api.krawlet.cc/v1/apikey/logs?limit=25"
+```
+
+#### API Key Info Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "My Application",
+    "email": "user@example.com",
+    "tier": "free",
+    "rateLimit": 1000,
+    "isActive": true,
+    "requestCount": 1234,
+    "lastUsedAt": "2026-01-25T10:30:00.000Z",
+    "createdAt": "2026-01-12T10:00:00.000Z",
+    "usage": {
+      "totalRequests": 1234,
+      "last24h": 50,
+      "last7d": 350,
+      "last30d": 1200,
+      "blockedRequests": 5,
+      "avgResponseTimeMs": 45.23,
+      "topEndpoints": [
+        { "path": "/v1/players", "count": 500 },
+        { "path": "/v1/shops", "count": 300 }
+      ]
+    }
+  }
+}
+```
+
+### Direct Database Queries
 
 Keys are stored hashed in the database. You can query key information:
 
