@@ -12,6 +12,8 @@ export class ApiKey extends Model {
   public isActive!: boolean;
   public lastUsedAt!: Date | null;
   public requestCount!: number;
+  public mcUuid!: string | null;
+  public mcName!: string | null;
 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -71,6 +73,17 @@ ApiKey.init(
     requestCount: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
+    },
+    mcUuid: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      unique: true,
+      field: 'mc_uuid',
+    },
+    mcName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      field: 'mc_name',
     },
   },
   {

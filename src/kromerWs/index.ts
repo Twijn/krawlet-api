@@ -5,11 +5,15 @@ import { rcc } from '../chat';
 import { hook } from '../lib/webhook';
 import { Transaction, TransactionWithMeta } from 'kromer';
 import { HATransactions } from '../lib/HATransactions';
-import formatTransaction, { parseTransactionData, TransactionData } from '../lib/formatTransaction';
+import formatTransaction, {
+  parseTransactionData,
+  TransactionData,
+  formatRefundForDiscord,
+} from '../lib/formatTransaction';
 import walletListeners from './walletListeners';
 import { formatKromerBalance } from '../lib/formatKromer';
 
-const STRIPPED_META_ENTRIES = ['error', 'message', 'return'];
+const STRIPPED_META_ENTRIES = ['error', 'message', 'return', 'ref', 'type', 'amount', 'original'];
 
 /**
  * Sanitizes text for use inside Discord inline code blocks.
@@ -37,23 +41,30 @@ function addressUrl(address: string, label?: string) {
 function sendDiscordMessage(transaction: TransactionWithMeta, data: TransactionData) {
   let metadata = '';
 
-  if (data.entries.error) {
-    metadata += `\n> :x: *${data.entries.error}*`;
-  }
-  if (data.entries.message) {
-    metadata += `\n> :speech_balloon: *${data.entries.message}*`;
-  }
+  // Check for refund data first (more specific, cleaner display)
+  if (data.refund) {
+    metadata += formatRefundForDiscord(data.refund);
+  } else {
+    if (data.entries.error) {
+      metadata += `\n> :x: *${data.entries.error}*`;
+    }
+    if (data.entries.message) {
+      metadata += `\n> :speech_balloon: *${data.entries.message}*`;
+    }
 
-  let strippedEntries = transaction?.meta?.entries
-    ? transaction.meta.entries.filter((x) => !STRIPPED_META_ENTRIES.includes(x.name.toLowerCase()))
-    : [];
-  if (strippedEntries.length > 0) {
-    metadata +=
-      '\n`' +
-      sanitizeForInlineCode(
-        strippedEntries.map((x) => `${x.name}${x.value ? `=${x.value}` : ''}`).join(';'),
-      ) +
-      '`';
+    let strippedEntries = transaction?.meta?.entries
+      ? transaction.meta.entries.filter(
+          (x) => !STRIPPED_META_ENTRIES.includes(x.name.toLowerCase()),
+        )
+      : [];
+    if (strippedEntries.length > 0) {
+      metadata +=
+        '\n`' +
+        sanitizeForInlineCode(
+          strippedEntries.map((x) => `${x.name}${x.value ? `=${x.value}` : ''}`).join(';'),
+        ) +
+        '`';
+    }
   }
 
   hook

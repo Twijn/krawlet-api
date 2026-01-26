@@ -3,6 +3,14 @@ import playerManager from './managers/playerManager';
 import kromer from './kromer';
 import { formatKromerBalance } from './formatKromer';
 
+export interface RefundData {
+  ref: string;
+  type: string;
+  amount: string;
+  original: string;
+  message: string;
+}
+
 export interface TransactionData {
   from: string;
   to: string;
@@ -11,6 +19,39 @@ export interface TransactionData {
     message?: string;
     blank?: string;
   };
+  refund?: RefundData;
+}
+
+/**
+ * Parses a structured metadata string like:
+ * ref=33328;type=refund;amount=0.88;original=88.1;message=Refund for transaction #33328
+ */
+export function parseStructuredMetadata(metadata: string): RefundData | null {
+  if (!metadata || !metadata.includes('ref=') || !metadata.includes('type=')) {
+    return null;
+  }
+
+  const parts = metadata.split(';');
+  const parsed: Partial<RefundData> = {};
+
+  for (const part of parts) {
+    const eqIndex = part.indexOf('=');
+    if (eqIndex === -1) continue;
+    const key = part.substring(0, eqIndex).toLowerCase();
+    const value = part.substring(eqIndex + 1);
+
+    if (key === 'ref') parsed.ref = value;
+    else if (key === 'type') parsed.type = value;
+    else if (key === 'amount') parsed.amount = value;
+    else if (key === 'original') parsed.original = value;
+    else if (key === 'message') parsed.message = value;
+  }
+
+  if (parsed.ref && parsed.type) {
+    return parsed as RefundData;
+  }
+
+  return null;
 }
 
 export const parseTransactionData = (transaction: Transaction): TransactionData => {
@@ -32,6 +73,9 @@ export const parseTransactionData = (transaction: Transaction): TransactionData 
   const messageEntry = meta.entries?.find((x) => x.name.toLowerCase() === 'message');
   const blankEntry = meta.entries?.find((x) => !x.value);
 
+  // Try to parse structured metadata (refund format)
+  const refund = parseStructuredMetadata(transaction.metadata ?? '');
+
   return {
     from,
     to,
@@ -40,8 +84,29 @@ export const parseTransactionData = (transaction: Transaction): TransactionData 
       message: messageEntry?.value,
       blank: blankEntry?.name,
     },
+    refund: refund ?? undefined,
   };
 };
+
+/**
+ * Format refund data for in-game chat display
+ */
+export function formatRefundForChat(refund: RefundData): string {
+  const typeLabel = refund.type.charAt(0).toUpperCase() + refund.type.slice(1);
+  return `<gold>${typeLabel}</gold> <gray>for tx</gray> <white>#${refund.ref}</white>`;
+}
+
+/**
+ * Format refund data for Discord display
+ */
+export function formatRefundForDiscord(refund: RefundData): string {
+  const typeLabel = refund.type.charAt(0).toUpperCase() + refund.type.slice(1);
+  let result = `\n> **${typeLabel}** for [#${refund.ref}](https://kromer.club/transactions/${refund.ref})`;
+  if (refund.message) {
+    result += `\n> *${refund.message}*`;
+  }
+  return result;
+}
 
 export default (transaction: Transaction, data?: TransactionData): string => {
   if (!data) {
@@ -50,7 +115,10 @@ export default (transaction: Transaction, data?: TransactionData): string => {
 
   let message = '';
 
-  if (data.entries.error) {
+  // Check for refund data first (more specific)
+  if (data.refund) {
+    message = formatRefundForChat(data.refund);
+  } else if (data.entries.error) {
     message = `<dark_red>Error:</dark_red> <red>${data.entries.error}</red>`;
   } else if (data.entries.message) {
     message = `<blue>Message:</blue> <gray>${data.entries.message}</gray>`;

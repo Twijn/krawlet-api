@@ -4,18 +4,73 @@ import { ChatboxCommand } from 'reconnectedchat';
 import commands from './index';
 import { rcc } from '../index';
 import playerManager from '../../lib/managers/playerManager';
+import { ApiKey } from '../../lib/models/apikey.model';
 
 const PREFIX = '\\' + (process.env.PREFIX ?? '');
 
 const NOTIFICATION_SETTINGS = ['all', 'self', 'none'];
 
+async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
+  const uuid = cmd.user.uuid;
+  const mcName = cmd.user.name;
+
+  try {
+    // Check if this user already has an API key
+    const existingKey = await ApiKey.findOne({
+      where: {
+        mcUuid: uuid,
+      },
+    });
+
+    if (existingKey) {
+      rcc
+        .tell(
+          cmd.user,
+          `<red>You already have an API key!</red> Created: ${existingKey.createdAt.toLocaleDateString()}. Contact admin if lost.`,
+        )
+        .catch(console.error);
+      return;
+    }
+
+    // Generate a new API key
+    const rawKey = ApiKey.generateKey();
+    const hashedKey = ApiKey.hashKey(rawKey);
+
+    await ApiKey.create({
+      key: hashedKey,
+      name: `${mcName}'s API Key`,
+      tier: 'free',
+      rateLimit: 1000,
+      isActive: true,
+      mcUuid: uuid,
+      mcName: mcName,
+    });
+
+    rcc
+      .tell(cmd.user, `<green>API Key generated!</green> <red>SAVE THIS - shown once!</red>`)
+      .catch(console.error);
+    rcc.tell(cmd.user, `<gold>${rawKey}</gold>`).catch(console.error);
+  } catch (err) {
+    console.error('Error generating API key via chatbox:', err);
+    rcc
+      .tell(cmd.user, `<red>Error generating API key. Try again later.</red>`)
+      .catch(console.error);
+  }
+}
+
 const command: Command = {
   name: 'krawlet',
   aliases: ['kromer', 'kro'],
   description: 'Shows this menu!',
-  usage: 'krawlet [notif [all/self/none]]',
+  usage: 'krawlet [notif [all/self/none] | api]',
   execute: async (cmd: ChatboxCommand) => {
     if (cmd.args.length > 0) {
+      // Handle API key generation subcommand
+      if (['api', 'apikey', 'key'].includes(cmd.args[0].toLowerCase())) {
+        await handleApiKeyGeneration(cmd);
+        return;
+      }
+
       if (['notif', 'notification', 'notifications'].includes(cmd.args[0].toLowerCase())) {
         let response = `<red>Usage: ${PREFIX}krawlet notif [${NOTIFICATION_SETTINGS.join('/')}]</red>`;
 
