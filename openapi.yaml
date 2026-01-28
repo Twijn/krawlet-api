@@ -817,6 +817,124 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /v1/apikey/quickcode/generate:
+    post:
+      tags: [API Key]
+      summary: Generate a quick code
+      description: |
+        Generate a 6-digit quick code for your API key. Quick codes are short-lived (15 minutes) 
+        and allow easy key retrieval, especially useful for in-game chatbox interactions.
+
+        **Warning:** Redeeming a quick code will regenerate your API key, invalidating the old one.
+
+        **Requires authentication:** This endpoint requires a valid API key.
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Quick code generated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/QuickCodeGenerated'
+              example:
+                success: true
+                data:
+                  quickCode: '003721'
+                  expiresAt: '2026-01-27T12:15:00.000Z'
+                  expiresIn: '15 minutes'
+                  message: 'Use this code to retrieve your full API key. Redeeming will regenerate your key.'
+                meta:
+                  timestamp: '2026-01-27T12:00:00.000Z'
+                  elapsed: 15
+                  version: '1.0.0'
+                  requestId: 'qc-gen-123'
+        '401':
+          description: Unauthorized - API key required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/apikey/quickcode/redeem:
+    post:
+      tags: [API Key]
+      summary: Redeem a quick code
+      description: |
+        Redeem a 6-digit quick code to receive a full API key. Quick codes are generated via 
+        the `\krawlet api` chatbox command or the `/v1/apikey/quickcode/generate` endpoint.
+
+        **Important:** Redeeming a quick code will generate a NEW API key, invalidating any previous key.
+
+        **No authentication required:** This endpoint can be called without an existing API key.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - code
+              properties:
+                code:
+                  type: string
+                  description: The 6-digit quick code
+                  pattern: '^\d{6}$'
+                  example: '003721'
+      responses:
+        '200':
+          description: Quick code redeemed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/QuickCodeRedeemed'
+              example:
+                success: true
+                data:
+                  message: 'Quick code redeemed successfully'
+                  apiKey: 'kraw_abc123def456789...'
+                  name: "PlayerName's API Key"
+                  tier: 'free'
+                  rateLimit: 1000
+                  warning: 'Save this API key securely - it will not be shown again!'
+                meta:
+                  timestamp: '2026-01-27T12:05:00.000Z'
+                  elapsed: 25
+                  version: '1.0.0'
+                  requestId: 'qc-redeem-456'
+        '400':
+          description: Invalid request - missing or malformed quick code
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: 'INVALID_REQUEST'
+                  message: 'Quick code must be a 6-digit number'
+        '404':
+          description: Quick code not found or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error:
+                  code: 'NOT_FOUND'
+                  message: 'Invalid or expired quick code'
+
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -1302,3 +1420,49 @@ components:
                       type: string
                     requiredMeta:
                       type: string
+
+    QuickCodeGenerated:
+      type: object
+      description: Response when a quick code is generated
+      properties:
+        quickCode:
+          type: string
+          description: The 6-digit quick code
+          pattern: '^\d{6}$'
+          example: '003721'
+        expiresAt:
+          type: string
+          format: date-time
+          description: When the quick code expires
+        expiresIn:
+          type: string
+          description: Human-readable expiration time
+          example: '15 minutes'
+        message:
+          type: string
+          description: Instructions for using the quick code
+
+    QuickCodeRedeemed:
+      type: object
+      description: Response when a quick code is successfully redeemed
+      properties:
+        message:
+          type: string
+          description: Success message
+        apiKey:
+          type: string
+          description: The full API key (starts with kraw_)
+          example: 'kraw_abc123def456...'
+        name:
+          type: string
+          description: Name associated with the API key
+        tier:
+          type: string
+          enum: [free, premium]
+          description: API key tier
+        rateLimit:
+          type: integer
+          description: Requests per hour limit
+        warning:
+          type: string
+          description: Warning to save the key securely

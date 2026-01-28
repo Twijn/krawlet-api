@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
 import { RequestLog } from '../../../lib/models/requestlog.model';
+import { ApiKey } from '../../../lib/models/apikey.model';
 import { sequelize } from '../../../lib/models/database';
 import { RequestWithRateLimit } from '../types/request';
 
@@ -174,6 +175,82 @@ router.get('/logs', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching API key logs:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch API key logs', 500);
+  }
+});
+
+// POST /v1/apikey/quickcode/redeem - Redeem a quick code for a full API key
+router.post('/quickcode/redeem', async (req: Request, res: Response) => {
+  try {
+    const { code } = req.body;
+
+    if (!code || typeof code !== 'string') {
+      return res.error('INVALID_REQUEST', 'Quick code is required', 400);
+    }
+
+    // Normalize the code (remove spaces/dashes, pad with leading zeros)
+    const normalizedCode = code.replace(/[\s-]/g, '').padStart(6, '0');
+
+    if (!/^\d{6}$/.test(normalizedCode)) {
+      return res.error('INVALID_REQUEST', 'Quick code must be a 6-digit number', 400);
+    }
+
+    const apiKey = await ApiKey.findByQuickCode(normalizedCode);
+
+    if (!apiKey) {
+      return res.error('NOT_FOUND', 'Invalid or expired quick code', 404);
+    }
+
+    // Generate a new raw key for the user
+    const rawKey = ApiKey.generateKey();
+    const hashedKey = ApiKey.hashKey(rawKey);
+
+    // Update the key and clear the quick code
+    apiKey.key = hashedKey;
+    apiKey.qcCode = null;
+    apiKey.qcExpires = null;
+    await apiKey.save();
+
+    return res.success({
+      message: 'Quick code redeemed successfully',
+      apiKey: rawKey,
+      name: apiKey.name,
+      tier: apiKey.tier,
+      rateLimit: apiKey.rateLimit,
+      warning: 'Save this API key securely - it will not be shown again!',
+    });
+  } catch (error) {
+    console.error('Error redeeming quick code:', error);
+    return res.error('INTERNAL_ERROR', 'Failed to redeem quick code', 500);
+  }
+});
+
+// POST /v1/apikey/quickcode/generate - Generate a quick code for an existing API key
+router.post('/quickcode/generate', async (req: Request, res: Response) => {
+  const request = req as RequestWithRateLimit;
+
+  if (!request.apiKey) {
+    return res.error('UNAUTHORIZED', 'API key required to generate a quick code', 401);
+  }
+
+  try {
+    // Fetch the full ApiKey model instance to use model methods
+    const apiKey = await ApiKey.findByPk(request.apiKey.id);
+
+    if (!apiKey) {
+      return res.error('NOT_FOUND', 'API key not found', 404);
+    }
+
+    const code = await apiKey.setQuickCode();
+
+    return res.success({
+      quickCode: code,
+      expiresAt: apiKey.qcExpires,
+      expiresIn: '15 minutes',
+      message: 'Use this code to retrieve your full API key. Redeeming will regenerate your key.',
+    });
+  } catch (error) {
+    console.error('Error generating quick code:', error);
+    return res.error('INTERNAL_ERROR', 'Failed to generate quick code', 500);
   }
 });
 

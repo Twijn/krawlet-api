@@ -30,6 +30,94 @@ The Krawlet API uses a two-tier system for API keys:
 
 ---
 
+## Quick Codes 🚀
+
+Quick codes are 6-digit temporary codes that allow easy API key retrieval without copy-pasting long strings. Perfect for in-game chatbox interactions!
+
+### How Quick Codes Work
+
+1. **Generate:** Use `\krawlet api` in-game or request via API
+2. **Receive:** Get a 6-digit code like `003721`
+3. **Redeem:** Call the redemption endpoint within 15 minutes
+4. **Done:** Receive your full API key
+
+### Quick Code Properties
+
+| Property    | Description                       |
+| ----------- | --------------------------------- |
+| Format      | 6-digit number (e.g., `003721`)   |
+| Expiration  | 15 minutes from generation        |
+| Single Use  | Code is cleared after redemption  |
+| Regenerates | Redeeming generates a new API key |
+
+### Generating a Quick Code (In-Game)
+
+Use the chatbox command:
+
+```
+\krawlet api
+```
+
+You'll receive a 6-digit quick code to redeem via the API.
+
+### Generating a Quick Code (API)
+
+If you already have an API key and need a new one:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer kraw_your_key" \
+  https://api.krawlet.cc/v1/apikey/quickcode/generate
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "quickCode": "003721",
+    "expiresAt": "2026-01-27T12:15:00.000Z",
+    "expiresIn": "15 minutes",
+    "message": "Use this code to retrieve your full API key. Redeeming will regenerate your key."
+  }
+}
+```
+
+### Redeeming a Quick Code
+
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"code": "003721"}' \
+  https://api.krawlet.cc/v1/apikey/quickcode/redeem
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "message": "Quick code redeemed successfully",
+    "apiKey": "kraw_abc123def456...",
+    "name": "PlayerName's API Key",
+    "tier": "free",
+    "rateLimit": 1000,
+    "warning": "Save this API key securely - it will not be shown again!"
+  }
+}
+```
+
+### Quick Code Errors
+
+| Error             | Cause                     |
+| ----------------- | ------------------------- |
+| `INVALID_REQUEST` | Missing or malformed code |
+| `NOT_FOUND`       | Invalid or expired code   |
+
+---
+
 ## Generating API Keys
 
 ### Basic Generation
@@ -333,7 +421,7 @@ When generating a key, you'll see:
 
 ### Can I retrieve a lost API key?
 
-No. API keys are hashed before storage and cannot be retrieved. If you lose a key, you must generate a new one and deactivate the old one.
+No. API keys are hashed before storage and cannot be retrieved. However, you can use `\krawlet api` in-game to generate a **quick code** that will regenerate your key. The quick code is easy to type and redeemable via the API.
 
 ### How do I increase my rate limit?
 
@@ -350,3 +438,11 @@ Anonymous requests are limited to 100 requests/hour, tracked by IP address.
 ### How long do API keys last?
 
 API keys don't expire automatically. They remain active until deactivated or deleted.
+
+### What are quick codes?
+
+Quick codes are 6-digit temporary codes (e.g., `003721`) that make it easy to retrieve your API key, especially when using in-game commands where copy-paste isn't available. They expire after 15 minutes.
+
+### Does redeeming a quick code invalidate my old key?
+
+Yes! Redeeming a quick code generates a new API key, which invalidates your previous key. Any applications using the old key will need to be updated.

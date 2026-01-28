@@ -2,6 +2,9 @@ import { Model, DataTypes } from 'sequelize';
 import { sequelize } from './database';
 import crypto from 'crypto';
 
+/** Quick code expiration time in minutes */
+const QC_EXPIRATION_MINUTES = 15;
+
 export class ApiKey extends Model {
   public id!: string;
   public key!: string;
@@ -14,6 +17,8 @@ export class ApiKey extends Model {
   public requestCount!: number;
   public mcUuid!: string | null;
   public mcName!: string | null;
+  public qcCode!: string | null;
+  public qcExpires!: Date | null;
 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -24,6 +29,57 @@ export class ApiKey extends Model {
 
   static hashKey(key: string): string {
     return crypto.createHash('sha256').update(key).digest('hex');
+  }
+
+  /**
+   * Generate a 6-digit quick code (e.g., "003721")
+   */
+  static generateQuickCode(): string {
+    const code = crypto.randomInt(0, 1000000);
+    return code.toString().padStart(6, '0');
+  }
+
+  /**
+   * Check if the quick code is still valid
+   */
+  isQuickCodeValid(): boolean {
+    if (!this.qcCode || !this.qcExpires) return false;
+    return new Date() < this.qcExpires;
+  }
+
+  /**
+   * Set a new quick code with expiration
+   */
+  async setQuickCode(): Promise<string> {
+    const code = ApiKey.generateQuickCode();
+    this.qcCode = code;
+    this.qcExpires = new Date(Date.now() + QC_EXPIRATION_MINUTES * 60 * 1000);
+    await this.save();
+    return code;
+  }
+
+  /**
+   * Clear the quick code after use or expiration
+   */
+  async clearQuickCode(): Promise<void> {
+    this.qcCode = null;
+    this.qcExpires = null;
+    await this.save();
+  }
+
+  /**
+   * Find an API key by quick code (if not expired)
+   */
+  static async findByQuickCode(code: string): Promise<ApiKey | null> {
+    const apiKey = await ApiKey.findOne({
+      where: { qcCode: code },
+    });
+
+    if (!apiKey || !apiKey.isQuickCodeValid()) {
+      return null;
+    }
+
+    return apiKey;
   }
 
   async incrementUsage(): Promise<void> {
@@ -84,6 +140,16 @@ ApiKey.init(
       type: DataTypes.STRING,
       allowNull: true,
       field: 'mc_name',
+    },
+    qcCode: {
+      type: DataTypes.STRING(6),
+      allowNull: true,
+      field: 'qc_code',
+    },
+    qcExpires: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      field: 'qc_expires',
     },
   },
   {

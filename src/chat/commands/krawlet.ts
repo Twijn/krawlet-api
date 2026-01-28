@@ -23,11 +23,22 @@ async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
     });
 
     if (existingKey) {
+      // Generate a quick code for the existing key
+      const quickCode = await existingKey.setQuickCode();
       rcc
         .tell(
           cmd.user,
-          `<red>You already have an API key!</red> Created: ${existingKey.createdAt.toLocaleDateString()}. Use <yellow>${PREFIX}krawlet api regen</yellow> to regenerate.`,
+          `<yellow>You already have an API key!</yellow> Here's a quick code to retrieve it:`,
         )
+        .catch(console.error);
+      rcc
+        .tell(cmd.user, `<gold><bold>${quickCode}</bold></gold> <gray>(expires in 15 min)</gray>`)
+        .catch(console.error);
+      rcc
+        .tell(cmd.user, `<gray>Redeem at:</gray> <aqua>POST /v1/apikey/quickcode/redeem</aqua>`)
+        .catch(console.error);
+      rcc
+        .tell(cmd.user, `<red>Note:</red> <gray>Redeeming will regenerate your API key!</gray>`)
         .catch(console.error);
       return;
     }
@@ -36,7 +47,7 @@ async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
     const rawKey = ApiKey.generateKey();
     const hashedKey = ApiKey.hashKey(rawKey);
 
-    await ApiKey.create({
+    const newKey = await ApiKey.create({
       key: hashedKey,
       name: `${mcName}'s API Key`,
       tier: 'free',
@@ -46,11 +57,20 @@ async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
       mcName: mcName,
     });
 
+    // Generate a quick code for immediate retrieval
+    const quickCode = await newKey.setQuickCode();
+
     rcc
-      .tell(cmd.user, `<green>API Key generated!</green> <red>SAVE THIS - shown once!</red>`)
+      .tell(cmd.user, `<green>API Key generated!</green> Use this quick code to retrieve it:`)
       .catch(console.error);
     rcc
-      .tell(cmd.user, `<gold><click:copy-to-clipboard:${rawKey}>${rawKey}</gold></click>`)
+      .tell(cmd.user, `<gold><bold>${quickCode}</bold></gold> <gray>(expires in 15 min)</gray>`)
+      .catch(console.error);
+    rcc
+      .tell(
+        cmd.user,
+        `<gray>Redeem at:</gray> <aqua>POST /v1/apikey/quickcode/redeem</aqua> <gray>with body</gray> <yellow>{"code": "${quickCode}"}</yellow>`,
+      )
       .catch(console.error);
   } catch (err) {
     console.error('Error generating API key via chatbox:', err);
@@ -62,7 +82,6 @@ async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
 
 async function handleApiKeyRegeneration(cmd: ChatboxCommand, confirmed: boolean): Promise<void> {
   const uuid = cmd.user.uuid;
-  const mcName = cmd.user.name;
 
   try {
     // Check if this user has an existing API key
@@ -101,25 +120,24 @@ async function handleApiKeyRegeneration(cmd: ChatboxCommand, confirmed: boolean)
       return;
     }
 
-    // Generate a new API key
-    const rawKey = ApiKey.generateKey();
-    const hashedKey = ApiKey.hashKey(rawKey);
-
-    // Update the existing key
-    existingKey.key = hashedKey;
-    existingKey.mcName = mcName; // Update name in case it changed
-    await existingKey.save();
+    // Generate a quick code instead of returning raw key
+    const quickCode = await existingKey.setQuickCode();
 
     rcc
-      .tell(cmd.user, `<green>API Key regenerated!</green> <red>SAVE THIS - shown once!</red>`)
+      .tell(cmd.user, `<green>Ready to regenerate!</green> Use this quick code:`)
+      .catch(console.error);
+    rcc
+      .tell(cmd.user, `<gold><bold>${quickCode}</bold></gold> <gray>(expires in 15 min)</gray>`)
+      .catch(console.error);
+    rcc
+      .tell(cmd.user, `<gray>Redeem at:</gray> <aqua>POST /v1/apikey/quickcode/redeem</aqua>`)
       .catch(console.error);
     rcc
       .tell(
         cmd.user,
-        `<gold><click:copy_to_clipboard:${rawKey}>${rawKey.substring(0, 20)}...</gold> <gray>[copy]</gray></click>`,
+        `<red>Note:</red> <gray>Your old key will be invalidated when you redeem!</gray>`,
       )
       .catch(console.error);
-    rcc.tell(cmd.user, `<gray>Your old API key has been invalidated.</gray>`).catch(console.error);
   } catch (err) {
     console.error('Error regenerating API key via chatbox:', err);
     rcc

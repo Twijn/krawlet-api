@@ -44,6 +44,8 @@ router.get('/', (req, res) => {
       '/v1/reports',
       '/v1/health',
       '/v1/apikey',
+      '/v1/apikey/quickcode/generate',
+      '/v1/apikey/quickcode/redeem',
     ],
     documentation: 'https://krawlet.cc/docs/v1',
     github: 'https://github.com/Twijn/krawlet-api',

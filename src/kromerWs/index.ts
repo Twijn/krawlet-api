@@ -13,7 +13,7 @@ import formatTransaction, {
 import walletListeners from './walletListeners';
 import { formatKromerBalance } from '../lib/formatKromer';
 
-const STRIPPED_META_ENTRIES = ['error', 'message', 'return', 'ref', 'type', 'amount', 'original'];
+const STRIPPED_META_ENTRIES = ['error', 'message', 'return', 'ref', 'type', 'original'];
 
 /**
  * Sanitizes text for use inside Discord inline code blocks.

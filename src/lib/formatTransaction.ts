@@ -6,7 +6,6 @@ import { formatKromerBalance } from './formatKromer';
 export interface RefundData {
   ref: string;
   type: string;
-  amount: string;
   original: string;
   message: string;
 }
@@ -24,7 +23,7 @@ export interface TransactionData {
 
 /**
  * Parses a structured metadata string like:
- * ref=33328;type=refund;amount=0.88;original=88.1;message=Refund for transaction #33328
+ * ref=33328;type=refund;original=88.1;message=Refund for transaction #33328
  */
 export function parseStructuredMetadata(metadata: string): RefundData | null {
   if (!metadata || !metadata.includes('ref=') || !metadata.includes('type=')) {
@@ -42,7 +41,6 @@ export function parseStructuredMetadata(metadata: string): RefundData | null {
 
     if (key === 'ref') parsed.ref = value;
     else if (key === 'type') parsed.type = value;
-    else if (key === 'amount') parsed.amount = value;
     else if (key === 'original') parsed.original = value;
     else if (key === 'message') parsed.message = value;
   }
