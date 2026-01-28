@@ -26,7 +26,7 @@ async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
       rcc
         .tell(
           cmd.user,
-          `<red>You already have an API key!</red> Created: ${existingKey.createdAt.toLocaleDateString()}. Contact admin if lost.`,
+          `<red>You already have an API key!</red> Created: ${existingKey.createdAt.toLocaleDateString()}. Use <yellow>${PREFIX}krawlet api regen</yellow> to regenerate.`,
         )
         .catch(console.error);
       return;
@@ -49,7 +49,9 @@ async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
     rcc
       .tell(cmd.user, `<green>API Key generated!</green> <red>SAVE THIS - shown once!</red>`)
       .catch(console.error);
-    rcc.tell(cmd.user, `<gold>${rawKey}</gold>`).catch(console.error);
+    rcc
+      .tell(cmd.user, `<gold><click:copy-to-clipboard:${rawKey}>${rawKey}</gold></click>`)
+      .catch(console.error);
   } catch (err) {
     console.error('Error generating API key via chatbox:', err);
     rcc
@@ -58,15 +60,89 @@ async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
   }
 }
 
+async function handleApiKeyRegeneration(cmd: ChatboxCommand, confirmed: boolean): Promise<void> {
+  const uuid = cmd.user.uuid;
+  const mcName = cmd.user.name;
+
+  try {
+    // Check if this user has an existing API key
+    const existingKey = await ApiKey.findOne({
+      where: {
+        mcUuid: uuid,
+      },
+    });
+
+    if (!existingKey) {
+      rcc
+        .tell(
+          cmd.user,
+          `<red>You don't have an API key to regenerate!</red> Use <yellow>${PREFIX}krawlet api</yellow> to generate one.`,
+        )
+        .catch(console.error);
+      return;
+    }
+
+    if (!confirmed) {
+      rcc
+        .tell(
+          cmd.user,
+          `<yellow><bold>Warning:</bold></yellow> Regenerating your API key will <red>invalidate your current key</red>.`,
+        )
+        .catch(console.error);
+      rcc
+        .tell(cmd.user, `<gray>Any applications using your old key will stop working.</gray>`)
+        .catch(console.error);
+      rcc
+        .tell(
+          cmd.user,
+          `<green><click:suggest_command:${PREFIX}krawlet api regen confirm>[Click here]</click></green> or run <yellow>${PREFIX}krawlet api regen confirm</yellow> to proceed.`,
+        )
+        .catch(console.error);
+      return;
+    }
+
+    // Generate a new API key
+    const rawKey = ApiKey.generateKey();
+    const hashedKey = ApiKey.hashKey(rawKey);
+
+    // Update the existing key
+    existingKey.key = hashedKey;
+    existingKey.mcName = mcName; // Update name in case it changed
+    await existingKey.save();
+
+    rcc
+      .tell(cmd.user, `<green>API Key regenerated!</green> <red>SAVE THIS - shown once!</red>`)
+      .catch(console.error);
+    rcc
+      .tell(
+        cmd.user,
+        `<gold><click:copy_to_clipboard:${rawKey}>${rawKey.substring(0, 20)}...</gold> <gray>[copy]</gray></click>`,
+      )
+      .catch(console.error);
+    rcc.tell(cmd.user, `<gray>Your old API key has been invalidated.</gray>`).catch(console.error);
+  } catch (err) {
+    console.error('Error regenerating API key via chatbox:', err);
+    rcc
+      .tell(cmd.user, `<red>Error regenerating API key. Try again later.</red>`)
+      .catch(console.error);
+  }
+}
+
 const command: Command = {
   name: 'krawlet',
   aliases: ['kromer', 'kro'],
   description: 'Shows this menu!',
-  usage: 'krawlet [notif [all/self/none] | api]',
+  usage: 'krawlet [notif [all/self/none] | api [regen [confirm]]]',
   execute: async (cmd: ChatboxCommand) => {
     if (cmd.args.length > 0) {
-      // Handle API key generation subcommand
+      // Handle API key generation/regeneration subcommand
       if (['api', 'apikey', 'key'].includes(cmd.args[0].toLowerCase())) {
+        // Check for regeneration subcommand
+        if (cmd.args.length >= 2 && ['regen', 'regenerate'].includes(cmd.args[1].toLowerCase())) {
+          const confirmed = cmd.args.length >= 3 && cmd.args[2].toLowerCase() === 'confirm';
+          await handleApiKeyRegeneration(cmd, confirmed);
+          return;
+        }
         await handleApiKeyGeneration(cmd);
         return;
       }
