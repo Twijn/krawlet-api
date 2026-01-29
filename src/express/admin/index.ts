@@ -100,6 +100,20 @@ const rateLimit = (req: Request, res: Response, next: NextFunction) => {
 router.use(ipAllowlist);
 router.use(rateLimit);
 
+// Timing middleware for admin API endpoints
+const adminTiming = (req: Request, res: Response, next: NextFunction) => {
+  const start = Date.now();
+  const originalJson = res.json.bind(res);
+
+  res.json = (body: any) => {
+    const elapsed = Date.now() - start;
+    console.log(`[Admin] ${req.method} ${req.path} - ${elapsed}ms`);
+    return originalJson(body);
+  };
+
+  next();
+};
+
 // Serve static files (CSS, JS)
 router.use('/static', express.static(path.join(__dirname, 'static')));
 
@@ -140,6 +154,9 @@ const adminAuth = (req: Request, res: Response, next: NextFunction) => {
 router.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'dashboard.html'));
 });
+
+// Apply timing middleware to all API routes
+router.use('/api', adminTiming);
 
 // API endpoint: Get statistics
 router.get('/api/stats', adminAuth, async (req, res) => {
