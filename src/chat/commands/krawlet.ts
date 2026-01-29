@@ -35,7 +35,11 @@ async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
         .tell(cmd.user, `<gold><bold>${quickCode}</bold></gold> <gray>(expires in 15 min)</gray>`)
         .catch(console.error);
       rcc
-        .tell(cmd.user, `<gray>Redeem at:</gray> <aqua>POST /v1/apikey/quickcode/redeem</aqua>`)
+        .tell(
+          cmd.user,
+          `<gray>Import to Krawlet:</gray> [Click Here](https://www.kromer.club/settings/advanced#${quickCode})`,
+          'markdown',
+        )
         .catch(console.error);
       rcc
         .tell(cmd.user, `<red>Note:</red> <gray>Redeeming will regenerate your API key!</gray>`)
@@ -69,7 +73,8 @@ async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
     rcc
       .tell(
         cmd.user,
-        `<gray>Redeem at:</gray> <aqua>POST /v1/apikey/quickcode/redeem</aqua> <gray>with body</gray> <yellow>{"code": "${quickCode}"}</yellow>`,
+        `<gray>Import to Krawlet:</gray> [Click Here](https://www.kromer.club/settings/advanced#${quickCode})`,
+        'markdown',
       )
       .catch(console.error);
   } catch (err) {
@@ -124,13 +129,18 @@ async function handleApiKeyRegeneration(cmd: ChatboxCommand, confirmed: boolean)
     const quickCode = await existingKey.setQuickCode();
 
     rcc
-      .tell(cmd.user, `<green>Ready to regenerate!</green> Use this quick code:`)
+      .tell(
+        cmd.user,
+        `<green>Ready to regenerate!</green> Use this quick code:<br><gold><bold>${quickCode}</bold></gold> <gray>(expires in 15 min)</gray>`,
+      )
       .catch(console.error);
     rcc
-      .tell(cmd.user, `<gold><bold>${quickCode}</bold></gold> <gray>(expires in 15 min)</gray>`)
-      .catch(console.error);
-    rcc
-      .tell(cmd.user, `<gray>Redeem at:</gray> <aqua>POST /v1/apikey/quickcode/redeem</aqua>`)
+      .tell(
+        cmd.user,
+        `Import to Krawlet: [Click Here](https://www.kromer.club/settings/advanced#${quickCode})`,
+        undefined,
+        'markdown',
+      )
       .catch(console.error);
     rcc
       .tell(
