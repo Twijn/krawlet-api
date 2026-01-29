@@ -71,7 +71,8 @@ async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
     rcc
       .tell(
         cmd.user,
-        `<gray>Import to Krawlet:</gray> [Click Here](https://www.kromer.club/settings/advanced#${quickCode})`,
+        `Import to Krawlet: [Click Here](https://www.kromer.club/settings/advanced#${quickCode})`,
+        undefined,
         'markdown',
       )
       .catch(console.error);
