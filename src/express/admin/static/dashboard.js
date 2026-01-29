@@ -4,6 +4,7 @@ let currentPage = 1;
 const pageSize = 50;
 let trendsChart = null;
 let tierChart = null;
+let pathsChart = null;
 
 // Authentication
 function login() {
@@ -416,6 +417,7 @@ async function loadCharts() {
   try {
     const trends = await fetchAPI('/admin/api/charts/trends');
     const tierData = await fetchAPI('/admin/api/charts/tiers');
+    const pathsData = await fetchAPI('/admin/api/charts/paths');
 
     // Trends Chart
     const trendsCtx = document.getElementById('trendsChart').getContext('2d');
@@ -476,6 +478,51 @@ async function loadCharts() {
           legend: {
             position: 'bottom',
             labels: { color: '#8899a6' },
+          },
+        },
+      },
+    });
+
+    // Paths Chart (Top Endpoints)
+    const pathsCtx = document.getElementById('pathsChart').getContext('2d');
+    if (pathsChart) pathsChart.destroy();
+    pathsChart = new Chart(pathsCtx, {
+      type: 'bar',
+      data: {
+        labels: pathsData.labels,
+        datasets: [
+          {
+            label: 'Requests',
+            data: pathsData.data,
+            backgroundColor: '#1da1f2',
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: function (context) {
+                // Show full path in tooltip
+                return pathsData.fullPaths[context[0].dataIndex];
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: { color: '#8899a6' },
+            grid: { color: '#38444d' },
+          },
+          y: {
+            ticks: { color: '#8899a6', font: { size: 11 } },
+            grid: { display: false },
           },
         },
       },
