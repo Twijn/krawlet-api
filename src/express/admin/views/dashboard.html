@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Krawlet Admin Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="/admin/static/dashboard.css" />
+  </head>
+  <body>
+    <div id="loginScreen" class="login-container">
+      <h1>🔐 Admin Login</h1>
+      <p>Enter the admin password to access the dashboard</p>
+      <input type="password" id="passwordInput" placeholder="Admin Password" />
+      <button onclick="login()">Login</button>
+      <div id="loginError" class="error" style="display: none; margin-top: 15px"></div>
+    </div>
+
+    <div id="dashboard" style="display: none">
+      <div class="container">
+        <header>
+          <div>
+            <h1>📊 Krawlet Admin Dashboard</h1>
+            <p class="subtitle">API Key Usage & Analytics</p>
+          </div>
+          <div class="header-actions">
+            <button onclick="showCreateKeyModal()">+ Create API Key</button>
+            <button class="secondary" onclick="logout()">Logout</button>
+          </div>
+        </header>
+
+        <div id="errorContainer"></div>
+        <div id="successContainer"></div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total API Keys</div>
+            <div class="stat-value" id="totalKeys">-</div>
+            <div class="stat-subvalue"><span id="activeKeys">-</span> active</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Requests</div>
+            <div class="stat-value" id="totalRequests">-</div>
+            <div class="stat-subvalue">Last 24h: <span id="requests24h">-</span></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Blocked Requests</div>
+            <div class="stat-value" id="blockedRequests">-</div>
+            <div class="stat-subvalue"><span id="blockRate">-</span>% block rate</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Most Active Key</div>
+            <div class="stat-value" style="font-size: 18px" id="mostActiveKey">-</div>
+            <div class="stat-subvalue"><span id="mostActiveCount">-</span> requests</div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="section">
+            <h2>📈 Request Trends (7 Days)</h2>
+            <div class="chart-container">
+              <canvas id="trendsChart"></canvas>
+            </div>
+          </div>
+          <div class="section">
+            <h2>🎯 Requests by Tier</h2>
+            <div class="chart-container">
+              <canvas id="tierChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">
+            <h2>🔑 API Keys</h2>
+            <div class="filters">
+              <select id="tierFilter" onchange="loadKeys()">
+                <option value="">All Tiers</option>
+                <option value="free">Free</option>
+                <option value="premium">Premium</option>
+              </select>
+              <select id="activeFilter" onchange="loadKeys()">
+                <option value="">All Status</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+              </select>
+              <input
+                type="text"
+                id="searchKeys"
+                placeholder="Search by name or email..."
+                onkeyup="loadKeys()"
+              />
+              <button onclick="exportKeys()">📥 Export CSV</button>
+            </div>
+          </div>
+          <div id="keysTable" class="loading">Loading...</div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">
+            <h2>📝 Recent Request Logs</h2>
+            <div class="filters">
+              <select id="statusFilter" onchange="loadLogs()">
+                <option value="">All Requests</option>
+                <option value="success">Success Only</option>
+                <option value="blocked">Blocked Only</option>
+              </select>
+              <input
+                type="text"
+                id="searchLogs"
+                placeholder="Search by IP or path..."
+                onkeyup="loadLogs()"
+              />
+              <button onclick="loadLogs()">Refresh</button>
+              <button onclick="exportLogs()">📥 Export CSV</button>
+            </div>
+          </div>
+          <div id="logsTable" class="loading">Loading...</div>
+          <div id="logsPagination" class="pagination"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Key Details Modal -->
+    <div id="keyModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>API Key Details</h3>
+          <button class="close-modal" onclick="closeModal('keyModal')">&times;</button>
+        </div>
+        <div id="keyDetails"></div>
+      </div>
+    </div>
+
+    <!-- Create Key Modal -->
+    <div id="createKeyModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Create New API Key</h3>
+          <button class="close-modal" onclick="closeModal('createKeyModal')">&times;</button>
+        </div>
+        <div>
+          <div style="margin-bottom: 15px">
+            <label style="display: block; color: #8899a6; margin-bottom: 5px">Name</label>
+            <input type="text" id="createKeyName" placeholder="Key name" style="width: 100%" />
+          </div>
+          <div style="margin-bottom: 15px">
+            <label style="display: block; color: #8899a6; margin-bottom: 5px"
+              >Email (optional)</label
+            >
+            <input
+              type="email"
+              id="createKeyEmail"
+              placeholder="user@example.com"
+              style="width: 100%"
+            />
+          </div>
+          <div style="margin-bottom: 15px">
+            <label style="display: block; color: #8899a6; margin-bottom: 5px">Tier</label>
+            <select id="createKeyTier" style="width: 100%">
+              <option value="free">Free</option>
+              <option value="premium">Premium</option>
+            </select>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 20px">
+            <button onclick="createKey()" style="flex: 1">Create Key</button>
+            <button class="secondary" onclick="closeModal('createKeyModal')" style="flex: 1">
+              Cancel
+            </button>
+          </div>
+          <div id="createKeyResult" style="margin-top: 15px"></div>
+        </div>
+      </div>
+    </div>
+
+    <script src="/admin/static/dashboard.js"></script>
+  </body>
+</html>

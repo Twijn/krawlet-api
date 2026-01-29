@@ -11,6 +11,7 @@ import { getPackageName, getPackageVersion } from '../lib/packageData';
 // Import V1 router
 import v1Router from './v1';
 import docsRouter from './docs';
+import adminRouter from './admin';
 
 const PORT = process.env.PORT ?? 3000;
 
@@ -61,6 +62,9 @@ apiRouter.use('/turtles', turtles);
 // Mount the /api router
 app.use('/api', apiRouter);
 
+// Mount admin dashboard
+app.use('/admin', adminRouter);
+
 app.use((req, res) => {
   res.status(404).json({
     ok: false,
@@ -72,4 +76,7 @@ app.listen(PORT, () => {
   console.log(`Express server listening on port ${PORT}`);
   console.log(`Documentation available at http://localhost:${PORT}/`);
   console.log(`V1 API available at http://localhost:${PORT}/api/v1`);
+  if (process.env.ADMIN_PASSWORD) {
+    console.log(`Admin dashboard available at http://localhost:${PORT}/admin`);
+  }
 });
