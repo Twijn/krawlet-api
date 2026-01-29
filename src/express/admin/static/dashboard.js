@@ -5,6 +5,8 @@ const pageSize = 50;
 let trendsChart = null;
 let tierChart = null;
 let pathsChart = null;
+let ipsChart = null;
+let userAgentsChart = null;
 
 // Authentication
 function login() {
@@ -527,8 +529,173 @@ async function loadCharts() {
         },
       },
     });
+
+    // IPs Chart (Requests by IP)
+    const ipsData = await fetchAPI('/admin/api/charts/ips');
+    const ipsCtx = document.getElementById('ipsChart').getContext('2d');
+    if (ipsChart) ipsChart.destroy();
+    ipsChart = new Chart(ipsCtx, {
+      type: 'bar',
+      data: {
+        labels: ipsData.labels,
+        datasets: [
+          {
+            label: 'Requests',
+            data: ipsData.data,
+            backgroundColor: '#17bf63',
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        onClick: (event, elements) => {
+          if (elements.length > 0) {
+            const index = elements[0].index;
+            const ip = ipsData.labels[index];
+            loadIpPathBreakdown(ip);
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              afterLabel: function () {
+                return 'Click for path breakdown';
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: { color: '#8899a6' },
+            grid: { color: '#38444d' },
+          },
+          y: {
+            ticks: { color: '#8899a6', font: { size: 11 } },
+            grid: { display: false },
+          },
+        },
+      },
+    });
+
+    // User Agents Chart
+    const uaData = await fetchAPI('/admin/api/charts/useragents');
+    const uaCtx = document.getElementById('userAgentsChart').getContext('2d');
+    if (userAgentsChart) userAgentsChart.destroy();
+    userAgentsChart = new Chart(uaCtx, {
+      type: 'bar',
+      data: {
+        labels: uaData.labels,
+        datasets: [
+          {
+            label: 'Requests',
+            data: uaData.data,
+            backgroundColor: '#794bc4',
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: function (context) {
+                return uaData.fullUserAgents[context[0].dataIndex];
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: { color: '#8899a6' },
+            grid: { color: '#38444d' },
+          },
+          y: {
+            ticks: { color: '#8899a6', font: { size: 11 } },
+            grid: { display: false },
+          },
+        },
+      },
+    });
   } catch (err) {
     console.error('Failed to load charts:', err);
+  }
+}
+
+// Load IP details (paths and user agents)
+async function loadIpPathBreakdown(ip) {
+  const container = document.getElementById('ipPathBreakdown');
+  container.innerHTML = '<div class="loading">Loading...</div>';
+
+  try {
+    const data = await fetchAPI('/admin/api/charts/ips/' + encodeURIComponent(ip) + '/details');
+
+    if (data.paths.length === 0 && data.userAgents.length === 0) {
+      container.innerHTML =
+        '<p style="color: #8899a6; text-align: center;">No data for this IP</p>';
+      return;
+    }
+
+    let html =
+      '<p style="color: #8899a6; font-size: 11px; margin-bottom: 10px; text-align: center;">IP: ' +
+      escapeHtml(ip) +
+      '</p>';
+    html += '<div style="max-height: 220px; overflow-y: auto;">';
+
+    // Paths table
+    if (data.paths.length > 0) {
+      html +=
+        '<p style="color: #fff; font-size: 12px; margin-bottom: 5px;"><strong>Paths:</strong></p>';
+      html += '<table style="width: 100%; font-size: 12px; margin-bottom: 10px;">';
+      html += '<tbody>';
+      data.paths.forEach((item) => {
+        const displayPath = item.path.length > 30 ? item.path.substring(0, 27) + '...' : item.path;
+        html +=
+          '<tr><td title="' +
+          escapeHtml(item.path) +
+          '">' +
+          escapeHtml(displayPath) +
+          '</td><td style="text-align: right;">' +
+          item.count.toLocaleString() +
+          '</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+
+    // User agents table
+    if (data.userAgents.length > 0) {
+      html +=
+        '<p style="color: #fff; font-size: 12px; margin-bottom: 5px;"><strong>User Agents:</strong></p>';
+      html += '<table style="width: 100%; font-size: 12px;">';
+      html += '<tbody>';
+      data.userAgents.forEach((item) => {
+        const displayUa =
+          item.userAgent.length > 30 ? item.userAgent.substring(0, 27) + '...' : item.userAgent;
+        html +=
+          '<tr><td title="' +
+          escapeHtml(item.userAgent) +
+          '">' +
+          escapeHtml(displayUa) +
+          '</td><td style="text-align: right;">' +
+          item.count.toLocaleString() +
+          '</td></tr>';
+      });
+      html += '</tbody></table>';
+    }
+
+    html += '</div>';
+    container.innerHTML = html;
+  } catch (err) {
+    container.innerHTML = '<div class="error">Failed to load IP details</div>';
   }
 }
 

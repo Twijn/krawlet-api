@@ -513,4 +513,166 @@ router.get('/api/charts/paths', adminAuth, async (req, res) => {
   }
 });
 
+// API endpoint: Get requests by IP address for chart
+router.get('/api/charts/ips', adminAuth, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+
+    const [results] = await sequelize.query(
+      `
+      SELECT
+        ip_address,
+        COUNT(*) as count
+      FROM request_logs
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      GROUP BY ip_address
+      ORDER BY count DESC
+      LIMIT :limit
+    `,
+      {
+        replacements: { limit },
+      },
+    );
+
+    const data = results as any[];
+    const labels = data.map((row) => row.ip_address);
+    const counts = data.map((row) => row.count);
+
+    res.json({
+      labels,
+      data: counts,
+    });
+  } catch (error) {
+    console.error('Error fetching IP data:', error);
+    res.status(500).json({ ok: false, error: 'Failed to fetch IP data' });
+  }
+});
+
+// API endpoint: Get path breakdown for a specific IP address
+router.get('/api/charts/ips/:ip/paths', adminAuth, async (req, res) => {
+  try {
+    const ip = req.params.ip;
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+
+    const [results] = await sequelize.query(
+      `
+      SELECT
+        path,
+        COUNT(*) as count
+      FROM request_logs
+      WHERE ip_address = :ip
+        AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      GROUP BY path
+      ORDER BY count DESC
+      LIMIT :limit
+    `,
+      {
+        replacements: { ip, limit },
+      },
+    );
+
+    const data = results as any[];
+
+    res.json({
+      ip,
+      paths: data.map((row) => ({
+        path: row.path,
+        count: row.count,
+      })),
+    });
+  } catch (error) {
+    console.error('Error fetching IP path data:', error);
+    res.status(500).json({ ok: false, error: 'Failed to fetch IP path data' });
+  }
+});
+
+// API endpoint: Get requests by user agent for chart
+router.get('/api/charts/useragents', adminAuth, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+
+    const [results] = await sequelize.query(
+      `
+      SELECT
+        COALESCE(user_agent, 'Unknown') as user_agent,
+        COUNT(*) as count
+      FROM request_logs
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      GROUP BY user_agent
+      ORDER BY count DESC
+      LIMIT :limit
+    `,
+      {
+        replacements: { limit },
+      },
+    );
+
+    const data = results as any[];
+
+    // Shorten long user agents for display
+    const labels = data.map((row) => {
+      const ua = row.user_agent || 'Unknown';
+      if (ua.length > 40) {
+        return ua.substring(0, 37) + '...';
+      }
+      return ua;
+    });
+    const counts = data.map((row) => row.count);
+    const fullUserAgents = data.map((row) => row.user_agent || 'Unknown');
+
+    res.json({
+      labels,
+      data: counts,
+      fullUserAgents,
+    });
+  } catch (error) {
+    console.error('Error fetching user agent data:', error);
+    res.status(500).json({ ok: false, error: 'Failed to fetch user agent data' });
+  }
+});
+
+// API endpoint: Get details for a specific IP (paths and user agents)
+router.get('/api/charts/ips/:ip/details', adminAuth, async (req, res) => {
+  try {
+    const ip = req.params.ip;
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+
+    const [pathResults] = await sequelize.query(
+      `
+      SELECT path, COUNT(*) as count
+      FROM request_logs
+      WHERE ip_address = :ip AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      GROUP BY path
+      ORDER BY count DESC
+      LIMIT :limit
+    `,
+      { replacements: { ip, limit } },
+    );
+
+    const [uaResults] = await sequelize.query(
+      `
+      SELECT COALESCE(user_agent, 'Unknown') as user_agent, COUNT(*) as count
+      FROM request_logs
+      WHERE ip_address = :ip AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      GROUP BY user_agent
+      ORDER BY count DESC
+      LIMIT :limit
+    `,
+      { replacements: { ip, limit } },
+    );
+
+    res.json({
+      ip,
+      paths: (pathResults as any[]).map((row) => ({ path: row.path, count: row.count })),
+      userAgents: (uaResults as any[]).map((row) => ({
+        userAgent: row.user_agent,
+        count: row.count,
+      })),
+    });
+  } catch (error) {
+    console.error('Error fetching IP details:', error);
+    res.status(500).json({ ok: false, error: 'Failed to fetch IP details' });
+  }
+});
+
 export default router;
