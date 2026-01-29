@@ -675,4 +675,49 @@ router.get('/api/charts/ips/:ip/details', adminAuth, async (req, res) => {
   }
 });
 
+// API endpoint: Get requests by referer for chart
+router.get('/api/charts/referers', adminAuth, async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+
+    const [results] = await sequelize.query(
+      `
+      SELECT
+        COALESCE(referer, 'Direct / None') as referer,
+        COUNT(*) as count
+      FROM request_logs
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+      GROUP BY referer
+      ORDER BY count DESC
+      LIMIT :limit
+    `,
+      {
+        replacements: { limit },
+      },
+    );
+
+    const data = results as any[];
+
+    // Shorten long referers for display
+    const labels = data.map((row) => {
+      const ref = row.referer || 'Direct / None';
+      if (ref.length > 50) {
+        return ref.substring(0, 47) + '...';
+      }
+      return ref;
+    });
+    const counts = data.map((row) => row.count);
+    const fullReferers = data.map((row) => row.referer || 'Direct / None');
+
+    res.json({
+      labels,
+      data: counts,
+      fullReferers,
+    });
+  } catch (error) {
+    console.error('Error fetching referer data:', error);
+    res.status(500).json({ ok: false, error: 'Failed to fetch referer data' });
+  }
+});
+
 export default router;

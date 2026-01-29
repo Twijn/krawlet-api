@@ -7,6 +7,7 @@ let tierChart = null;
 let pathsChart = null;
 let ipsChart = null;
 let userAgentsChart = null;
+let referersChart = null;
 
 // Authentication
 function login() {
@@ -609,6 +610,51 @@ async function loadCharts() {
             callbacks: {
               title: function (context) {
                 return uaData.fullUserAgents[context[0].dataIndex];
+              },
+            },
+          },
+        },
+        scales: {
+          x: {
+            beginAtZero: true,
+            ticks: { color: '#8899a6' },
+            grid: { color: '#38444d' },
+          },
+          y: {
+            ticks: { color: '#8899a6', font: { size: 11 } },
+            grid: { display: false },
+          },
+        },
+      },
+    });
+
+    // Referers Chart
+    const refData = await fetchAPI('/admin/api/charts/referers');
+    const refCtx = document.getElementById('referersChart').getContext('2d');
+    if (referersChart) referersChart.destroy();
+    referersChart = new Chart(refCtx, {
+      type: 'bar',
+      data: {
+        labels: refData.labels,
+        datasets: [
+          {
+            label: 'Requests',
+            data: refData.data,
+            backgroundColor: '#f45d22',
+            borderRadius: 4,
+          },
+        ],
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: function (context) {
+                return refData.fullReferers[context[0].dataIndex];
               },
             },
           },

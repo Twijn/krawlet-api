@@ -77,6 +77,7 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
 
   const ip = getClientIp(request);
   const userAgent = request.get('user-agent');
+  const referer = request.get('referer') || request.get('referrer');
   const tier = (request.apiKey?.tier || 'anonymous') as 'anonymous' | 'free' | 'premium';
 
   // Track request start time
@@ -94,6 +95,7 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
       path: req.path,
       ipAddress: ip,
       userAgent,
+      referer,
       apiKeyId: request.apiKey?.id,
       tier,
       rateLimitCount: current.count,
@@ -120,6 +122,7 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
       path: req.path,
       ipAddress: ip,
       userAgent,
+      referer,
       apiKeyId: request.apiKey?.id,
       tier,
       rateLimitCount: current.count,

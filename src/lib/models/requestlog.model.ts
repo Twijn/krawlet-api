@@ -9,6 +9,7 @@ interface RequestLogAttributes {
   path: string;
   ipAddress: string;
   userAgent?: string;
+  referer?: string;
   apiKeyId?: string;
   tier: 'anonymous' | 'free' | 'premium';
   rateLimitCount: number;
@@ -29,6 +30,7 @@ interface RequestLogCreationAttributes
     | 'timestamp'
     | 'createdAt'
     | 'userAgent'
+    | 'referer'
     | 'apiKeyId'
     | 'blockReason'
     | 'responseStatus'
@@ -46,6 +48,7 @@ export class RequestLog
   declare path: string;
   declare ipAddress: string;
   declare userAgent?: string;
+  declare referer?: string;
   declare apiKeyId?: string;
   declare tier: 'anonymous' | 'free' | 'premium';
   declare rateLimitCount: number;
@@ -145,6 +148,11 @@ RequestLog.init(
       type: DataTypes.STRING(500),
       allowNull: true,
       field: 'user_agent',
+    },
+    referer: {
+      type: DataTypes.STRING(500),
+      allowNull: true,
+      field: 'referer',
     },
     apiKeyId: {
       type: DataTypes.UUID,
