@@ -606,8 +606,9 @@ function krawlet.searchItems(query)
     local queryLower = query:lower()
 
     for _, item in ipairs(items) do
-        local name = item.itemDisplayName or item.itemName or ""
-        if name:lower():find(queryLower, 1, true) then
+        local displayName = (item.itemDisplayName or ""):lower()
+        local itemName = (item.itemName or ""):lower()
+        if displayName:find(queryLower, 1, true) or itemName:find(queryLower, 1, true) then
             table.insert(results, item)
         end
     end
