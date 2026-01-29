@@ -395,13 +395,13 @@ end</code></pre>
       <div class="method">
         <div class="method-sig">krawlet.findBestPrices(itemName, currency?, limit?)</div>
         <div class="method-desc">Find items with the lowest buy prices. Great for finding deals!</div>
-        <div class="method-returns">Parameters: <span>itemName</span>, <span>currency</span> (default: "KST"), <span>limit</span> (default: 10) | Returns: <span>table[]|nil</span></div>
+        <div class="method-returns">Parameters: <span>itemName</span>, <span>currency</span> (default: "KRO"), <span>limit</span> (default: 10) | Returns: <span>table[]|nil</span></div>
       </div>
 
       <div class="method">
         <div class="method-sig">krawlet.findBestSellPrices(itemName, currency?, limit?)</div>
         <div class="method-desc">Find shops that buy items at the highest prices.</div>
-        <div class="method-returns">Parameters: <span>itemName</span>, <span>currency</span> (default: "KST"), <span>limit</span> (default: 10) | Returns: <span>table[]|nil</span></div>
+        <div class="method-returns">Parameters: <span>itemName</span>, <span>currency</span> (default: "KRO"), <span>limit</span> (default: 10) | Returns: <span>table[]|nil</span></div>
       </div>
 
       <div class="example">
@@ -409,12 +409,12 @@ end</code></pre>
         <pre><code>local krawlet = require("krawlet")
 
 -- Find the best prices for diamonds
-local deals = krawlet.findBestPrices("diamond", "KST", 5)
+local deals = krawlet.findBestPrices("diamond", "KRO", 5)
 if deals then
     print("Best diamond prices:")
     for i, deal in ipairs(deals) do
         local shopName = deal.shop and deal.shop.name or "Unknown Shop"
-        print(string.format("%d. %s - %s KST (stock: %d)", 
+        print(string.format("%d. %s - %s KRO (stock: %d)", 
             i, shopName, krawlet.formatKromer(deal.price), deal.stock or 0))
     end
 end
@@ -499,7 +499,7 @@ end</code></pre>
       <div class="method">
         <div class="method-sig">krawlet.formatKromer(value, decimals?)</div>
         <div class="method-desc">Format a number as a Kromer currency string with commas.</div>
-        <div class="method-returns">Parameters: <span>value</span> (number), <span>decimals</span> (default: 2) | Returns: <span>string</span> (e.g., "1,234.56 KST")</div>
+        <div class="method-returns">Parameters: <span>value</span> (number), <span>decimals</span> (default: 2) | Returns: <span>string</span> (e.g., "1,234.56 KRO")</div>
       </div>
 
       <div class="method">
@@ -546,7 +546,7 @@ while true do
     end
     
     print("Searching...")
-    local deals = krawlet.findBestPrices(query, "KST", 5)
+    local deals = krawlet.findBestPrices(query, "KRO", 5)
     
     if not deals or #deals == 0 then
         print("No results found for '" .. query .. "'")

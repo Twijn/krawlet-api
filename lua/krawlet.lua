@@ -618,12 +618,12 @@ end
 
 ---Find items with the best prices (lowest buy price)
 ---@param itemName string Item name to search
----@param currency? string Currency filter (default: "KST")
+---@param currency? string Currency filter (default: "KRO")
 ---@param limit? number Maximum results (default: 10)
 ---@return table[]|nil results Sorted results with item and shop info
 ---@return string? error Error message if request failed
 function krawlet.findBestPrices(itemName, currency, limit)
-    currency = currency or "KST"
+    currency = currency or "KRO"
     limit = limit or 10
 
     local items, err = krawlet.searchItems(itemName)
@@ -680,12 +680,12 @@ end
 
 ---Find shops that buy a specific item (best sell prices)
 ---@param itemName string Item name to search
----@param currency? string Currency filter (default: "KST")
+---@param currency? string Currency filter (default: "KRO")
 ---@param limit? number Maximum results (default: 10)
 ---@return table[]|nil results Sorted results with item and shop info
 ---@return string? error Error message if request failed
 function krawlet.findBestSellPrices(itemName, currency, limit)
-    currency = currency or "KST"
+    currency = currency or "KRO"
     limit = limit or 10
 
     local items, err = krawlet.searchItems(itemName)
@@ -981,7 +981,7 @@ end
 ---Format a Kromer value with currency symbol
 ---@param value number Kromer value
 ---@param decimals? number Decimal places (default: 2)
----@return string formatted Formatted string (e.g., "1,234.56 KST")
+---@return string formatted Formatted string (e.g., "1,234.56 KRO")
 function krawlet.formatKromer(value, decimals)
     decimals = decimals or 2
 
@@ -1010,7 +1010,7 @@ function krawlet.formatKromer(value, decimals)
         formatted = "-" .. formatted
     end
 
-    return formatted .. " KST"
+    return formatted .. " KRO"
 end
 
 ---Parse an item string (e.g., "minecraft:diamond" -> {mod = "minecraft", item = "diamond"})
