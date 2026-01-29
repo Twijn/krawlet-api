@@ -14,7 +14,7 @@
 --- local krawlet = require("krawlet")
 ---
 --- -- Configure (optional - defaults to production API)
---- krawlet.setEndpoint("https://api.krawlet.cc/api")
+--- krawlet.setEndpoint("https://api.krawlet.cc")
 ---
 --- -- Set API key for authenticated requests (optional)
 --- krawlet.setApiKey("kraw_your_api_key_here")
@@ -166,7 +166,7 @@ local VERSION = "1.0.0"
 ---@field _debug boolean Debug mode flag
 ---@field VERSION string Module version
 local krawlet = {
-    _endpoint = "https://api.krawlet.cc/api",
+    _endpoint = "https://api.krawlet.cc",
     _apiKey = nil,
     _lastRateLimit = nil,
     _debug = false,
@@ -346,7 +346,7 @@ end
 -------------------------------------------------------------------------------
 
 ---Set the API endpoint URL
----@param endpoint string Base URL (e.g., "https://api.krawlet.cc/api")
+---@param endpoint string Base URL (e.g., "https://api.krawlet.cc")
 function krawlet.setEndpoint(endpoint)
     -- Remove trailing slash if present
     if endpoint:sub(-1) == "/" then
@@ -1091,7 +1091,7 @@ end
 ---@return boolean hasUpdate True if update is available
 ---@return string|nil newVersion New version string if available
 function krawlet.checkForUpdate()
-    local url = "https://api.krawlet.cc/api/v1/health"
+    local url = "https://api.krawlet.cc/v1/health"
     local response = http.get(url)
 
     if response then
