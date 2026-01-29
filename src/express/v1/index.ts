@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import express from 'express';
 import { requestIdMiddleware } from './middleware/requestId';
 import { responseFormatterMiddleware } from './middleware/responseFormatter';
 import { optionalApiKeyAuth } from './middleware/apiKeyAuth';
@@ -14,6 +15,9 @@ import healthRouter from './routes/health';
 import apikeyRouter from './routes/apikey';
 
 const router = Router();
+
+// Parse JSON request bodies
+router.use(express.json());
 
 // Apply V1 middleware in order
 router.use(requestIdMiddleware);
