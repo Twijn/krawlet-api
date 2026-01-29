@@ -2,6 +2,8 @@ import { Shop } from './shop.model';
 import { Listing } from './listing.model';
 import { Turtle } from './turtle.model';
 import { TurtleStat } from './turtlestat.model';
+import { ApiKey } from './apikey.model';
+import { RequestLog } from './requestlog.model';
 
 // Initialize model relationships
 Shop.hasMany(Listing, {
@@ -23,6 +25,16 @@ TurtleStat.belongsTo(Turtle, {
   as: 'turtle',
 });
 
+// RequestLog -> ApiKey association
+RequestLog.belongsTo(ApiKey, {
+  foreignKey: 'apiKeyId',
+  as: 'apiKey',
+});
+ApiKey.hasMany(RequestLog, {
+  foreignKey: 'apiKeyId',
+  as: 'requestLogs',
+});
+
 export * from './database';
 export * from './player.model';
 export * from './listing.model';
@@ -32,3 +44,4 @@ export * from './turtle.model';
 export * from './turtlestat.model';
 export * from './changelog.model';
 export * from './apikey.model';
+export * from './requestlog.model';

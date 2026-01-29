@@ -237,10 +237,22 @@ router.get('/api/keys', adminAuth, async (req, res) => {
         'lastUsedAt',
         'isActive',
         'createdAt',
+        'mcName',
+        'mcUuid',
       ],
     });
 
-    res.json(keys);
+    // Transform to include minecraftName and minecraftUuid for frontend
+    const keysData = keys.map((key) => {
+      const keyJson = key.toJSON();
+      return {
+        ...keyJson,
+        minecraftName: keyJson.mcName,
+        minecraftUuid: keyJson.mcUuid,
+      };
+    });
+
+    res.json(keysData);
   } catch (error) {
     console.error('Error fetching API keys:', error);
     res.status(500).json({ ok: false, error: 'Failed to fetch API keys' });
@@ -445,6 +457,7 @@ router.get('/api/logs', adminAuth, async (req, res) => {
         'path',
         'ipAddress',
         'referer',
+        'apiKeyId',
         'tier',
         'wasBlocked',
         'blockReason',
@@ -454,12 +467,32 @@ router.get('/api/logs', adminAuth, async (req, res) => {
         'rateLimitRemaining',
         'createdAt',
       ],
+      include: [
+        {
+          model: ApiKey,
+          as: 'apiKey',
+          attributes: ['id', 'name', 'mcName', 'mcUuid'],
+          required: false,
+        },
+      ],
     });
 
     const [count, rows] = await Promise.all([countPromise, rowsPromise]);
 
+    // Transform rows to include API key info in a flat structure
+    const logsData = rows.map((row) => {
+      const log = row.toJSON() as any;
+      return {
+        ...log,
+        apiKeyName: log.apiKey?.name || null,
+        apiKeyMcName: log.apiKey?.mcName || null,
+        apiKeyMcUuid: log.apiKey?.mcUuid || null,
+        apiKey: undefined, // Remove nested object
+      };
+    });
+
     res.json({
-      logs: rows,
+      logs: logsData,
       total: count,
       page,
       totalPages: Math.ceil(count / limit),

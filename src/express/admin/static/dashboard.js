@@ -112,9 +112,7 @@ function renderKeysTable(keys) {
   }
 
   let html = '<table><thead><tr>';
-  html += '<th>Name</th>';
-  html += '<th>Email</th>';
-  html += '<th>Tier</th>';
+  html += '<th>API Key</th>';
   html += '<th>Requests</th>';
   html += '<th>Rate Limit</th>';
   html += '<th>Last Used</th>';
@@ -124,9 +122,41 @@ function renderKeysTable(keys) {
 
   keys.forEach((key) => {
     html += '<tr>';
-    html += '<td><strong>' + escapeHtml(key.name) + '</strong></td>';
-    html += '<td>' + escapeHtml(key.email || 'N/A') + '</td>';
-    html += '<td><span class="badge ' + key.tier + '">' + key.tier + '</span></td>';
+
+    // Combined API Key info cell with name, tier, email, and MC info
+    html += '<td class="key-info-cell">';
+    html += '<div class="key-info-main">';
+
+    // Show MC avatar if available
+    if (key.minecraftUuid) {
+      html +=
+        '<img src="https://api.mineatar.io/face/' +
+        escapeHtml(key.minecraftUuid) +
+        '" class="mc-avatar" alt="MC Avatar" />';
+    }
+
+    html += '<div class="key-info-text">';
+    html +=
+      '<div class="key-name">' +
+      escapeHtml(key.name) +
+      ' <span class="badge ' +
+      key.tier +
+      '">' +
+      key.tier +
+      '</span></div>';
+
+    // Show MC name if available
+    if (key.minecraftName) {
+      html += '<div class="key-mc-name">🎮 ' + escapeHtml(key.minecraftName) + '</div>';
+    }
+
+    // Show email if available
+    if (key.email) {
+      html += '<div class="key-email">✉️ ' + escapeHtml(key.email) + '</div>';
+    }
+
+    html += '</div></div></td>';
+
     html += '<td>' + key.requestCount.toLocaleString() + '</td>';
     html += '<td>' + key.rateLimit + '/hour</td>';
     html += '<td class="timestamp">' + formatDate(key.lastUsedAt) + '</td>';
@@ -171,24 +201,37 @@ async function viewKey(keyId) {
     console.log('logs data:', logs);
 
     let html = '';
+
+    // Show MC profile header if available
+    if (key.minecraftUuid) {
+      html += '<div class="key-modal-header">';
+      html +=
+        '<img src="https://api.mineatar.io/face/' +
+        escapeHtml(key.minecraftUuid) +
+        '" class="mc-avatar-large" alt="MC Avatar" />';
+      html += '<div class="key-modal-header-info">';
+      html += '<div class="key-modal-name">' + escapeHtml(key.name) + '</div>';
+      if (key.minecraftName) {
+        html += '<div class="key-modal-mc">🎮 ' + escapeHtml(key.minecraftName) + '</div>';
+      }
+      html += '<span class="badge ' + key.tier + '">' + key.tier + '</span>';
+      html += '</div></div>';
+    } else {
+      html += '<div class="key-modal-header">';
+      html += '<div class="key-modal-header-info">';
+      html += '<div class="key-modal-name">' + escapeHtml(key.name) + '</div>';
+      html += '<span class="badge ' + key.tier + '">' + key.tier + '</span>';
+      html += '</div></div>';
+    }
+
     html +=
       '<div class="detail-row"><span class="detail-label">ID:</span><span class="detail-value key-display">' +
       key.id +
       '</span></div>';
     html +=
-      '<div class="detail-row"><span class="detail-label">Name:</span><span class="detail-value">' +
-      escapeHtml(key.name) +
-      '</span></div>';
-    html +=
       '<div class="detail-row"><span class="detail-label">Email:</span><span class="detail-value">' +
       escapeHtml(key.email || 'N/A') +
       '</span></div>';
-    html +=
-      '<div class="detail-row"><span class="detail-label">Tier:</span><span class="detail-value"><span class="badge ' +
-      key.tier +
-      '">' +
-      key.tier +
-      '</span></span></div>';
     html +=
       '<div class="detail-row"><span class="detail-label">Rate Limit:</span><span class="detail-value">' +
       key.rateLimit +
@@ -211,13 +254,6 @@ async function viewKey(keyId) {
       '<div class="detail-row"><span class="detail-label">Last Used:</span><span class="detail-value">' +
       formatDate(key.lastUsedAt) +
       '</span></div>';
-
-    if (key.minecraftName) {
-      html +=
-        '<div class="detail-row"><span class="detail-label">Minecraft:</span><span class="detail-value">' +
-        escapeHtml(key.minecraftName) +
-        '</span></div>';
-    }
 
     html +=
       '<h3 style="margin-top: 25px; margin-bottom: 15px; color: #1da1f2;">Recent Activity</h3>';
@@ -365,8 +401,7 @@ function renderLogsTable(logs) {
   html += '<th>Method</th>';
   html += '<th>Path</th>';
   html += '<th>IP Address</th>';
-  html += '<th>Referer</th>';
-  html += '<th>Tier</th>';
+  html += '<th>API Key</th>';
   html += '<th>Status</th>';
   html += '<th>Rate Limit</th>';
   html += '</tr></thead><tbody>';
@@ -378,10 +413,31 @@ function renderLogsTable(logs) {
     html += '<td><strong>' + log.method + '</strong></td>';
     html += '<td class="key-display">' + escapeHtml(log.path) + '</td>';
     html += '<td class="key-display">' + (log.ipAddress || 'N/A') + '</td>';
-    const referer = log.referer || '-';
-    const displayReferer = referer.length > 30 ? referer.substring(0, 27) + '...' : referer;
-    html += '<td title="' + escapeHtml(referer) + '">' + escapeHtml(displayReferer) + '</td>';
-    html += '<td><span class="badge ' + log.tier + '">' + log.tier + '</span></td>';
+
+    // API Key info cell with tier badge
+    html += '<td class="log-key-cell">';
+    if (log.apiKeyName || log.tier !== 'anonymous') {
+      html += '<div class="log-key-info">';
+      if (log.apiKeyMcUuid) {
+        html +=
+          '<img src="https://api.mineatar.io/face/' +
+          escapeHtml(log.apiKeyMcUuid) +
+          '" class="mc-avatar-small" alt="" />';
+      }
+      html += '<div class="log-key-text">';
+      if (log.apiKeyName) {
+        html += '<div class="log-key-name">' + escapeHtml(log.apiKeyName) + '</div>';
+      }
+      if (log.apiKeyMcName) {
+        html += '<div class="log-key-mc">🎮 ' + escapeHtml(log.apiKeyMcName) + '</div>';
+      }
+      html += '<span class="badge ' + log.tier + '">' + log.tier + '</span>';
+      html += '</div></div>';
+    } else {
+      html += '<span class="badge anonymous">anonymous</span>';
+    }
+    html += '</td>';
+
     html +=
       '<td>' +
       (blocked ? '<span class="badge inactive">Blocked</span>' : log.responseStatus) +
