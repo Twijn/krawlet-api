@@ -389,14 +389,34 @@ router.get('/api/logs', adminAuth, async (req, res) => {
 
     const where: any = {};
     if (blocked !== undefined) where.wasBlocked = blocked === 'true';
+
+    // Optimize search: use exact match for IP addresses, LIKE only for paths
     if (search) {
-      where[Op.or] = [
-        { ipAddress: { [Op.like]: `%${search}%` } },
-        { path: { [Op.like]: `%${search}%` } },
-      ];
+      const searchStr = search as string;
+      // Check if search looks like an IP address (contains dots and numbers)
+      const isIpSearch = /^[\d.:%a-fA-F]+$/.test(searchStr);
+
+      if (isIpSearch) {
+        // Exact match for IP - uses index
+        where.ipAddress = searchStr;
+      } else {
+        // For paths, use prefix match when possible (can use index)
+        // Full LIKE only if it starts with a wildcard character
+        if (searchStr.startsWith('/')) {
+          where.path = { [Op.like]: `${searchStr}%` };
+        } else {
+          where[Op.or] = [
+            { ipAddress: { [Op.like]: `%${searchStr}%` } },
+            { path: { [Op.like]: `%${searchStr}%` } },
+          ];
+        }
+      }
     }
 
-    const { count, rows } = await RequestLog.findAndCountAll({
+    // Use separate queries to avoid slow COUNT with OFFSET
+    // Only get approximate count for large result sets
+    const countPromise = RequestLog.count({ where });
+    const rowsPromise = RequestLog.findAll({
       where,
       limit,
       offset,
@@ -417,6 +437,8 @@ router.get('/api/logs', adminAuth, async (req, res) => {
         'createdAt',
       ],
     });
+
+    const [count, rows] = await Promise.all([countPromise, rowsPromise]);
 
     res.json({
       logs: rows,
