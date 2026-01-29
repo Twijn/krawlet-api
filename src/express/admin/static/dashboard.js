@@ -152,7 +152,7 @@ function renderKeysTable(keys) {
       '<button class="danger" onclick="deleteKey(\'' +
       key.id +
       "', '" +
-      escapeHtml(key.name) +
+      escapeJs(key.name) +
       '\')">Delete</button>';
     html += '</div></td>';
     html += '</tr>';
@@ -163,9 +163,12 @@ function renderKeysTable(keys) {
 }
 
 async function viewKey(keyId) {
+  console.log('viewKey called with:', keyId);
   try {
     const key = await fetchAPI('/admin/api/keys/' + keyId);
+    console.log('key data:', key);
     const logs = await fetchAPI('/admin/api/keys/' + keyId + '/logs?limit=10');
+    console.log('logs data:', logs);
 
     let html = '';
     html +=
@@ -246,15 +249,18 @@ async function viewKey(keyId) {
 }
 
 async function toggleKeyStatus(keyId, newStatus) {
+  console.log('toggleKeyStatus called with:', keyId, newStatus);
   try {
     await fetchAPI('/admin/api/keys/' + keyId, {
       method: 'PATCH',
       body: JSON.stringify({ isActive: newStatus }),
     });
+    console.log('toggleKeyStatus success');
     showSuccess('API key ' + (newStatus ? 'enabled' : 'disabled') + ' successfully');
     loadKeys();
     loadStats();
   } catch (err) {
+    console.error('toggleKeyStatus error:', err);
     showError('Failed to update API key status');
   }
 }
@@ -854,6 +860,13 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+function escapeJs(text) {
+  // Escape for use in JavaScript strings within HTML attributes
+  return String(text || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'");
 }
 
 function showError(message) {

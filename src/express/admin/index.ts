@@ -54,9 +54,10 @@ const ipAllowlist = (req: Request, res: Response, next: NextFunction) => {
 // ============================================
 // Rate Limiting Middleware
 // ============================================
-// Simple in-memory rate limiter: 30 requests per minute per IP
+// Simple in-memory rate limiter: different limits for authenticated vs unauthenticated
 const rateLimitWindowMs = 60 * 1000; // 1 minute
-const rateLimitMaxRequests = 30;
+const rateLimitMaxRequestsUnauthenticated = 30; // 30/min for login attempts etc
+const rateLimitMaxRequestsAuthenticated = 300; // 300/min for logged-in users
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
 // Clean up old entries periodically
@@ -69,9 +70,20 @@ setInterval(() => {
   }
 }, rateLimitWindowMs);
 
+const isAuthenticated = (req: Request): boolean => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) return false;
+  const token = authHeader.substring(7);
+  return token === process.env.ADMIN_PASSWORD;
+};
+
 const rateLimit = (req: Request, res: Response, next: NextFunction) => {
   const clientIp = getClientIp(req);
   const now = Date.now();
+  const authenticated = isAuthenticated(req);
+  const maxRequests = authenticated
+    ? rateLimitMaxRequestsAuthenticated
+    : rateLimitMaxRequestsUnauthenticated;
 
   let record = rateLimitStore.get(clientIp);
 
@@ -83,7 +95,7 @@ const rateLimit = (req: Request, res: Response, next: NextFunction) => {
 
   record.count++;
 
-  if (record.count > rateLimitMaxRequests) {
+  if (record.count > maxRequests) {
     const retryAfter = Math.ceil((record.resetTime - now) / 1000);
     res.setHeader('Retry-After', retryAfter.toString());
     return res.status(429).json({
@@ -249,8 +261,8 @@ router.get('/api/keys/:id', adminAuth, async (req, res) => {
         'lastUsedAt',
         'isActive',
         'createdAt',
-        'minecraftName',
-        'minecraftUuid',
+        'mcName',
+        'mcUuid',
       ],
     });
 
@@ -258,7 +270,13 @@ router.get('/api/keys/:id', adminAuth, async (req, res) => {
       return res.status(404).json({ ok: false, error: 'API key not found' });
     }
 
-    res.json(key);
+    // Transform to match frontend expected format
+    const keyData = key.toJSON();
+    res.json({
+      ...keyData,
+      minecraftName: keyData.mcName,
+      minecraftUuid: keyData.mcUuid,
+    });
   } catch (error) {
     console.error('Error fetching API key:', error);
     res.status(500).json({ ok: false, error: 'Failed to fetch API key' });
