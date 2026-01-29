@@ -406,6 +406,7 @@ router.get('/api/logs', adminAuth, async (req, res) => {
         'method',
         'path',
         'ipAddress',
+        'referer',
         'tier',
         'wasBlocked',
         'blockReason',

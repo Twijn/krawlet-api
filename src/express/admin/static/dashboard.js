@@ -359,6 +359,7 @@ function renderLogsTable(logs) {
   html += '<th>Method</th>';
   html += '<th>Path</th>';
   html += '<th>IP Address</th>';
+  html += '<th>Referer</th>';
   html += '<th>Tier</th>';
   html += '<th>Status</th>';
   html += '<th>Rate Limit</th>';
@@ -371,6 +372,9 @@ function renderLogsTable(logs) {
     html += '<td><strong>' + log.method + '</strong></td>';
     html += '<td class="key-display">' + escapeHtml(log.path) + '</td>';
     html += '<td class="key-display">' + (log.ipAddress || 'N/A') + '</td>';
+    const referer = log.referer || '-';
+    const displayReferer = referer.length > 30 ? referer.substring(0, 27) + '...' : referer;
+    html += '<td title="' + escapeHtml(referer) + '">' + escapeHtml(displayReferer) + '</td>';
     html += '<td><span class="badge ' + log.tier + '">' + log.tier + '</span></td>';
     html +=
       '<td>' +
