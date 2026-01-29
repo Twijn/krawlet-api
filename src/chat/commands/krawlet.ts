@@ -28,16 +28,14 @@ async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
       rcc
         .tell(
           cmd.user,
-          `<yellow>You already have an API key!</yellow> Here's a quick code to retrieve it:`,
+          `<yellow>You already have an API key!</yellow> Here's a quick code to retrieve it:<br><gold><bold>${quickCode}</bold></gold> <gray>(expires in 15 min)</gray>`,
         )
-        .catch(console.error);
-      rcc
-        .tell(cmd.user, `<gold><bold>${quickCode}</bold></gold> <gray>(expires in 15 min)</gray>`)
         .catch(console.error);
       rcc
         .tell(
           cmd.user,
-          `<gray>Import to Krawlet:</gray> [Click Here](https://www.kromer.club/settings/advanced#${quickCode})`,
+          `Import to Krawlet: [Click Here](https://www.kromer.club/settings/advanced#${quickCode})`,
+          undefined,
           'markdown',
         )
         .catch(console.error);
