@@ -66,7 +66,7 @@ interface ShopSyncListing {
 
 interface ShopSyncPrice {
   value: number; // Price value
-  currency: string; // Currency identifier (e.g., "KST")
+  currency: string; // Currency identifier (e.g., "KRO")
   address?: string; // Payment address
   requiredMeta?: string; // Required metadata for payment
 }
@@ -558,8 +558,8 @@ Get price/property change records (persistent database only).
       "itemDisplayName": "Diamond",
       "itemHash": "abc123def456",
       "field": "prices",
-      "previousValue": "[{\"value\":10,\"currency\":\"KST\"}]",
-      "newValue": "[{\"value\":12,\"currency\":\"KST\"}]",
+      "previousValue": "[{\"value\":10,\"currency\":\"KRO\"}]",
+      "newValue": "[{\"value\":12,\"currency\":\"KRO\"}]",
       "createdAt": "2025-12-27T12:34:56.789Z"
     }
   ]

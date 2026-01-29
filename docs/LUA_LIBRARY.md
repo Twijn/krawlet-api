@@ -86,11 +86,27 @@ krawlet._dumpState()
 
 ## API Reference
 
+### Return Value Pattern
+
+All API functions follow the same return pattern: `result, error`. If the request succeeds, `result` contains the data and `error` is `nil`. If the request fails, `result` is `nil` and `error` contains an error message string.
+
+```lua
+local data, err = krawlet.someFunction()
+if data then
+    -- Success: use data
+else
+    -- Error: err contains the error message
+    print("Error: " .. err)
+end
+```
+
 ### Health Check
 
 ```lua
 local healthy, status = krawlet.healthCheck()
 -- Returns: boolean, string
+-- healthy = true/false
+-- status = "ok" or error message
 ```
 
 ### Players
@@ -116,12 +132,22 @@ local players, err = krawlet.getPlayersByAddresses({"addr1", "addr2"})
 
 **Player Object:**
 
+| Field           | Type    | Description                                             |
+| --------------- | ------- | ------------------------------------------------------- |
+| `minecraftUUID` | string  | Player's Minecraft UUID                                 |
+| `minecraftName` | string  | Player's Minecraft username                             |
+| `kromerAddress` | string  | 10-character Kromer address                             |
+| `notifications` | string  | Notification preference: `"none"`, `"self"`, or `"all"` |
+| `online`        | boolean | Whether the player is currently online                  |
+| `createdDate`   | string? | ISO 8601 timestamp                                      |
+| `updatedDate`   | string? | ISO 8601 timestamp                                      |
+
 ```lua
 {
     minecraftUUID = "d98440d6-5117-4ac8-bd50-70b086101e3e",
     minecraftName = "Twijn",
     kromerAddress = "ks0d5iqb6p",
-    notifications = "none",  -- "none", "self", or "all"
+    notifications = "none",
     online = true,
     createdDate = "2026-01-12T10:00:00.000Z",
     updatedDate = "2026-01-12T10:00:00.000Z"
@@ -145,6 +171,23 @@ local shops, err = krawlet.searchShops("diamond")
 ```
 
 **Shop Object:**
+
+| Field                 | Type     | Description                                      |
+| --------------------- | -------- | ------------------------------------------------ |
+| `id`                  | string   | Shop ID                                          |
+| `name`                | string   | Shop name                                        |
+| `description`         | string?  | Shop description                                 |
+| `owner`               | string?  | Shop owner's name                                |
+| `computerId`          | number   | Computer ID in-game                              |
+| `softwareName`        | string?  | Shop software name (e.g., "ShopSync")            |
+| `softwareVersion`     | string?  | Shop software version                            |
+| `locationCoordinates` | string?  | Location coordinates (e.g., "100, 64, -200")     |
+| `locationDescription` | string?  | Human-readable location description              |
+| `locationDimension`   | string?  | Dimension: `"overworld"`, `"nether"`, or `"end"` |
+| `items`               | Item[]   | Array of items in the shop                       |
+| `addresses`           | string[] | Associated Kromer addresses                      |
+| `createdDate`         | string?  | ISO 8601 timestamp                               |
+| `updatedDate`         | string?  | ISO 8601 timestamp                               |
 
 ```lua
 {
@@ -171,7 +214,7 @@ local shops, err = krawlet.searchShops("diamond")
 -- Get all items
 local items, err = krawlet.getItems()
 
--- Search items by name
+-- Search items by name (searches both itemDisplayName and itemName)
 local items, err = krawlet.searchItems("diamond")
 
 -- Find best buy prices (lowest)
@@ -183,11 +226,31 @@ local deals, err = krawlet.findBestSellPrices("iron_ingot", "KST", 10)
 
 **Item Object:**
 
+| Field                 | Type     | Description                                     |
+| --------------------- | -------- | ----------------------------------------------- |
+| `id`                  | string   | Item ID                                         |
+| `shopId`              | string   | Parent shop ID                                  |
+| `itemName`            | string   | Minecraft item name (e.g., "minecraft:diamond") |
+| `itemNbt`             | string?  | NBT data                                        |
+| `itemDisplayName`     | string?  | Display name                                    |
+| `itemDescription`     | string?  | Item description                                |
+| `shopBuysItem`        | boolean? | Whether the shop buys this item from players    |
+| `noLimit`             | boolean? | No stock limit                                  |
+| `dynamicPrice`        | boolean  | Dynamic pricing enabled                         |
+| `madeOnDemand`        | boolean  | Made on demand                                  |
+| `requiresInteraction` | boolean  | Requires player interaction                     |
+| `stock`               | number   | Current stock count                             |
+| `prices`              | Price[]  | Array of price options                          |
+| `addresses`           | string[] | Associated Kromer addresses                     |
+| `createdDate`         | string?  | ISO 8601 timestamp                              |
+| `updatedDate`         | string?  | ISO 8601 timestamp                              |
+
 ```lua
 {
     id = "item-123",
     shopId = "shop-456",
     itemName = "minecraft:diamond",
+    itemNbt = nil,
     itemDisplayName = "Diamond",
     itemDescription = "Shiny!",
     shopBuysItem = false,
@@ -203,7 +266,36 @@ local deals, err = krawlet.findBestSellPrices("iron_ingot", "KST", 10)
 }
 ```
 
-**Price Deal Object (from findBestPrices):**
+**Price Object:**
+
+| Field          | Type    | Description                 |
+| -------------- | ------- | --------------------------- |
+| `id`           | string  | Price ID                    |
+| `value`        | number  | Price value                 |
+| `currency`     | string  | Currency type (e.g., "KST") |
+| `address`      | string? | Kromer address for payment  |
+| `requiredMeta` | string? | Required metadata           |
+
+```lua
+{
+    id = "price-789",
+    value = 10.5,
+    currency = "KST",
+    address = "ks0d5iqb6p",
+    requiredMeta = nil
+}
+```
+
+**Price Deal Object (from findBestPrices/findBestSellPrices):**
+
+| Field      | Type     | Description                     |
+| ---------- | -------- | ------------------------------- |
+| `item`     | Item     | Full item object                |
+| `price`    | number   | Price value                     |
+| `currency` | string   | Currency type                   |
+| `shop`     | Shop     | Full shop object                |
+| `stock`    | number   | Available stock (for buy deals) |
+| `noLimit`  | boolean? | No stock limit (for sell deals) |
 
 ```lua
 {
@@ -229,6 +321,32 @@ local shops, err = krawlet.getAddressesByType("shop")
 -- Types: "official", "shop", "gamble", "service", "company"
 ```
 
+**Known Address Object:**
+
+| Field         | Type    | Description                                                                   |
+| ------------- | ------- | ----------------------------------------------------------------------------- |
+| `id`          | string  | Address ID                                                                    |
+| `type`        | string  | Address type: `"official"`, `"shop"`, `"gamble"`, `"service"`, or `"company"` |
+| `address`     | string  | 10-character Kromer address                                                   |
+| `imageSrc`    | string? | Optional image URL                                                            |
+| `name`        | string  | Address name                                                                  |
+| `description` | string  | Address description                                                           |
+| `createdDate` | string? | ISO 8601 timestamp                                                            |
+| `updatedDate` | string? | ISO 8601 timestamp                                                            |
+
+```lua
+{
+    id = "addr-123",
+    type = "shop",
+    address = "ks0d5iqb6p",
+    imageSrc = "https://example.com/logo.png",
+    name = "Diamond Emporium",
+    description = "The best diamond shop on the server",
+    createdDate = "2026-01-12T10:00:00.000Z",
+    updatedDate = "2026-01-12T10:00:00.000Z"
+}
+```
+
 ### Ender Storage
 
 ```lua
@@ -252,7 +370,6 @@ local logs, err = krawlet.getPriceChangeLogs({ offset = 0, until = "2026-01-31" 
 ```lua
 -- Redeem a quick code (no auth required)
 local result, err = krawlet.redeemQuickCode("123456")
--- result = { apiKey = "kraw_...", tier = "free", rateLimit = 1000, ... }
 
 -- Get API key info (requires auth)
 local info, err = krawlet.getApiKeyInfo()
@@ -266,6 +383,104 @@ local logs, err = krawlet.getApiKeyLogs(50)
 
 -- Generate a quick code for your key
 local code, err = krawlet.generateQuickCode()
+```
+
+**Quick Code Redeem Result:**
+
+| Field       | Type   | Description                       |
+| ----------- | ------ | --------------------------------- |
+| `message`   | string | Success message                   |
+| `apiKey`    | string | Full API key (e.g., "kraw\_...")  |
+| `name`      | string | Key name                          |
+| `tier`      | string | Key tier: `"free"` or `"premium"` |
+| `rateLimit` | number | Requests per hour                 |
+| `warning`   | string | Warning to save the key           |
+
+```lua
+{
+    message = "API key redeemed successfully",
+    apiKey = "kraw_abc123...",
+    name = "My API Key",
+    tier = "free",
+    rateLimit = 1000,
+    warning = "Save this key! It cannot be retrieved again."
+}
+```
+
+**API Key Info Object:**
+
+| Field          | Type    | Description                       |
+| -------------- | ------- | --------------------------------- |
+| `id`           | string  | API key ID                        |
+| `name`         | string  | Key name/description              |
+| `email`        | string? | Associated email                  |
+| `tier`         | string  | Key tier: `"free"` or `"premium"` |
+| `rateLimit`    | number  | Maximum requests per hour         |
+| `isActive`     | boolean | Whether key is active             |
+| `requestCount` | number  | Total requests made               |
+| `lastUsedAt`   | string? | Last usage timestamp              |
+| `createdAt`    | string  | Creation timestamp                |
+| `usage`        | Usage?  | Usage statistics (if requested)   |
+
+```lua
+{
+    id = "key-123",
+    name = "My API Key",
+    email = "user@example.com",
+    tier = "free",
+    rateLimit = 1000,
+    isActive = true,
+    requestCount = 500,
+    lastUsedAt = "2026-01-29T10:00:00.000Z",
+    createdAt = "2026-01-12T10:00:00.000Z",
+    usage = { ... }
+}
+```
+
+**API Key Usage Object:**
+
+| Field               | Type    | Description                 |
+| ------------------- | ------- | --------------------------- |
+| `totalRequests`     | number  | Total logged requests       |
+| `last24h`           | number  | Requests in last 24 hours   |
+| `last7d`            | number  | Requests in last 7 days     |
+| `last30d`           | number  | Requests in last 30 days    |
+| `blockedRequests`   | number  | Blocked request count       |
+| `avgResponseTimeMs` | number? | Average response time in ms |
+| `topEndpoints`      | table[] | Top 5 endpoints used        |
+
+```lua
+{
+    totalRequests = 500,
+    last24h = 50,
+    last7d = 200,
+    last30d = 500,
+    blockedRequests = 0,
+    avgResponseTimeMs = 45.5,
+    topEndpoints = {
+        { endpoint = "/v1/shops", count = 200 },
+        { endpoint = "/v1/items", count = 150 },
+        ...
+    }
+}
+```
+
+**Quick Code Object (from generateQuickCode):**
+
+| Field       | Type   | Description                                   |
+| ----------- | ------ | --------------------------------------------- |
+| `quickCode` | string | 6-digit quick code                            |
+| `expiresAt` | string | Expiration timestamp                          |
+| `expiresIn` | string | Human-readable expiration (e.g., "5 minutes") |
+| `message`   | string | Instructions                                  |
+
+```lua
+{
+    quickCode = "123456",
+    expiresAt = "2026-01-29T10:05:00.000Z",
+    expiresIn = "5 minutes",
+    message = "Use this code in-game with: \\krawlet redeem 123456"
+}
 ```
 
 ### Utilities
@@ -292,6 +507,22 @@ local success, msg = krawlet.install("/krawlet.lua")
 
 -- Check for updates
 local hasUpdate, newVersion = krawlet.checkForUpdate()
+```
+
+**Rate Limit Object:**
+
+| Field       | Type   | Description                      |
+| ----------- | ------ | -------------------------------- |
+| `limit`     | number | Maximum requests per hour        |
+| `remaining` | number | Requests remaining in window     |
+| `reset`     | number | Unix timestamp when limit resets |
+
+```lua
+{
+    limit = 1000,
+    remaining = 950,
+    reset = 1706529600
+}
 ```
 
 ## Examples

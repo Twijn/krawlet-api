@@ -44,7 +44,7 @@ export default class AddressCommand implements DiscordCommand {
         const filtered = richAddresses.addresses
           .filter((addr) => addr.address.toLowerCase().includes(focusedOption.value.toLowerCase()))
           .map((addr) => ({
-            name: `${addr.address} (${addr.balance.toLocaleString()} KST)`,
+            name: `${addr.address} (${addr.balance.toLocaleString()} KRO)`,
             value: addr.address,
           }));
 
