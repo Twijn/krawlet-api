@@ -21,7 +21,7 @@ export const optionalApiKeyAuth = async (req: Request, res: Response, next: Next
     RequestLog.logRequest({
       requestId: request.requestId,
       method: req.method,
-      path: req.path,
+      path: req.originalUrl,
       ipAddress: ip,
       userAgent: req.get('user-agent'),
       referer: req.get('referer') || req.get('referrer'),
@@ -52,7 +52,7 @@ export const optionalApiKeyAuth = async (req: Request, res: Response, next: Next
       RequestLog.logRequest({
         requestId: request.requestId,
         method: req.method,
-        path: req.path,
+        path: req.originalUrl,
         ipAddress: ip,
         userAgent: req.get('user-agent'),
         referer: req.get('referer') || req.get('referrer'),
