@@ -242,6 +242,159 @@ tr:hover {
   color: white;
 }
 
+/* Improved Tier Badges */
+.tier-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tier-badge.tier-anonymous {
+  background: linear-gradient(135deg, #2d3741 0%, #38444d 100%);
+  color: #8899a6;
+  border: 1px solid #4a5661;
+}
+
+.tier-badge.tier-free {
+  background: linear-gradient(135deg, #14a653 0%, #17bf63 100%);
+  color: #0f1419;
+  box-shadow: 0 1px 3px rgba(23, 191, 99, 0.3);
+}
+
+.tier-badge.tier-premium {
+  background: linear-gradient(135deg, #1a8cd8 0%, #1da1f2 100%);
+  color: white;
+  box-shadow: 0 1px 3px rgba(29, 161, 242, 0.3);
+}
+
+.tier-badge.tier-enterprise {
+  background: linear-gradient(135deg, #6b3fa0 0%, #794bc4 100%);
+  color: white;
+  box-shadow: 0 1px 3px rgba(121, 75, 196, 0.3);
+}
+
+/* Method Badges */
+.method-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+}
+
+.method-badge.method-get {
+  background: rgba(23, 191, 99, 0.2);
+  color: #17bf63;
+}
+
+.method-badge.method-post {
+  background: rgba(29, 161, 242, 0.2);
+  color: #1da1f2;
+}
+
+.method-badge.method-put {
+  background: rgba(244, 93, 34, 0.2);
+  color: #f45d22;
+}
+
+.method-badge.method-patch {
+  background: rgba(121, 75, 196, 0.2);
+  color: #794bc4;
+}
+
+.method-badge.method-delete {
+  background: rgba(224, 36, 94, 0.2);
+  color: #e0245e;
+}
+
+/* Status Badges */
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge.status-success {
+  background: rgba(23, 191, 99, 0.15);
+  color: #17bf63;
+}
+
+.status-badge.status-redirect {
+  background: rgba(29, 161, 242, 0.15);
+  color: #1da1f2;
+}
+
+.status-badge.status-client-error {
+  background: rgba(244, 93, 34, 0.15);
+  color: #f45d22;
+}
+
+.status-badge.status-server-error {
+  background: rgba(224, 36, 94, 0.15);
+  color: #e0245e;
+}
+
+.status-badge.status-blocked {
+  background: rgba(224, 36, 94, 0.2);
+  color: #e0245e;
+  font-weight: 700;
+}
+
+.status-badge.status-unknown {
+  background: rgba(136, 153, 166, 0.15);
+  color: #8899a6;
+}
+
+/* Blocked Row Styling */
+.blocked-row {
+  background: rgba(224, 36, 94, 0.08) !important;
+}
+
+.blocked-row:hover {
+  background: rgba(224, 36, 94, 0.12) !important;
+}
+
+/* User Agent Cell */
+.ua-cell {
+  max-width: 150px;
+}
+
+.ua-snippet {
+  font-size: 12px;
+  color: #8899a6;
+  font-family: 'Courier New', monospace;
+}
+
+.ua-full {
+  font-size: 12px;
+  color: #8899a6;
+  font-family: 'Courier New', monospace;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+/* Path Cell */
+.path-cell {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Small Button */
+button.small {
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
 /* Status Messages */
 .loading {
   text-align: center;
@@ -561,4 +714,54 @@ tr:hover {
   .action-buttons {
     flex-direction: column;
   }
+}
+
+/* Log Details Modal Styling */
+.log-details {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.detail-section {
+  background: #0f1419;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #38444d;
+}
+
+.detail-section h4 {
+  color: #1da1f2;
+  margin-bottom: 12px;
+  font-size: 14px;
+  border-bottom: 1px solid #38444d;
+  padding-bottom: 8px;
+}
+
+.detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-grid .detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 6px 0;
+  border-bottom: none;
+}
+
+.detail-grid .detail-label {
+  color: #8899a6;
+  font-size: 13px;
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.detail-grid .detail-value {
+  color: #e1e8ed;
+  font-size: 13px;
+  text-align: right;
+  word-break: break-word;
 }

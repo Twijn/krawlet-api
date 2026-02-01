@@ -332,11 +332,14 @@ router.patch('/api/keys/:id', adminAuth, async (req, res) => {
       return res.status(404).json({ ok: false, error: 'API key not found' });
     }
 
-    const { isActive, tier, rateLimit } = req.body;
+    const { isActive, tier, rateLimit, name, email, requestCount } = req.body;
 
     if (isActive !== undefined) key.isActive = isActive;
     if (tier) key.tier = tier;
-    if (rateLimit) key.rateLimit = rateLimit;
+    if (rateLimit !== undefined) key.rateLimit = rateLimit;
+    if (name !== undefined) key.name = name;
+    if (email !== undefined) key.email = email || null;
+    if (requestCount !== undefined) key.requestCount = requestCount;
 
     await key.save();
 
@@ -456,15 +459,18 @@ router.get('/api/logs', adminAuth, async (req, res) => {
         'method',
         'path',
         'ipAddress',
+        'userAgent',
         'referer',
         'apiKeyId',
         'tier',
         'wasBlocked',
         'blockReason',
         'responseStatus',
+        'responseTimeMs',
         'rateLimitCount',
         'rateLimitLimit',
         'rateLimitRemaining',
+        'rateLimitResetAt',
         'createdAt',
       ],
       include: [
@@ -500,6 +506,42 @@ router.get('/api/logs', adminAuth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching request logs:', error);
     res.status(500).json({ ok: false, error: 'Failed to fetch request logs' });
+  }
+});
+
+// API endpoint: Get single log details
+router.get('/api/logs/:id', adminAuth, async (req, res) => {
+  try {
+    const log = await RequestLog.findOne({
+      where: { requestId: req.params.id },
+      include: [
+        {
+          model: ApiKey,
+          as: 'apiKey',
+          attributes: ['id', 'name', 'email', 'tier', 'mcName', 'mcUuid', 'rateLimit', 'isActive'],
+          required: false,
+        },
+      ],
+    });
+
+    if (!log) {
+      return res.status(404).json({ ok: false, error: 'Log not found' });
+    }
+
+    const logData = log.toJSON() as any;
+    res.json({
+      ...logData,
+      apiKeyName: logData.apiKey?.name || null,
+      apiKeyEmail: logData.apiKey?.email || null,
+      apiKeyTier: logData.apiKey?.tier || null,
+      apiKeyMcName: logData.apiKey?.mcName || null,
+      apiKeyMcUuid: logData.apiKey?.mcUuid || null,
+      apiKeyRateLimit: logData.apiKey?.rateLimit || null,
+      apiKeyIsActive: logData.apiKey?.isActive ?? null,
+    });
+  } catch (error) {
+    console.error('Error fetching log details:', error);
+    res.status(500).json({ ok: false, error: 'Failed to fetch log details' });
   }
 });
 

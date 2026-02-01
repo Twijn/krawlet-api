@@ -139,7 +139,7 @@ function renderKeysTable(keys) {
     html +=
       '<div class="key-name">' +
       escapeHtml(key.name) +
-      ' <span class="badge ' +
+      ' <span class="tier-badge tier-' +
       key.tier +
       '">' +
       key.tier +
@@ -214,13 +214,13 @@ async function viewKey(keyId) {
       if (key.minecraftName) {
         html += '<div class="key-modal-mc">🎮 ' + escapeHtml(key.minecraftName) + '</div>';
       }
-      html += '<span class="badge ' + key.tier + '">' + key.tier + '</span>';
+      html += '<span class="tier-badge tier-' + key.tier + '">' + key.tier + '</span>';
       html += '</div></div>';
     } else {
       html += '<div class="key-modal-header">';
       html += '<div class="key-modal-header-info">';
       html += '<div class="key-modal-name">' + escapeHtml(key.name) + '</div>';
-      html += '<span class="badge ' + key.tier + '">' + key.tier + '</span>';
+      html += '<span class="tier-badge tier-' + key.tier + '">' + key.tier + '</span>';
       html += '</div></div>';
     }
 
@@ -255,6 +255,11 @@ async function viewKey(keyId) {
       formatDate(key.lastUsedAt) +
       '</span></div>';
 
+    // Edit button
+    html += '<div style="margin-top: 20px; text-align: center;">';
+    html += '<button onclick="showEditKeyModal(\'' + key.id + '\')">✏️ Edit Key Settings</button>';
+    html += '</div>';
+
     html +=
       '<h3 style="margin-top: 25px; margin-bottom: 15px; color: #1da1f2;">Recent Activity</h3>';
 
@@ -281,6 +286,70 @@ async function viewKey(keyId) {
     openModal('keyModal');
   } catch (err) {
     showError('Failed to load key details');
+  }
+}
+
+// Store for editing
+let editingKeyId = null;
+
+async function showEditKeyModal(keyId) {
+  try {
+    const key = await fetchAPI('/admin/api/keys/' + keyId);
+    editingKeyId = keyId;
+
+    document.getElementById('editKeyName').value = key.name || '';
+    document.getElementById('editKeyEmail').value = key.email || '';
+    document.getElementById('editKeyTier').value = key.tier;
+    document.getElementById('editKeyRateLimit').value = key.rateLimit;
+    document.getElementById('editKeyRequestCount').value = key.requestCount;
+    document.getElementById('editKeyResult').innerHTML = '';
+
+    closeModal('keyModal');
+    openModal('editKeyModal');
+  } catch (err) {
+    showError('Failed to load key for editing');
+  }
+}
+
+async function saveKeyEdits() {
+  if (!editingKeyId) return;
+
+  const name = document.getElementById('editKeyName').value.trim();
+  const email = document.getElementById('editKeyEmail').value.trim();
+  const tier = document.getElementById('editKeyTier').value;
+  const rateLimit = parseInt(document.getElementById('editKeyRateLimit').value) || 1000;
+  const requestCount = parseInt(document.getElementById('editKeyRequestCount').value) || 0;
+
+  if (!name) {
+    document.getElementById('editKeyResult').innerHTML =
+      '<div class="error">Name is required</div>';
+    return;
+  }
+
+  try {
+    await fetchAPI('/admin/api/keys/' + editingKeyId, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        name,
+        email: email || null,
+        tier,
+        rateLimit,
+        requestCount,
+      }),
+    });
+
+    document.getElementById('editKeyResult').innerHTML =
+      '<div class="success-message">Key updated successfully!</div>';
+    loadKeys();
+    loadStats();
+
+    setTimeout(() => {
+      closeModal('editKeyModal');
+      editingKeyId = null;
+    }, 1000);
+  } catch (err) {
+    document.getElementById('editKeyResult').innerHTML =
+      '<div class="error">Failed to update key</div>';
   }
 }
 
@@ -402,16 +471,27 @@ function renderLogsTable(logs) {
   html += '<th>Path</th>';
   html += '<th>IP Address</th>';
   html += '<th>API Key</th>';
+  html += '<th>User Agent</th>';
   html += '<th>Status</th>';
-  html += '<th>Rate Limit</th>';
+  html += '<th>Actions</th>';
   html += '</tr></thead><tbody>';
 
   logs.forEach((log) => {
     const blocked = log.wasBlocked;
-    html += '<tr' + (blocked ? ' style="background: rgba(224, 36, 94, 0.1);"' : '') + '>';
+    html += '<tr' + (blocked ? ' class="blocked-row"' : '') + '>';
     html += '<td class="timestamp">' + formatDate(log.createdAt) + '</td>';
-    html += '<td><strong>' + log.method + '</strong></td>';
-    html += '<td class="key-display">' + escapeHtml(log.path) + '</td>';
+    html +=
+      '<td><span class="method-badge method-' +
+      log.method.toLowerCase() +
+      '">' +
+      log.method +
+      '</span></td>';
+    html +=
+      '<td class="key-display path-cell" title="' +
+      escapeHtml(log.path) +
+      '">' +
+      escapeHtml(truncateText(log.path, 35)) +
+      '</td>';
     html += '<td class="key-display">' + (log.ipAddress || 'N/A') + '</td>';
 
     // API Key info cell with tier badge
@@ -431,23 +511,242 @@ function renderLogsTable(logs) {
       if (log.apiKeyMcName) {
         html += '<div class="log-key-mc">🎮 ' + escapeHtml(log.apiKeyMcName) + '</div>';
       }
-      html += '<span class="badge ' + log.tier + '">' + log.tier + '</span>';
+      html += '<span class="tier-badge tier-' + log.tier + '">' + log.tier + '</span>';
       html += '</div></div>';
     } else {
-      html += '<span class="badge anonymous">anonymous</span>';
+      html += '<span class="tier-badge tier-anonymous">anonymous</span>';
     }
+    html += '</td>';
+
+    // User Agent snippet
+    html += '<td class="ua-cell" title="' + escapeHtml(log.userAgent || 'Unknown') + '">';
+    html +=
+      '<span class="ua-snippet">' +
+      escapeHtml(truncateText(parseUserAgent(log.userAgent), 25)) +
+      '</span>';
     html += '</td>';
 
     html +=
       '<td>' +
-      (blocked ? '<span class="badge inactive">Blocked</span>' : log.responseStatus) +
+      (blocked
+        ? '<span class="status-badge status-blocked">Blocked</span>'
+        : '<span class="status-badge status-' +
+          getStatusClass(log.responseStatus) +
+          '">' +
+          log.responseStatus +
+          '</span>') +
       '</td>';
-    html += '<td>' + log.rateLimitRemaining + '/' + log.rateLimitLimit + '</td>';
+
+    // Actions column
+    html += '<td>';
+    html +=
+      '<button class="secondary small" onclick="viewLogDetails(\'' +
+      log.requestId +
+      '\')">View</button>';
+    html += '</td>';
     html += '</tr>';
   });
 
   html += '</tbody></table>';
   document.getElementById('logsTable').innerHTML = html;
+}
+
+// Parse user agent to get a friendly name
+function parseUserAgent(ua) {
+  if (!ua) return 'Unknown';
+
+  // Common patterns
+  if (ua.includes('ComputerCraft')) return 'ComputerCraft';
+  if (ua.includes('curl')) return 'curl';
+  if (ua.includes('Postman')) return 'Postman';
+  if (ua.includes('axios')) return 'axios';
+  if (ua.includes('node-fetch')) return 'node-fetch';
+  if (ua.includes('Python')) return 'Python';
+  if (ua.includes('Go-http-client')) return 'Go';
+
+  // Browser detection
+  if (ua.includes('Firefox')) return 'Firefox';
+  if (ua.includes('Chrome') && !ua.includes('Edg')) return 'Chrome';
+  if (ua.includes('Safari') && !ua.includes('Chrome')) return 'Safari';
+  if (ua.includes('Edg')) return 'Edge';
+
+  // Truncate unknown
+  return ua.length > 20 ? ua.substring(0, 17) + '...' : ua;
+}
+
+// Get status code class for styling
+function getStatusClass(status) {
+  if (!status) return 'unknown';
+  if (status >= 200 && status < 300) return 'success';
+  if (status >= 300 && status < 400) return 'redirect';
+  if (status >= 400 && status < 500) return 'client-error';
+  if (status >= 500) return 'server-error';
+  return 'unknown';
+}
+
+// Truncate text helper
+function truncateText(text, maxLength) {
+  if (!text) return '';
+  return text.length > maxLength ? text.substring(0, maxLength - 3) + '...' : text;
+}
+
+// View log details modal
+async function viewLogDetails(requestId) {
+  try {
+    const log = await fetchAPI('/admin/api/logs/' + requestId);
+
+    let html = '<div class="log-details">';
+
+    // Request Info Section
+    html += '<div class="detail-section">';
+    html += '<h4>📡 Request Information</h4>';
+    html += '<div class="detail-grid">';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Request ID:</span><span class="detail-value key-display">' +
+      escapeHtml(log.requestId) +
+      '</span></div>';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Timestamp:</span><span class="detail-value">' +
+      new Date(log.createdAt).toLocaleString() +
+      '</span></div>';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Method:</span><span class="detail-value"><span class="method-badge method-' +
+      log.method.toLowerCase() +
+      '">' +
+      log.method +
+      '</span></span></div>';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Path:</span><span class="detail-value key-display" style="word-break: break-all;">' +
+      escapeHtml(log.path) +
+      '</span></div>';
+    html += '</div></div>';
+
+    // Client Info Section
+    html += '<div class="detail-section">';
+    html += '<h4>🖥️ Client Information</h4>';
+    html += '<div class="detail-grid">';
+    html +=
+      '<div class="detail-row"><span class="detail-label">IP Address:</span><span class="detail-value key-display">' +
+      escapeHtml(log.ipAddress || 'N/A') +
+      '</span></div>';
+    html +=
+      '<div class="detail-row"><span class="detail-label">User Agent:</span><span class="detail-value ua-full">' +
+      escapeHtml(log.userAgent || 'Unknown') +
+      '</span></div>';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Referer:</span><span class="detail-value">' +
+      escapeHtml(log.referer || 'None') +
+      '</span></div>';
+    html += '</div></div>';
+
+    // API Key Info Section
+    html += '<div class="detail-section">';
+    html += '<h4>🔑 API Key Information</h4>';
+    html += '<div class="detail-grid">';
+    if (log.apiKeyId) {
+      html +=
+        '<div class="detail-row"><span class="detail-label">Key ID:</span><span class="detail-value key-display">' +
+        escapeHtml(log.apiKeyId) +
+        '</span></div>';
+      html +=
+        '<div class="detail-row"><span class="detail-label">Name:</span><span class="detail-value">' +
+        escapeHtml(log.apiKeyName || 'N/A') +
+        '</span></div>';
+      if (log.apiKeyEmail) {
+        html +=
+          '<div class="detail-row"><span class="detail-label">Email:</span><span class="detail-value">' +
+          escapeHtml(log.apiKeyEmail) +
+          '</span></div>';
+      }
+      if (log.apiKeyMcName) {
+        html +=
+          '<div class="detail-row"><span class="detail-label">MC Name:</span><span class="detail-value">🎮 ' +
+          escapeHtml(log.apiKeyMcName) +
+          '</span></div>';
+      }
+      html +=
+        '<div class="detail-row"><span class="detail-label">Tier:</span><span class="detail-value"><span class="tier-badge tier-' +
+        (log.apiKeyTier || log.tier) +
+        '">' +
+        (log.apiKeyTier || log.tier) +
+        '</span></span></div>';
+      html +=
+        '<div class="detail-row"><span class="detail-label">Key Status:</span><span class="detail-value"><span class="badge ' +
+        (log.apiKeyIsActive ? 'active' : 'inactive') +
+        '">' +
+        (log.apiKeyIsActive ? 'Active' : 'Inactive') +
+        '</span></span></div>';
+    } else {
+      html +=
+        '<div class="detail-row"><span class="detail-label">Tier:</span><span class="detail-value"><span class="tier-badge tier-anonymous">anonymous</span></span></div>';
+      html +=
+        '<div class="detail-row"><span class="detail-label">Note:</span><span class="detail-value" style="color: #8899a6;">No API key was used for this request</span></div>';
+    }
+    html += '</div></div>';
+
+    // Response Info Section
+    html += '<div class="detail-section">';
+    html += '<h4>📤 Response Information</h4>';
+    html += '<div class="detail-grid">';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Status:</span><span class="detail-value">';
+    if (log.wasBlocked) {
+      html += '<span class="status-badge status-blocked">Blocked</span>';
+    } else {
+      html +=
+        '<span class="status-badge status-' +
+        getStatusClass(log.responseStatus) +
+        '">' +
+        log.responseStatus +
+        '</span>';
+    }
+    html += '</span></div>';
+    if (log.wasBlocked && log.blockReason) {
+      html +=
+        '<div class="detail-row"><span class="detail-label">Block Reason:</span><span class="detail-value" style="color: #e0245e;">' +
+        escapeHtml(log.blockReason) +
+        '</span></div>';
+    }
+    if (log.responseTimeMs) {
+      html +=
+        '<div class="detail-row"><span class="detail-label">Response Time:</span><span class="detail-value">' +
+        log.responseTimeMs +
+        'ms</span></div>';
+    }
+    html += '</div></div>';
+
+    // Rate Limit Info Section
+    html += '<div class="detail-section">';
+    html += '<h4>⏱️ Rate Limit Information</h4>';
+    html += '<div class="detail-grid">';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Request Count:</span><span class="detail-value">' +
+      (log.rateLimitCount || 0) +
+      '</span></div>';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Limit:</span><span class="detail-value">' +
+      (log.rateLimitLimit || 'N/A') +
+      '</span></div>';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Remaining:</span><span class="detail-value">' +
+      (log.rateLimitRemaining ?? 'N/A') +
+      '</span></div>';
+    if (log.rateLimitResetAt) {
+      html +=
+        '<div class="detail-row"><span class="detail-label">Reset At:</span><span class="detail-value">' +
+        new Date(log.rateLimitResetAt).toLocaleString() +
+        '</span></div>';
+    }
+    html += '</div></div>';
+
+    html += '</div>';
+
+    document.getElementById('logDetailsContent').innerHTML = html;
+    openModal('logDetailsModal');
+  } catch (err) {
+    console.error('Error loading log details:', err);
+    showError('Failed to load log details');
+  }
 }
 
 function renderPagination(total) {

@@ -92,7 +92,7 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
     RequestLog.logRequest({
       requestId: request.requestId,
       method: req.method,
-      path: req.path,
+      path: req.originalUrl,
       ipAddress: ip,
       userAgent,
       referer,
@@ -119,7 +119,7 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
     RequestLog.logRequest({
       requestId: request.requestId,
       method: req.method,
-      path: req.path,
+      path: req.originalUrl,
       ipAddress: ip,
       userAgent,
       referer,
