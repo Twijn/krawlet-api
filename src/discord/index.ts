@@ -32,8 +32,17 @@ let discordConnectionStatus: DiscordConnectionStatus = 'disconnected';
 let lastDiscordError: string | undefined;
 
 export function getDiscordStatus(): DiscordStatus {
+  // Check actual client state as the source of truth
+  let status = discordConnectionStatus;
+  if (client.isReady()) {
+    status = 'connected';
+  } else if (discordConnectionStatus === 'connected') {
+    // Client reports not ready but we think we're connected - we're likely reconnecting
+    status = 'connecting';
+  }
+
   return {
-    status: discordConnectionStatus,
+    status,
     lastError: lastDiscordError,
     username: client.user?.tag,
     commandCount: commands.length,
@@ -43,6 +52,17 @@ export function getDiscordStatus(): DiscordStatus {
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`Ready! Logged in as ${readyClient.user.tag}`);
   console.log(`Loaded ${commands.length} commands: ${commands.map((x) => x.data.name).join(', ')}`);
+  discordConnectionStatus = 'connected';
+  lastDiscordError = undefined;
+});
+
+client.on(Events.ShardReady, () => {
+  discordConnectionStatus = 'connected';
+  lastDiscordError = undefined;
+});
+
+client.on(Events.ShardResume, () => {
+  console.log('Discord client resumed');
   discordConnectionStatus = 'connected';
   lastDiscordError = undefined;
 });

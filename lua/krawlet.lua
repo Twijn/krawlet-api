@@ -155,6 +155,69 @@ local VERSION = "1.0.0"
 ---@field rateLimit number Requests per hour
 ---@field warning string Warning to save key
 
+---@alias KrawletServiceStatus "connected" | "disconnected" | "connecting" | "error"
+
+---@class KrawletServiceInfo
+---@field status KrawletServiceStatus Connection status
+---@field lastError? string Last error message if any
+
+---@class KrawletServiceInfoKromer : KrawletServiceInfo
+---@field lastConnectedAt? string ISO 8601 timestamp of last connection
+---@field lastTransactionId? number ID of last processed transaction
+
+---@class KrawletServiceInfoChatbox : KrawletServiceInfo
+---@field owner? string Chatbox owner name
+---@field playerCount? number Number of online players
+
+---@class KrawletServiceInfoDiscord : KrawletServiceInfo
+---@field username? string Discord bot username
+---@field commandCount? number Number of loaded commands
+
+---@class KrawletHealthServices
+---@field kromerWs KrawletServiceInfo Kromer WebSocket status
+---@field chatbox KrawletServiceInfo Chatbox status
+---@field discord KrawletServiceInfo Discord bot status
+
+---@class KrawletHealthServicesDetailed
+---@field kromerWs KrawletServiceInfoKromer Kromer WebSocket status (detailed)
+---@field chatbox KrawletServiceInfoChatbox Chatbox status (detailed)
+---@field discord KrawletServiceInfoDiscord Discord bot status (detailed)
+
+---@class KrawletHealthData
+---@field status string Health status (healthy/degraded)
+---@field timestamp string ISO 8601 timestamp
+---@field uptime number Server uptime in seconds
+---@field version string API version
+---@field name string API name
+---@field services KrawletHealthServices Service connection statuses
+
+---@class KrawletHealthChecks
+---@field database boolean Database connection healthy
+---@field memory boolean Memory usage healthy
+---@field kromerWs boolean Kromer WebSocket connected
+---@field chatbox boolean Chatbox connected
+---@field discord boolean Discord bot connected
+
+---@class KrawletHealthMemory
+---@field heapUsed string Heap memory used (e.g., "50MB")
+---@field heapTotal string Total heap memory (e.g., "100MB")
+---@field rss string Resident set size (e.g., "120MB")
+
+---@class KrawletHealthDetails
+---@field timestamp string ISO 8601 timestamp
+---@field uptime number Server uptime in seconds
+---@field version string API version
+---@field name string API name
+---@field memory KrawletHealthMemory Memory usage info
+---@field node string Node.js version
+---@field platform string OS platform
+
+---@class KrawletHealthDetailedData
+---@field status string Health status (healthy/degraded)
+---@field checks KrawletHealthChecks Health check results
+---@field details KrawletHealthDetails Detailed server info
+---@field services KrawletHealthServicesDetailed Detailed service statuses
+
 -------------------------------------------------------------------------------
 -- Module State
 -------------------------------------------------------------------------------
@@ -394,17 +457,72 @@ end
 -- Health Check
 -------------------------------------------------------------------------------
 
----Check API health status
+---Check API health status (basic)
 ---@return boolean healthy True if API is healthy
----@return string? status Status message or error
+---@return KrawletHealthData|string data Health data on success, error message on failure
 function krawlet.healthCheck()
     local response = httpRequest("GET", "/v1/health")
 
     if response.success then
-        return true, response.data and response.data.status or "ok"
+        return true, response.data
     end
 
     return false, response.error and response.error.message or "Unknown error"
+end
+
+---Check API health status (detailed)
+---Returns comprehensive health information including all service statuses
+---@return boolean healthy True if API is healthy
+---@return KrawletHealthDetailedData|string data Detailed health data on success, error message on failure
+function krawlet.healthCheckDetailed()
+    local response = httpRequest("GET", "/v1/health/detailed")
+
+    if response.success then
+        return true, response.data
+    end
+
+    return false, response.error and response.error.message or "Unknown error"
+end
+
+---Get the status of a specific service
+---@param serviceName "kromerWs"|"chatbox"|"discord" Service to check
+---@return KrawletServiceStatus|nil status Service status or nil on error
+---@return string? error Error message if request failed
+function krawlet.getServiceStatus(serviceName)
+    local healthy, data = krawlet.healthCheck()
+
+    if not healthy then
+        return nil, type(data) == "string" and data or "Health check failed"
+    end
+
+    if type(data) == "table" and data.services and data.services[serviceName] then
+        return data.services[serviceName].status
+    end
+
+    return nil, "Service not found: " .. tostring(serviceName)
+end
+
+---Check if all services are connected
+---@return boolean allConnected True if all services are connected
+---@return table<string, KrawletServiceStatus>? statuses Map of service names to statuses
+function krawlet.areAllServicesConnected()
+    local healthy, data = krawlet.healthCheck()
+
+    if not healthy or type(data) ~= "table" or not data.services then
+        return false, nil
+    end
+
+    local statuses = {}
+    local allConnected = true
+
+    for name, info in pairs(data.services) do
+        statuses[name] = info.status
+        if info.status ~= "connected" then
+            allConnected = false
+        end
+    end
+
+    return allConnected, statuses
 end
 
 -------------------------------------------------------------------------------
