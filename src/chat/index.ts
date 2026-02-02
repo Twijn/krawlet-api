@@ -10,6 +10,33 @@ export const rcc = new Client(process.env.CHAT_LICENSE!, {
   defaultFormattingMode: 'minimessage',
 });
 
+export type ChatConnectionStatus = 'connected' | 'disconnected' | 'connecting' | 'error';
+
+export interface ChatStatus {
+  status: ChatConnectionStatus;
+  lastError?: string;
+  owner?: string;
+  playerCount?: number;
+}
+
+let chatConnectionStatus: ChatConnectionStatus = 'disconnected';
+let lastChatError: string | undefined;
+
+export function getChatStatus(): ChatStatus {
+  // Check the running property to determine connection status
+  let status: ChatConnectionStatus = chatConnectionStatus;
+  if (rcc.running && chatConnectionStatus !== 'error') {
+    status = 'connected';
+  }
+
+  return {
+    status,
+    lastError: lastChatError,
+    owner: rcc.owner,
+    playerCount: rcc.players?.length,
+  };
+}
+
 rcc.on('command', async (cmd) => {
   let commandName = cmd.command.toLowerCase();
 
@@ -39,6 +66,20 @@ rcc.on('join', async (join) => {
 
 rcc.on('ready', () => {
   console.log('Connected to RCC chat!');
+  chatConnectionStatus = 'connected';
+  lastChatError = undefined;
 });
 
+rcc.on('ws_error', (err) => {
+  console.error('RCC WebSocket error:', err);
+  chatConnectionStatus = 'error';
+  lastChatError = err?.message || 'WebSocket error';
+});
+
+rcc.on('closing', () => {
+  console.log('RCC chat connection closing');
+  chatConnectionStatus = 'disconnected';
+});
+
+chatConnectionStatus = 'connecting';
 rcc.connect();

@@ -19,9 +19,48 @@ function isAPIError(error: any): error is APIError {
 // Create a new client instance
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
+export type DiscordConnectionStatus = 'connected' | 'disconnected' | 'connecting' | 'error';
+
+export interface DiscordStatus {
+  status: DiscordConnectionStatus;
+  lastError?: string;
+  username?: string;
+  commandCount?: number;
+}
+
+let discordConnectionStatus: DiscordConnectionStatus = 'disconnected';
+let lastDiscordError: string | undefined;
+
+export function getDiscordStatus(): DiscordStatus {
+  return {
+    status: discordConnectionStatus,
+    lastError: lastDiscordError,
+    username: client.user?.tag,
+    commandCount: commands.length,
+  };
+}
+
 client.once(Events.ClientReady, (readyClient) => {
   console.log(`Ready! Logged in as ${readyClient.user.tag}`);
   console.log(`Loaded ${commands.length} commands: ${commands.map((x) => x.data.name).join(', ')}`);
+  discordConnectionStatus = 'connected';
+  lastDiscordError = undefined;
+});
+
+client.on(Events.Error, (error) => {
+  console.error('Discord client error:', error);
+  discordConnectionStatus = 'error';
+  lastDiscordError = error?.message || 'Discord client error';
+});
+
+client.on(Events.ShardDisconnect, () => {
+  console.log('Discord client disconnected');
+  discordConnectionStatus = 'disconnected';
+});
+
+client.on(Events.ShardReconnecting, () => {
+  console.log('Discord client reconnecting');
+  discordConnectionStatus = 'connecting';
 });
 
 // Handle interactions (both commands and autocomplete)
@@ -102,4 +141,9 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 });
 
 // Log in to Discord with your client's token
-client.login(DISCORD_TOKEN);
+discordConnectionStatus = 'connecting';
+client.login(DISCORD_TOKEN).catch((err) => {
+  console.error('Failed to login to Discord:', err);
+  discordConnectionStatus = 'error';
+  lastDiscordError = err?.message || 'Failed to login';
+});
