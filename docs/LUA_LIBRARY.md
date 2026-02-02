@@ -46,8 +46,8 @@ end
 ### Setting the Endpoint
 
 ```lua
--- Default is production: https://api.krawlet.cc/api
-krawlet.setEndpoint("https://api.krawlet.cc/api")
+-- Default is production: https://api.krawlet.cc
+krawlet.setEndpoint("https://api.krawlet.cc")
 
 -- For local development:
 krawlet.setEndpoint("http://localhost:3330/api")

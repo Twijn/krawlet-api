@@ -105,6 +105,10 @@ router.get('/detailed', async (req, res) => {
           ...(kromerStatus.lastConnectedAt && {
             lastConnectedAt: kromerStatus.lastConnectedAt.toISOString(),
           }),
+          ...(kromerStatus.failedAttempts && { failedAttempts: kromerStatus.failedAttempts }),
+          ...(kromerStatus.nextReconnectAt && {
+            nextReconnectAt: kromerStatus.nextReconnectAt.toISOString(),
+          }),
           lastTransactionId: kromerStatus.lastTransactionId,
         },
         chatbox: {

@@ -165,7 +165,7 @@ router.get('/', (req, res) => {
 
       <div class="footer">
         <a href="https://github.com/Twijn/krawlet-api" target="_blank">GitHub</a> · 
-        <a href="https://api.krawlet.cc/api/v1" target="_blank">API Root</a> ·
+        <a href="https://api.krawlet.cc/v1" target="_blank">API Root</a> ·
         <a href="/krawlet.lua" target="_blank">Download Lua Library</a>
       </div>
     </body>
@@ -295,7 +295,7 @@ end</code></pre>
       
       <div class="method">
         <div class="method-sig">krawlet.setEndpoint(endpoint)</div>
-        <div class="method-desc">Set the API endpoint URL. Defaults to production (<code>https://api.krawlet.cc/api</code>).</div>
+        <div class="method-desc">Set the API endpoint URL. Defaults to production (<code>https://api.krawlet.cc</code>).</div>
         <div class="method-returns">Parameters: <span>endpoint</span> (string) - Base URL</div>
       </div>
 
