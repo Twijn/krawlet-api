@@ -173,35 +173,56 @@ router.use('/api', adminTiming);
 // API endpoint: Get statistics
 router.get('/api/stats', adminAuth, async (req, res) => {
   try {
-    const [statsResult] = await sequelize.query(`
-      SELECT
-        (SELECT COUNT(*) FROM api_keys) as totalKeys,
-        (SELECT COUNT(*) FROM api_keys WHERE isActive = 1) as activeKeys,
-        (SELECT COALESCE(SUM(requestCount), 0) FROM api_keys) as totalRequests,
-        (SELECT COUNT(*) FROM request_logs WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)) as requests24h,
-        (SELECT COUNT(*) FROM request_logs WHERE was_blocked = 1) as blockedRequests,
-        (SELECT COUNT(*) FROM request_logs) as totalLogs
-    `);
+    // Run queries in parallel for better performance
+    const [[keyStatsResult], [requests24hResult], [blockedStatsResult], mostActive] =
+      await Promise.all([
+        // API key stats (small table, fast)
+        sequelize.query(`
+        SELECT
+          COUNT(*) as totalKeys,
+          SUM(CASE WHEN isActive = 1 THEN 1 ELSE 0 END) as activeKeys,
+          COALESCE(SUM(requestCount), 0) as totalRequests
+        FROM api_keys
+      `),
+        // 24h request count (uses created_at index)
+        sequelize.query(`
+        SELECT COUNT(*) as count
+        FROM request_logs
+        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+      `),
+        // Blocked stats - use was_blocked index with approximate total from information_schema
+        // This avoids expensive full table COUNT(*)
+        sequelize.query(`
+        SELECT
+          (SELECT COUNT(*) FROM request_logs WHERE was_blocked = 1) as blockedRequests,
+          (SELECT table_rows FROM information_schema.tables
+           WHERE table_schema = DATABASE() AND table_name = 'request_logs') as totalLogs
+      `),
+        // Most active API key
+        ApiKey.findAll({
+          order: [['requestCount', 'DESC']],
+          limit: 1,
+        }),
+      ]);
 
-    const stats = statsResult as any[];
-
-    const [mostActive] = await ApiKey.findAll({
-      order: [['requestCount', 'DESC']],
-      limit: 1,
-    });
+    const keyStats = (keyStatsResult as any[])[0];
+    const requests24h = (requests24hResult as any[])[0].count;
+    const blockedStats = (blockedStatsResult as any[])[0];
 
     const blockRate =
-      stats[0].totalLogs > 0 ? (stats[0].blockedRequests / stats[0].totalLogs) * 100 : 0;
+      blockedStats.totalLogs > 0
+        ? (blockedStats.blockedRequests / blockedStats.totalLogs) * 100
+        : 0;
 
     res.json({
-      totalKeys: stats[0].totalKeys,
-      activeKeys: stats[0].activeKeys,
-      totalRequests: stats[0].totalRequests,
-      requests24h: stats[0].requests24h,
-      blockedRequests: stats[0].blockedRequests,
+      totalKeys: keyStats.totalKeys,
+      activeKeys: keyStats.activeKeys,
+      totalRequests: keyStats.totalRequests,
+      requests24h,
+      blockedRequests: blockedStats.blockedRequests,
       blockRate,
-      mostActiveKey: mostActive?.name || null,
-      mostActiveCount: mostActive?.requestCount || 0,
+      mostActiveKey: mostActive[0]?.name || null,
+      mostActiveCount: mostActive[0]?.requestCount || 0,
     });
   } catch (error) {
     console.error('Error fetching stats:', error);
