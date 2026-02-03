@@ -112,6 +112,123 @@
           </div>
         </div>
 
+        <!-- Blocked IPs Section -->
+        <div class="section blocked-section">
+          <div class="section-header">
+            <h2>🛡️ IP Blocking & Abuse Protection</h2>
+            <div class="filters">
+              <button onclick="showBlockIpModal()">+ Block IP</button>
+              <button class="secondary" onclick="loadBlockedIps()">Refresh</button>
+            </div>
+          </div>
+
+          <!-- Blocked Stats -->
+          <div class="blocked-stats-grid">
+            <div class="blocked-stat-card">
+              <div class="stat-label">App-Level Blocks</div>
+              <div class="stat-value" id="activeAppBlocks">-</div>
+              <div class="stat-subvalue">Temporary blocks</div>
+            </div>
+            <div class="blocked-stat-card firewall">
+              <div class="stat-label">Firewall Blocks</div>
+              <div class="stat-value" id="activeFirewallBlocks">-</div>
+              <div class="stat-subvalue">For UFW blocking</div>
+            </div>
+            <div class="blocked-stat-card">
+              <div class="stat-label">Blocked Requests (24h)</div>
+              <div class="stat-value" id="blockedRequests24h">-</div>
+              <div class="stat-subvalue">Prevented access</div>
+            </div>
+            <div class="blocked-stat-card">
+              <div class="stat-label">Tracked IPs</div>
+              <div class="stat-value" id="trackedIps">-</div>
+              <div class="stat-subvalue">In abuse detection</div>
+            </div>
+          </div>
+
+          <!-- Tabs for different views -->
+          <div class="blocked-tabs">
+            <button class="tab-btn active" onclick="switchBlockedTab('all')">All Blocks</button>
+            <button class="tab-btn" onclick="switchBlockedTab('firewall')">🔥 Firewall List</button>
+            <button class="tab-btn" onclick="switchBlockedTab('config')">⚙️ Config</button>
+          </div>
+
+          <!-- All Blocks Tab -->
+          <div id="blockedAllTab" class="blocked-tab-content">
+            <div class="filters" style="margin-bottom: 15px">
+              <select id="blockLevelFilter" onchange="loadBlockedIps()">
+                <option value="">All Levels</option>
+                <option value="app">App-Level Only</option>
+                <option value="firewall">Firewall Only</option>
+              </select>
+              <select id="blockActiveFilter" onchange="loadBlockedIps()">
+                <option value="true">Active Only</option>
+                <option value="">All (Including Expired)</option>
+                <option value="false">Expired/Removed Only</option>
+              </select>
+            </div>
+            <div id="blockedTable" class="loading">Loading...</div>
+            <div id="blockedPagination" class="pagination"></div>
+          </div>
+
+          <!-- Firewall List Tab -->
+          <div id="blockedFirewallTab" class="blocked-tab-content" style="display: none">
+            <div class="firewall-info">
+              <p>
+                ⚠️ These IPs should be blocked at the firewall level using UFW. Copy commands below:
+              </p>
+            </div>
+            <div id="firewallCommands" class="loading">Loading...</div>
+          </div>
+
+          <!-- Config Tab -->
+          <div id="blockedConfigTab" class="blocked-tab-content" style="display: none">
+            <div class="config-grid">
+              <div class="config-item">
+                <label>Max Consecutive 429s</label>
+                <input type="number" id="configMax429s" min="1" max="100" />
+                <span class="config-help">Block after N consecutive rate limit responses</span>
+              </div>
+              <div class="config-item">
+                <label>Burst Threshold (req/sec)</label>
+                <input type="number" id="configBurstThreshold" min="1" max="100" />
+                <span class="config-help">Block if requests exceed this per second</span>
+              </div>
+              <div class="config-item">
+                <label>Sustained Traffic Threshold</label>
+                <input type="number" id="configSustainedThreshold" min="1" max="200" />
+                <span class="config-help">Block after N requests at rate limit in 5 min</span>
+              </div>
+              <div class="config-item">
+                <label>User Agent Cycling Threshold</label>
+                <input type="number" id="configUaThreshold" min="2" max="20" />
+                <span class="config-help">Block after N different user agents in 10 min</span>
+              </div>
+              <div class="config-item">
+                <label>Initial Block Duration (min)</label>
+                <input type="number" id="configInitialDuration" min="1" max="1440" />
+                <span class="config-help">First-time offense block duration</span>
+              </div>
+              <div class="config-item">
+                <label>Repeat Block Duration (min)</label>
+                <input type="number" id="configRepeatDuration" min="1" max="1440" />
+                <span class="config-help">Repeat offender block duration</span>
+              </div>
+              <div class="config-item">
+                <label>Escalation After N Blocks</label>
+                <input type="number" id="configEscalationCount" min="1" max="10" />
+                <span class="config-help">Escalate to firewall after this many app blocks</span>
+              </div>
+            </div>
+            <div style="margin-top: 15px">
+              <button onclick="saveBlockConfig()">Save Configuration</button>
+              <span class="config-note"
+                >Note: Changes are runtime only and will reset on server restart</span
+              >
+            </div>
+          </div>
+        </div>
+
         <div class="section">
           <div class="section-header">
             <h2>🔑 API Keys</h2>
@@ -286,6 +403,76 @@
           <button class="close-modal" onclick="closeModal('logDetailsModal')">&times;</button>
         </div>
         <div id="logDetailsContent"></div>
+      </div>
+    </div>
+
+    <!-- Block IP Modal -->
+    <div id="blockIpModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Block IP Address</h3>
+          <button class="close-modal" onclick="closeModal('blockIpModal')">&times;</button>
+        </div>
+        <div>
+          <div style="margin-bottom: 15px">
+            <label style="display: block; color: #8899a6; margin-bottom: 5px">IP Address</label>
+            <input
+              type="text"
+              id="blockIpAddress"
+              placeholder="192.168.1.100"
+              style="width: 100%"
+            />
+          </div>
+          <div style="margin-bottom: 15px">
+            <label style="display: block; color: #8899a6; margin-bottom: 5px">Block Level</label>
+            <select id="blockIpLevel" style="width: 100%">
+              <option value="app">App-Level (temporary, auto-expires)</option>
+              <option value="firewall">Firewall (for UFW blocking, no expiry)</option>
+            </select>
+          </div>
+          <div style="margin-bottom: 15px">
+            <label style="display: block; color: #8899a6; margin-bottom: 5px">Reason</label>
+            <input
+              type="text"
+              id="blockIpReason"
+              placeholder="Manual block - suspicious activity"
+              style="width: 100%"
+            />
+          </div>
+          <div style="margin-bottom: 15px" id="blockDurationContainer">
+            <label style="display: block; color: #8899a6; margin-bottom: 5px"
+              >Duration (minutes)</label
+            >
+            <input
+              type="number"
+              id="blockIpDuration"
+              placeholder="60"
+              min="1"
+              max="10080"
+              style="width: 100%"
+              value="60"
+            />
+            <span class="config-help">Leave empty for default (60 min for app-level)</span>
+          </div>
+          <div style="display: flex; gap: 10px; margin-top: 20px">
+            <button onclick="blockIp()" style="flex: 1">Block IP</button>
+            <button class="secondary" onclick="closeModal('blockIpModal')" style="flex: 1">
+              Cancel
+            </button>
+          </div>
+          <div id="blockIpResult" style="margin-top: 15px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block Details Modal -->
+    <div id="blockDetailsModal" class="modal">
+      <div class="modal-content" style="max-width: 600px">
+        <div class="modal-header">
+          <h3>Block Details</h3>
+          <button class="close-modal" onclick="closeModal('blockDetailsModal')">&times;</button>
+        </div>
+        <div id="blockDetailsContent"></div>
       </div>
     </div>
 

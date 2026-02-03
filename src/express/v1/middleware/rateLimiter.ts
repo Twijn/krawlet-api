@@ -2,6 +2,11 @@ import { Request, Response, NextFunction } from 'express';
 import { RequestWithRateLimit } from '../types/request';
 import { RequestLog } from '../../../lib/models/requestlog.model';
 import { getClientIp } from '../utils/getClientIp';
+import {
+  trackRateLimitExceeded,
+  trackSuccessfulRequest,
+  checkAbuseAfterRequest,
+} from './abuseBlock';
 
 interface RateLimitStore {
   [key: string]: {
@@ -83,6 +88,9 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
   // Track request start time
   const startTime = Date.now();
 
+  // Track successful request for abuse detection (burst/UA cycling)
+  trackSuccessfulRequest(ip, userAgent);
+
   // Log to database after response finishes
   const originalEnd = res.end;
   res.end = function (this: Response, ...args: any[]): Response {
@@ -106,6 +114,11 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
       responseStatus: res.statusCode,
       responseTimeMs,
     }).catch((err) => console.error('Failed to log request:', err));
+
+    // Check for abuse patterns after request (async, don't wait)
+    checkAbuseAfterRequest(ip).catch((err) =>
+      console.error('Failed to check abuse after request:', err),
+    );
 
     return originalEnd.apply(this, args as any) as Response;
   };
@@ -133,6 +146,11 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
       blockReason: 'RATE_LIMIT_EXCEEDED',
       responseStatus: 429,
     }).catch((err) => console.error('Failed to log blocked request:', err));
+
+    // Track rate limit exceeded for abuse detection (async, don't wait)
+    trackRateLimitExceeded(ip, userAgent).catch((err) =>
+      console.error('Failed to track rate limit exceeded:', err),
+    );
 
     return res.error(
       'RATE_LIMIT_EXCEEDED',

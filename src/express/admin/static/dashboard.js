@@ -1246,3 +1246,554 @@ setInterval(() => {
     loadCharts();
   }
 }, 30000);
+
+// ============================================
+// BLOCKED IPs FUNCTIONALITY
+// ============================================
+
+let blockedPage = 1;
+const blockedPageSize = 20;
+let currentBlockedTab = 'all';
+
+// Load blocked IPs stats
+async function loadBlockedStats() {
+  try {
+    const data = await fetchAPI('/admin/api/blocked/stats');
+    document.getElementById('activeAppBlocks').textContent = data.activeAppBlocks.toLocaleString();
+    document.getElementById('activeFirewallBlocks').textContent =
+      data.activeFirewallBlocks.toLocaleString();
+    document.getElementById('blockedRequests24h').textContent =
+      data.blockedRequests24h.toLocaleString();
+    document.getElementById('trackedIps').textContent =
+      data.abuseDetection.trackedIps.toLocaleString();
+
+    // Update config inputs if config tab
+    if (data.config) {
+      document.getElementById('configMax429s').value = data.config.MAX_CONSECUTIVE_429S;
+      document.getElementById('configBurstThreshold').value = data.config.BURST_THRESHOLD;
+      document.getElementById('configSustainedThreshold').value =
+        data.config.SUSTAINED_TRAFFIC_THRESHOLD;
+      document.getElementById('configUaThreshold').value = data.config.USER_AGENT_THRESHOLD;
+      document.getElementById('configInitialDuration').value = data.config.INITIAL_BLOCK_DURATION;
+      document.getElementById('configRepeatDuration').value = data.config.REPEAT_BLOCK_DURATION;
+      document.getElementById('configEscalationCount').value = data.config.ESCALATION_BLOCK_COUNT;
+    }
+  } catch (err) {
+    console.error('Failed to load blocked stats:', err);
+  }
+}
+
+// Load blocked IPs list
+async function loadBlockedIps() {
+  const level = document.getElementById('blockLevelFilter')?.value || '';
+  const active = document.getElementById('blockActiveFilter')?.value || 'true';
+
+  let url = '/admin/api/blocked?page=' + blockedPage + '&limit=' + blockedPageSize;
+  if (level) url += '&level=' + level;
+  if (active) url += '&active=' + active;
+
+  try {
+    const data = await fetchAPI(url);
+    renderBlockedTable(data.blocks, data.total, data.page, data.totalPages);
+  } catch (err) {
+    document.getElementById('blockedTable').innerHTML =
+      '<div class="error">Failed to load blocked IPs</div>';
+  }
+}
+
+function renderBlockedTable(blocks, total, page, totalPages) {
+  if (blocks.length === 0) {
+    document.getElementById('blockedTable').innerHTML =
+      '<p style="text-align: center; color: #8899a6; padding: 20px;">No blocked IPs found</p>';
+    document.getElementById('blockedPagination').innerHTML = '';
+    return;
+  }
+
+  let html = '<table><thead><tr>';
+  html += '<th>IP Address</th>';
+  html += '<th>Level</th>';
+  html += '<th>Trigger</th>';
+  html += '<th>Reason</th>';
+  html += '<th>Blocked At</th>';
+  html += '<th>Expires</th>';
+  html += '<th>Actions</th>';
+  html += '</tr></thead><tbody>';
+
+  blocks.forEach((block) => {
+    const isExpired = block.expiresAt && new Date(block.expiresAt) < new Date();
+    const isActive = block.isActive && !isExpired;
+
+    html += '<tr class="' + (isActive ? '' : 'expired-row') + '">';
+    html += '<td class="key-display">' + escapeHtml(block.ipAddress) + '</td>';
+    html +=
+      '<td><span class="level-badge level-' +
+      block.blockLevel +
+      '">' +
+      block.blockLevel +
+      '</span></td>';
+    html += '<td>' + formatTriggerType(block.triggerType) + '</td>';
+    html +=
+      '<td class="reason-cell" title="' +
+      escapeHtml(block.reason) +
+      '">' +
+      truncate(block.reason, 30) +
+      '</td>';
+    html += '<td class="timestamp">' + formatDate(block.createdAt) + '</td>';
+    html +=
+      '<td class="timestamp">' +
+      (block.expiresAt ? formatDate(block.expiresAt) : '<span style="color:#e0245e">Never</span>') +
+      '</td>';
+    html += '<td><div class="action-buttons">';
+    html +=
+      '<button class="secondary small" onclick="viewBlockDetails(\'' +
+      block.id +
+      '\')">View</button>';
+    if (isActive) {
+      html +=
+        '<button class="danger small" onclick="removeBlock(\'' +
+        block.id +
+        "', '" +
+        escapeJs(block.ipAddress) +
+        '\')">Remove</button>';
+      if (block.blockLevel === 'app') {
+        html +=
+          '<button class="warning small" onclick="escalateBlock(\'' +
+          block.id +
+          '\')">↑ Firewall</button>';
+      }
+    }
+    html += '</div></td>';
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('blockedTable').innerHTML = html;
+
+  // Render pagination
+  renderBlockedPagination(page, totalPages, total);
+}
+
+function renderBlockedPagination(page, totalPages, total) {
+  if (totalPages <= 1) {
+    document.getElementById('blockedPagination').innerHTML = '';
+    return;
+  }
+
+  let html =
+    '<div class="pagination-info">Page ' +
+    page +
+    ' of ' +
+    totalPages +
+    ' (' +
+    total +
+    ' total)</div>';
+  html += '<div class="pagination-buttons">';
+
+  if (page > 1) {
+    html += '<button onclick="changeBlockedPage(' + (page - 1) + ')">← Previous</button>';
+  }
+  if (page < totalPages) {
+    html += '<button onclick="changeBlockedPage(' + (page + 1) + ')">Next →</button>';
+  }
+
+  html += '</div>';
+  document.getElementById('blockedPagination').innerHTML = html;
+}
+
+function changeBlockedPage(newPage) {
+  blockedPage = newPage;
+  loadBlockedIps();
+}
+
+// Load firewall blocks list
+async function loadFirewallBlocks() {
+  try {
+    const data = await fetchAPI('/admin/api/blocked/firewall');
+    renderFirewallCommands(data);
+  } catch (err) {
+    document.getElementById('firewallCommands').innerHTML =
+      '<div class="error">Failed to load firewall blocks</div>';
+  }
+}
+
+function renderFirewallCommands(data) {
+  if (data.blocks.length === 0) {
+    document.getElementById('firewallCommands').innerHTML =
+      '<p style="text-align: center; color: #8899a6; padding: 20px;">No firewall-level blocks. IPs will appear here after repeated abuse.</p>';
+    return;
+  }
+
+  let html = '<div class="firewall-list">';
+
+  // Copy all button
+  html += '<div class="firewall-actions">';
+  html += '<button onclick="copyAllUfwCommands()">📋 Copy All UFW Commands</button>';
+  html += '<span class="firewall-count">' + data.count + ' IPs to block</span>';
+  html += '</div>';
+
+  // Commands list
+  html += '<div class="firewall-commands" id="ufwCommandsList">';
+  data.ufwCommands.forEach((cmd) => {
+    html += '<div class="firewall-command">';
+    html += '<div class="firewall-ip">';
+    html += '<span class="ip">' + escapeHtml(cmd.ip) + '</span>';
+    html += '<span class="firewall-reason">' + escapeHtml(cmd.reason) + '</span>';
+    html += '</div>';
+    html += '<div class="firewall-cmd">';
+    html += '<code>' + escapeHtml(cmd.command) + '</code>';
+    html +=
+      '<button class="small" onclick="copyToClipboard(\'' +
+      escapeJs(cmd.command) +
+      '\')">Copy</button>';
+    html +=
+      '<button class="danger small" onclick="removeBlockByIp(\'' +
+      escapeJs(cmd.ip) +
+      '\')">Remove</button>';
+    html += '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+
+  html += '</div>';
+  document.getElementById('firewallCommands').innerHTML = html;
+}
+
+function copyAllUfwCommands() {
+  const commands = [];
+  document.querySelectorAll('#ufwCommandsList code').forEach((el) => {
+    commands.push(el.textContent);
+  });
+  copyToClipboard(commands.join('\n'));
+  showSuccess('All UFW commands copied to clipboard!');
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      // Already handled by caller if needed
+    })
+    .catch(() => {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    });
+}
+
+// Switch between tabs
+function switchBlockedTab(tab) {
+  currentBlockedTab = tab;
+
+  // Update tab buttons
+  document.querySelectorAll('.blocked-tabs .tab-btn').forEach((btn) => {
+    btn.classList.remove('active');
+  });
+  event.target.classList.add('active');
+
+  // Show/hide content
+  document.getElementById('blockedAllTab').style.display = tab === 'all' ? 'block' : 'none';
+  document.getElementById('blockedFirewallTab').style.display =
+    tab === 'firewall' ? 'block' : 'none';
+  document.getElementById('blockedConfigTab').style.display = tab === 'config' ? 'block' : 'none';
+
+  // Load data for tab
+  if (tab === 'all') {
+    loadBlockedIps();
+  } else if (tab === 'firewall') {
+    loadFirewallBlocks();
+  }
+}
+
+// Block IP modal
+function showBlockIpModal() {
+  document.getElementById('blockIpAddress').value = '';
+  document.getElementById('blockIpLevel').value = 'app';
+  document.getElementById('blockIpReason').value = '';
+  document.getElementById('blockIpDuration').value = '60';
+  document.getElementById('blockIpResult').innerHTML = '';
+  document.getElementById('blockDurationContainer').style.display = 'block';
+  openModal('blockIpModal');
+}
+
+// Toggle duration field based on level
+document.getElementById('blockIpLevel')?.addEventListener('change', function () {
+  const container = document.getElementById('blockDurationContainer');
+  if (this.value === 'firewall') {
+    container.style.display = 'none';
+  } else {
+    container.style.display = 'block';
+  }
+});
+
+async function blockIp() {
+  const ipAddress = document.getElementById('blockIpAddress').value.trim();
+  const blockLevel = document.getElementById('blockIpLevel').value;
+  const reason = document.getElementById('blockIpReason').value.trim();
+  const durationMinutes = parseInt(document.getElementById('blockIpDuration').value) || null;
+
+  if (!ipAddress) {
+    document.getElementById('blockIpResult').innerHTML =
+      '<div class="error">IP address is required</div>';
+    return;
+  }
+
+  if (!reason) {
+    document.getElementById('blockIpResult').innerHTML =
+      '<div class="error">Reason is required</div>';
+    return;
+  }
+
+  try {
+    const body = { ipAddress, blockLevel, reason };
+    if (blockLevel === 'app' && durationMinutes) {
+      body.durationMinutes = durationMinutes;
+    }
+
+    await fetchAPI('/admin/api/blocked', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+
+    document.getElementById('blockIpResult').innerHTML =
+      '<div class="success-message">IP blocked successfully!</div>';
+    loadBlockedStats();
+    loadBlockedIps();
+
+    setTimeout(() => {
+      closeModal('blockIpModal');
+    }, 1000);
+  } catch (err) {
+    document.getElementById('blockIpResult').innerHTML =
+      '<div class="error">Failed to block IP</div>';
+  }
+}
+
+async function removeBlock(blockId, ipAddress) {
+  if (!confirm('Are you sure you want to remove the block for ' + ipAddress + '?')) {
+    return;
+  }
+
+  try {
+    await fetchAPI('/admin/api/blocked/' + blockId, {
+      method: 'DELETE',
+      body: JSON.stringify({ reason: 'Manually removed via admin panel' }),
+    });
+    showSuccess('Block removed successfully');
+    loadBlockedStats();
+    loadBlockedIps();
+    if (currentBlockedTab === 'firewall') {
+      loadFirewallBlocks();
+    }
+  } catch (err) {
+    showError('Failed to remove block');
+  }
+}
+
+async function removeBlockByIp(ipAddress) {
+  if (!confirm('Are you sure you want to remove the block for ' + ipAddress + '?')) {
+    return;
+  }
+
+  try {
+    await fetchAPI('/admin/api/blocked/ip/' + encodeURIComponent(ipAddress), {
+      method: 'DELETE',
+      body: JSON.stringify({ reason: 'Manually removed via admin panel' }),
+    });
+    showSuccess('Block removed successfully');
+    loadBlockedStats();
+    loadBlockedIps();
+    loadFirewallBlocks();
+  } catch (err) {
+    showError('Failed to remove block');
+  }
+}
+
+async function escalateBlock(blockId) {
+  if (
+    !confirm(
+      'Escalate this block to firewall level? This will make it permanent until manually removed.',
+    )
+  ) {
+    return;
+  }
+
+  try {
+    await fetchAPI('/admin/api/blocked/' + blockId + '/escalate', {
+      method: 'POST',
+    });
+    showSuccess('Block escalated to firewall level');
+    loadBlockedStats();
+    loadBlockedIps();
+  } catch (err) {
+    showError('Failed to escalate block');
+  }
+}
+
+async function viewBlockDetails(blockId) {
+  try {
+    // Get block and history
+    const blocksData = await fetchAPI('/admin/api/blocked?active=');
+    const block = blocksData.blocks.find((b) => b.id === blockId);
+
+    if (!block) {
+      showError('Block not found');
+      return;
+    }
+
+    const history = await fetchAPI(
+      '/admin/api/blocked/history/' + encodeURIComponent(block.ipAddress),
+    );
+
+    let html = '';
+
+    // Block info
+    html += '<div class="block-detail-section">';
+    html += '<h4>Block Information</h4>';
+    html +=
+      '<div class="detail-row"><span class="detail-label">IP Address:</span><span class="detail-value key-display">' +
+      escapeHtml(block.ipAddress) +
+      '</span></div>';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Block Level:</span><span class="detail-value"><span class="level-badge level-' +
+      block.blockLevel +
+      '">' +
+      block.blockLevel +
+      '</span></span></div>';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Trigger Type:</span><span class="detail-value">' +
+      formatTriggerType(block.triggerType) +
+      '</span></div>';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Reason:</span><span class="detail-value">' +
+      escapeHtml(block.reason) +
+      '</span></div>';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Blocked At:</span><span class="detail-value">' +
+      new Date(block.createdAt).toLocaleString() +
+      '</span></div>';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Expires At:</span><span class="detail-value">' +
+      (block.expiresAt ? new Date(block.expiresAt).toLocaleString() : 'Never') +
+      '</span></div>';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Status:</span><span class="detail-value">' +
+      (block.isActive
+        ? '<span class="badge active">Active</span>'
+        : '<span class="badge inactive">Inactive</span>') +
+      '</span></div>';
+    html +=
+      '<div class="detail-row"><span class="detail-label">Blocked Requests:</span><span class="detail-value">' +
+      block.blockedRequestCount.toLocaleString() +
+      '</span></div>';
+    if (block.lastSeenAt) {
+      html +=
+        '<div class="detail-row"><span class="detail-label">Last Seen:</span><span class="detail-value">' +
+        new Date(block.lastSeenAt).toLocaleString() +
+        '</span></div>';
+    }
+    html += '</div>';
+
+    // Trigger metadata
+    if (block.consecutive429Count || block.requestsPerSecond || block.userAgentCount) {
+      html += '<div class="block-detail-section">';
+      html += '<h4>Trigger Details</h4>';
+      if (block.consecutive429Count) {
+        html +=
+          '<div class="detail-row"><span class="detail-label">Consecutive 429s:</span><span class="detail-value">' +
+          block.consecutive429Count +
+          '</span></div>';
+      }
+      if (block.requestsPerSecond) {
+        html +=
+          '<div class="detail-row"><span class="detail-label">Requests/Second:</span><span class="detail-value">' +
+          block.requestsPerSecond.toFixed(1) +
+          '</span></div>';
+      }
+      if (block.userAgentCount) {
+        html +=
+          '<div class="detail-row"><span class="detail-label">User Agents:</span><span class="detail-value">' +
+          block.userAgentCount +
+          '</span></div>';
+      }
+      html += '</div>';
+    }
+
+    // Block history
+    if (history.history.length > 1) {
+      html += '<div class="block-detail-section">';
+      html += '<h4>Block History (' + history.totalBlocks + ' total blocks)</h4>';
+      html += '<div class="history-list">';
+      history.history.forEach((h, i) => {
+        if (i >= 5) return; // Show last 5
+        html += '<div class="history-item">';
+        html += '<span class="history-date">' + new Date(h.createdAt).toLocaleString() + '</span>';
+        html += '<span class="level-badge level-' + h.blockLevel + '">' + h.blockLevel + '</span>';
+        html += '<span class="history-trigger">' + formatTriggerType(h.triggerType) + '</span>';
+        html += '</div>';
+      });
+      html += '</div>';
+      html += '</div>';
+    }
+
+    document.getElementById('blockDetailsContent').innerHTML = html;
+    openModal('blockDetailsModal');
+  } catch (err) {
+    showError('Failed to load block details');
+  }
+}
+
+async function saveBlockConfig() {
+  const config = {
+    MAX_CONSECUTIVE_429S: parseInt(document.getElementById('configMax429s').value),
+    BURST_THRESHOLD: parseInt(document.getElementById('configBurstThreshold').value),
+    SUSTAINED_TRAFFIC_THRESHOLD: parseInt(
+      document.getElementById('configSustainedThreshold').value,
+    ),
+    USER_AGENT_THRESHOLD: parseInt(document.getElementById('configUaThreshold').value),
+    INITIAL_BLOCK_DURATION: parseInt(document.getElementById('configInitialDuration').value),
+    REPEAT_BLOCK_DURATION: parseInt(document.getElementById('configRepeatDuration').value),
+    ESCALATION_BLOCK_COUNT: parseInt(document.getElementById('configEscalationCount').value),
+  };
+
+  try {
+    await fetchAPI('/admin/api/blocked/config', {
+      method: 'PATCH',
+      body: JSON.stringify(config),
+    });
+    showSuccess('Configuration saved (runtime only)');
+    loadBlockedStats();
+  } catch (err) {
+    showError('Failed to save configuration');
+  }
+}
+
+// Helper functions
+function formatTriggerType(type) {
+  const map = {
+    consecutive_429s: '🔄 Consecutive 429s',
+    sustained_traffic: '📈 Sustained Traffic',
+    burst_traffic: '⚡ Burst Traffic',
+    repeat_offender: '🔁 Repeat Offender',
+    user_agent_cycling: '🎭 UA Cycling',
+    manual: '👤 Manual',
+  };
+  return map[type] || type;
+}
+
+function truncate(str, maxLen) {
+  if (!str) return '';
+  if (str.length <= maxLen) return escapeHtml(str);
+  return escapeHtml(str.substring(0, maxLen)) + '...';
+}
+
+// Update loadDashboard to include blocked stats
+const originalLoadDashboard = loadDashboard;
+loadDashboard = async function () {
+  await originalLoadDashboard();
+  loadBlockedStats();
+  loadBlockedIps();
+};

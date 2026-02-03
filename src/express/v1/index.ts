@@ -2,6 +2,7 @@ import { Router } from 'express';
 import express from 'express';
 import { requestIdMiddleware } from './middleware/requestId';
 import { responseFormatterMiddleware } from './middleware/responseFormatter';
+import { abuseBlockMiddleware } from './middleware/abuseBlock';
 import { optionalApiKeyAuth } from './middleware/apiKeyAuth';
 import { rateLimiterMiddleware } from './middleware/rateLimiter';
 
@@ -22,6 +23,7 @@ router.use(express.json());
 // Apply V1 middleware in order
 router.use(requestIdMiddleware);
 router.use(responseFormatterMiddleware);
+router.use(abuseBlockMiddleware); // Check for blocked IPs BEFORE auth/rate limiting
 router.use(optionalApiKeyAuth);
 router.use(rateLimiterMiddleware);
 

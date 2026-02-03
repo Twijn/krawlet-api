@@ -765,3 +765,331 @@ button.small {
   text-align: right;
   word-break: break-word;
 }
+
+/* ============================================
+   BLOCKED IPs SECTION STYLES
+   ============================================ */
+
+/* Blocked Stats Grid */
+.blocked-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.blocked-stat-card {
+  background: #0f1419;
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #38444d;
+  text-align: center;
+}
+
+.blocked-stat-card .stat-value {
+  font-size: 24px;
+}
+
+.blocked-stat-card.firewall {
+  border-color: #e0245e;
+  background: rgba(224, 36, 94, 0.1);
+}
+
+.blocked-stat-card.firewall .stat-value {
+  color: #e0245e;
+}
+
+/* Blocked Tabs */
+.blocked-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #38444d;
+  padding-bottom: 10px;
+}
+
+.tab-btn {
+  background: transparent;
+  color: #8899a6;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: #e1e8ed;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-btn.active {
+  color: #1da1f2;
+  border-color: #38444d;
+  background: #192734;
+  border-bottom-color: #192734;
+  margin-bottom: -1px;
+}
+
+.blocked-tab-content {
+  min-height: 200px;
+}
+
+/* Level Badges */
+.level-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.level-badge.level-app {
+  background: rgba(29, 161, 242, 0.2);
+  color: #1da1f2;
+}
+
+.level-badge.level-firewall {
+  background: rgba(224, 36, 94, 0.2);
+  color: #e0245e;
+}
+
+/* Expired row styling */
+.expired-row {
+  opacity: 0.5;
+}
+
+.expired-row td {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Small buttons */
+button.small {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+button.warning {
+  background: #f5a623;
+  color: #0f1419;
+}
+
+button.warning:hover {
+  background: #d4900c;
+}
+
+/* Reason cell */
+.reason-cell {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Firewall Commands Section */
+.firewall-info {
+  background: rgba(224, 36, 94, 0.1);
+  border: 1px solid rgba(224, 36, 94, 0.3);
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.firewall-info p {
+  color: #e0245e;
+  margin: 0;
+}
+
+.firewall-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.firewall-count {
+  color: #8899a6;
+  font-size: 14px;
+}
+
+.firewall-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.firewall-command {
+  background: #0f1419;
+  border: 1px solid #38444d;
+  border-radius: 8px;
+  padding: 12px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.firewall-ip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.firewall-ip .ip {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: #e1e8ed;
+}
+
+.firewall-ip .firewall-reason {
+  font-size: 12px;
+  color: #8899a6;
+}
+
+.firewall-cmd {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.firewall-cmd code {
+  background: #0a0d10;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: #17bf63;
+  border: 1px solid #38444d;
+}
+
+/* Config Grid */
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.config-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.config-item label {
+  color: #e1e8ed;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.config-item input {
+  width: 100%;
+}
+
+.config-help {
+  color: #8899a6;
+  font-size: 12px;
+}
+
+.config-note {
+  color: #8899a6;
+  font-size: 12px;
+  margin-left: 15px;
+}
+
+/* Block Details Modal */
+.block-detail-section {
+  background: #0f1419;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 15px;
+  border: 1px solid #38444d;
+}
+
+.block-detail-section h4 {
+  color: #1da1f2;
+  margin-bottom: 12px;
+  font-size: 14px;
+  border-bottom: 1px solid #38444d;
+  padding-bottom: 8px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px;
+  background: #192734;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.history-date {
+  color: #8899a6;
+  min-width: 150px;
+}
+
+.history-trigger {
+  color: #e1e8ed;
+}
+
+/* Pagination styling */
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #38444d;
+}
+
+.pagination-info {
+  color: #8899a6;
+  font-size: 13px;
+}
+
+.pagination-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* Responsive adjustments for blocked section */
+@media (max-width: 768px) {
+  .blocked-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .blocked-tabs {
+    flex-wrap: wrap;
+  }
+
+  .firewall-command {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .firewall-cmd {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .firewall-cmd code {
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+  }
+
+  .config-grid {
+    grid-template-columns: 1fr;
+  }
+}

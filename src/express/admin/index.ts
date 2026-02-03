@@ -1,8 +1,10 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { ApiKey } from '../../lib/models/apikey.model';
 import { RequestLog } from '../../lib/models/requestlog.model';
+import { BlockedIp } from '../../lib/models/blockedip.model';
 import { Op } from 'sequelize';
 import { sequelize } from '../../lib/models/database';
+import { removeFromCache, getAbuseStats, ABUSE_CONFIG } from '../../lib/abuseManager';
 import path from 'path';
 import express from 'express';
 
@@ -871,6 +873,310 @@ router.get('/api/charts/referers', adminAuth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching referer data:', error);
     res.status(500).json({ ok: false, error: 'Failed to fetch referer data' });
+  }
+});
+
+// ============================================
+// BLOCKED IPs ENDPOINTS
+// ============================================
+
+// API endpoint: Get abuse detection stats
+router.get('/api/blocked/stats', adminAuth, async (req, res) => {
+  try {
+    const abuseStats = getAbuseStats();
+
+    // Count active blocks by level
+    const [appBlocks, firewallBlocks, totalBlocks] = await Promise.all([
+      BlockedIp.count({
+        where: {
+          isActive: true,
+          blockLevel: 'app',
+          [Op.or]: [{ expiresAt: null }, { expiresAt: { [Op.gt]: new Date() } }],
+        },
+      }),
+      BlockedIp.count({
+        where: {
+          isActive: true,
+          blockLevel: 'firewall',
+        },
+      }),
+      BlockedIp.count(),
+    ]);
+
+    // Get total blocked requests in last 24h
+    const [blockedRequests24h] = await sequelize.query(`
+      SELECT COALESCE(SUM(blocked_request_count), 0) as count
+      FROM blocked_ips
+      WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+    `);
+
+    res.json({
+      activeAppBlocks: appBlocks,
+      activeFirewallBlocks: firewallBlocks,
+      totalBlocksAllTime: totalBlocks,
+      blockedRequests24h: (blockedRequests24h as any[])[0]?.count || 0,
+      abuseDetection: {
+        trackedIps: abuseStats.trackedIps,
+        cachedBlocks: abuseStats.cachedBlocks,
+      },
+      config: abuseStats.config,
+    });
+  } catch (error) {
+    console.error('Error fetching blocked stats:', error);
+    res.status(500).json({ ok: false, error: 'Failed to fetch blocked stats' });
+  }
+});
+
+// API endpoint: Get all blocked IPs
+router.get('/api/blocked', adminAuth, async (req, res) => {
+  try {
+    const { level, active } = req.query;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const offset = (page - 1) * limit;
+
+    const where: any = {};
+
+    if (level && (level === 'app' || level === 'firewall')) {
+      where.blockLevel = level;
+    }
+
+    if (active === 'true') {
+      where.isActive = true;
+      where[Op.or] = [{ expiresAt: null }, { expiresAt: { [Op.gt]: new Date() } }];
+    } else if (active === 'false') {
+      where[Op.or] = [{ isActive: false }, { expiresAt: { [Op.lte]: new Date() } }];
+    }
+
+    const [count, rows] = await Promise.all([
+      BlockedIp.count({ where }),
+      BlockedIp.findAll({
+        where,
+        limit,
+        offset,
+        order: [['createdAt', 'DESC']],
+      }),
+    ]);
+
+    res.json({
+      blocks: rows,
+      total: count,
+      page,
+      totalPages: Math.ceil(count / limit),
+    });
+  } catch (error) {
+    console.error('Error fetching blocked IPs:', error);
+    res.status(500).json({ ok: false, error: 'Failed to fetch blocked IPs' });
+  }
+});
+
+// API endpoint: Get firewall-level blocks (for manual UFW blocking)
+router.get('/api/blocked/firewall', adminAuth, async (req, res) => {
+  try {
+    const blocks = await BlockedIp.getFirewallBlocks();
+
+    // Format for easy UFW commands
+    const ufwCommands = blocks.map((block) => ({
+      ip: block.ipAddress,
+      command: `sudo ufw deny from ${block.ipAddress}`,
+      reason: block.reason,
+      blockedAt: block.createdAt.toISOString(),
+      previousBlocks: block.previousBlockCount,
+    }));
+
+    res.json({
+      blocks,
+      ufwCommands,
+      count: blocks.length,
+    });
+  } catch (error) {
+    console.error('Error fetching firewall blocks:', error);
+    res.status(500).json({ ok: false, error: 'Failed to fetch firewall blocks' });
+  }
+});
+
+// API endpoint: Get block history for an IP
+router.get('/api/blocked/history/:ip', adminAuth, async (req, res) => {
+  try {
+    const ip = req.params.ip;
+    const history = await BlockedIp.getHistory(ip);
+
+    res.json({
+      ip,
+      history,
+      totalBlocks: history.length,
+    });
+  } catch (error) {
+    console.error('Error fetching block history:', error);
+    res.status(500).json({ ok: false, error: 'Failed to fetch block history' });
+  }
+});
+
+// API endpoint: Manually block an IP
+router.post('/api/blocked', adminAuth, async (req, res) => {
+  try {
+    const { ipAddress, blockLevel, reason, durationMinutes } = req.body;
+
+    if (!ipAddress) {
+      return res.status(400).json({ ok: false, error: 'IP address is required' });
+    }
+
+    if (!blockLevel || !['app', 'firewall'].includes(blockLevel)) {
+      return res.status(400).json({ ok: false, error: 'Block level must be "app" or "firewall"' });
+    }
+
+    if (!reason) {
+      return res.status(400).json({ ok: false, error: 'Reason is required' });
+    }
+
+    // Check if already blocked
+    const existingBlock = await BlockedIp.isBlocked(ipAddress);
+    if (existingBlock) {
+      return res.status(409).json({
+        ok: false,
+        error: 'IP is already blocked',
+        existingBlock,
+      });
+    }
+
+    const block = await BlockedIp.manualBlock(
+      ipAddress,
+      blockLevel,
+      reason,
+      durationMinutes || (blockLevel === 'app' ? 60 : undefined),
+    );
+
+    res.json({
+      ok: true,
+      message: 'IP blocked successfully',
+      block,
+    });
+  } catch (error) {
+    console.error('Error blocking IP:', error);
+    res.status(500).json({ ok: false, error: 'Failed to block IP' });
+  }
+});
+
+// API endpoint: Remove a block
+router.delete('/api/blocked/:id', adminAuth, async (req, res) => {
+  try {
+    const block = await BlockedIp.findByPk(req.params.id);
+
+    if (!block) {
+      return res.status(404).json({ ok: false, error: 'Block not found' });
+    }
+
+    const { reason } = req.body;
+    await block.remove(reason || 'Manually removed via admin panel');
+
+    // Remove from memory cache
+    removeFromCache(block.ipAddress);
+
+    res.json({
+      ok: true,
+      message: 'Block removed successfully',
+      block,
+    });
+  } catch (error) {
+    console.error('Error removing block:', error);
+    res.status(500).json({ ok: false, error: 'Failed to remove block' });
+  }
+});
+
+// API endpoint: Remove a block by IP address
+router.delete('/api/blocked/ip/:ip', adminAuth, async (req, res) => {
+  try {
+    const ip = req.params.ip;
+    const block = await BlockedIp.isBlocked(ip);
+
+    if (!block) {
+      return res.status(404).json({ ok: false, error: 'No active block found for this IP' });
+    }
+
+    const { reason } = req.body;
+    await block.remove(reason || 'Manually removed via admin panel');
+
+    // Remove from memory cache
+    removeFromCache(ip);
+
+    res.json({
+      ok: true,
+      message: 'Block removed successfully',
+      block,
+    });
+  } catch (error) {
+    console.error('Error removing block by IP:', error);
+    res.status(500).json({ ok: false, error: 'Failed to remove block' });
+  }
+});
+
+// API endpoint: Escalate an IP to firewall level
+router.post('/api/blocked/:id/escalate', adminAuth, async (req, res) => {
+  try {
+    const existingBlock = await BlockedIp.findByPk(req.params.id);
+
+    if (!existingBlock) {
+      return res.status(404).json({ ok: false, error: 'Block not found' });
+    }
+
+    if (existingBlock.blockLevel === 'firewall') {
+      return res.status(400).json({ ok: false, error: 'Block is already at firewall level' });
+    }
+
+    // Mark existing block as inactive
+    await existingBlock.remove('Escalated to firewall level');
+
+    // Create new firewall-level block
+    const newBlock = await BlockedIp.escalateToFirewall(
+      existingBlock.ipAddress,
+      `Escalated from app-level: ${existingBlock.reason}`,
+      'repeat_offender',
+    );
+
+    res.json({
+      ok: true,
+      message: 'Block escalated to firewall level',
+      block: newBlock,
+    });
+  } catch (error) {
+    console.error('Error escalating block:', error);
+    res.status(500).json({ ok: false, error: 'Failed to escalate block' });
+  }
+});
+
+// API endpoint: Update abuse detection config (runtime only, not persisted)
+router.patch('/api/blocked/config', adminAuth, async (req, res) => {
+  try {
+    const allowedKeys = [
+      'MAX_CONSECUTIVE_429S',
+      'SUSTAINED_TRAFFIC_THRESHOLD',
+      'BURST_THRESHOLD',
+      'USER_AGENT_THRESHOLD',
+      'INITIAL_BLOCK_DURATION',
+      'REPEAT_BLOCK_DURATION',
+      'ESCALATION_BLOCK_COUNT',
+    ];
+
+    const updates: string[] = [];
+    for (const [key, value] of Object.entries(req.body)) {
+      if (allowedKeys.includes(key) && typeof value === 'number') {
+        (ABUSE_CONFIG as any)[key] = value;
+        updates.push(`${key} = ${value}`);
+      }
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ ok: false, error: 'No valid config updates provided' });
+    }
+
+    res.json({
+      ok: true,
+      message: `Updated config: ${updates.join(', ')}`,
+      config: ABUSE_CONFIG,
+    });
+  } catch (error) {
+    console.error('Error updating config:', error);
+    res.status(500).json({ ok: false, error: 'Failed to update config' });
   }
 });
 

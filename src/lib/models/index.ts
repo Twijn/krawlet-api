@@ -45,3 +45,4 @@ export * from './turtlestat.model';
 export * from './changelog.model';
 export * from './apikey.model';
 export * from './requestlog.model';
+export * from './blockedip.model';
