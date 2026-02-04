@@ -9,11 +9,26 @@ import formatTransaction, {
   parseTransactionData,
   TransactionData,
   formatRefundForDiscord,
+  formatKBCForDiscord,
+  formatItemReturnForDiscord,
 } from '../lib/formatTransaction';
 import walletListeners from './walletListeners';
 import { formatKromerBalance } from '../lib/formatKromer';
 
-const STRIPPED_META_ENTRIES = ['error', 'message', 'return', 'ref', 'type', 'original'];
+const STRIPPED_META_ENTRIES = [
+  'error',
+  'message',
+  'return',
+  'ref',
+  'type',
+  'original',
+  'winner_ticket',
+  'winner',
+  'payout',
+  'name',
+  'quantity',
+  'left',
+];
 
 /**
  * Sanitizes text for use inside Discord inline code blocks.
@@ -41,8 +56,14 @@ function addressUrl(address: string, label?: string) {
 function sendDiscordMessage(transaction: TransactionWithMeta, data: TransactionData) {
   let metadata = '';
 
-  // Check for refund data first (more specific, cleaner display)
-  if (data.refund) {
+  // Check for KBC data first (most specific, cleanest display)
+  if (data.kbc) {
+    metadata += formatKBCForDiscord(data.kbc);
+  } else if (data.itemReturn) {
+    // Check for item return data
+    metadata += formatItemReturnForDiscord(data.itemReturn);
+  } else if (data.refund) {
+    // Check for refund data (more specific, cleaner display)
     metadata += formatRefundForDiscord(data.refund);
   } else {
     if (data.entries.error) {
