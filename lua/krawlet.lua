@@ -69,6 +69,8 @@ local VERSION = "1.0.0"
 ---@field createdDate? string ISO 8601 timestamp
 ---@field updatedDate? string ISO 8601 timestamp
 
+---@alias KrawletShopSourceType "modem" | "radio_tower"
+
 ---@class KrawletShop
 ---@field id string Shop ID
 ---@field name string Shop name
@@ -80,6 +82,7 @@ local VERSION = "1.0.0"
 ---@field locationCoordinates? string Location coordinates
 ---@field locationDescription? string Location description
 ---@field locationDimension? string Dimension (overworld, nether, end)
+---@field sourceType KrawletShopSourceType How the shop was added (modem=direct, radio_tower=CC Radio Tower)
 ---@field items KrawletItem[] Shop items
 ---@field addresses string[] Associated Kromer addresses
 ---@field createdDate? string ISO 8601 timestamp

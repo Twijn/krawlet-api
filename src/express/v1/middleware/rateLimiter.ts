@@ -83,6 +83,10 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
   const ip = getClientIp(request);
   const userAgent = request.get('user-agent');
   const referer = request.get('referer') || request.get('referrer');
+  const ccServer = request.get('x-cc-srv');
+  const ccComputerId = request.get('x-cc-id')
+    ? parseInt(request.get('x-cc-id') as string, 10)
+    : undefined;
   const tier = (request.apiKey?.tier || 'anonymous') as 'anonymous' | 'free' | 'premium';
 
   // Track request start time
@@ -104,6 +108,8 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
       ipAddress: ip,
       userAgent,
       referer,
+      ccServer,
+      ccComputerId: Number.isNaN(ccComputerId) ? undefined : ccComputerId,
       apiKeyId: request.apiKey?.id,
       tier,
       rateLimitCount: current.count,
@@ -136,6 +142,8 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
       ipAddress: ip,
       userAgent,
       referer,
+      ccServer,
+      ccComputerId: Number.isNaN(ccComputerId) ? undefined : ccComputerId,
       apiKeyId: request.apiKey?.id,
       tier,
       rateLimitCount: current.count,

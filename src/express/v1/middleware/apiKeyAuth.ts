@@ -18,6 +18,11 @@ export const optionalApiKeyAuth = async (req: Request, res: Response, next: Next
 
   if (!providedKey.startsWith('kraw_')) {
     // Log blocked request to database
+    const ccServer = req.get('x-cc-srv');
+    const ccComputerId = req.get('x-cc-id')
+      ? parseInt(req.get('x-cc-id') as string, 10)
+      : undefined;
+
     RequestLog.logRequest({
       requestId: request.requestId,
       method: req.method,
@@ -25,6 +30,8 @@ export const optionalApiKeyAuth = async (req: Request, res: Response, next: Next
       ipAddress: ip,
       userAgent: req.get('user-agent'),
       referer: req.get('referer') || req.get('referrer'),
+      ccServer,
+      ccComputerId: Number.isNaN(ccComputerId) ? undefined : ccComputerId,
       tier: 'anonymous',
       rateLimitCount: 0,
       rateLimitLimit: 100,
@@ -49,6 +56,11 @@ export const optionalApiKeyAuth = async (req: Request, res: Response, next: Next
 
     if (!apiKey) {
       // Log blocked request to database
+      const ccServer = req.get('x-cc-srv');
+      const ccComputerId = req.get('x-cc-id')
+        ? parseInt(req.get('x-cc-id') as string, 10)
+        : undefined;
+
       RequestLog.logRequest({
         requestId: request.requestId,
         method: req.method,
@@ -56,6 +68,8 @@ export const optionalApiKeyAuth = async (req: Request, res: Response, next: Next
         ipAddress: ip,
         userAgent: req.get('user-agent'),
         referer: req.get('referer') || req.get('referrer'),
+        ccServer,
+        ccComputerId: Number.isNaN(ccComputerId) ? undefined : ccComputerId,
         tier: 'anonymous',
         rateLimitCount: 0,
         rateLimitLimit: 100,

@@ -172,22 +172,23 @@ local shops, err = krawlet.searchShops("diamond")
 
 **Shop Object:**
 
-| Field                 | Type     | Description                                      |
-| --------------------- | -------- | ------------------------------------------------ |
-| `id`                  | string   | Shop ID                                          |
-| `name`                | string   | Shop name                                        |
-| `description`         | string?  | Shop description                                 |
-| `owner`               | string?  | Shop owner's name                                |
-| `computerId`          | number   | Computer ID in-game                              |
-| `softwareName`        | string?  | Shop software name (e.g., "ShopSync")            |
-| `softwareVersion`     | string?  | Shop software version                            |
-| `locationCoordinates` | string?  | Location coordinates (e.g., "100, 64, -200")     |
-| `locationDescription` | string?  | Human-readable location description              |
-| `locationDimension`   | string?  | Dimension: `"overworld"`, `"nether"`, or `"end"` |
-| `items`               | Item[]   | Array of items in the shop                       |
-| `addresses`           | string[] | Associated Kromer addresses                      |
-| `createdDate`         | string?  | ISO 8601 timestamp                               |
-| `updatedDate`         | string?  | ISO 8601 timestamp                               |
+| Field                 | Type     | Description                                                            |
+| --------------------- | -------- | ---------------------------------------------------------------------- |
+| `id`                  | string   | Shop ID                                                                |
+| `name`                | string   | Shop name                                                              |
+| `description`         | string?  | Shop description                                                       |
+| `owner`               | string?  | Shop owner's name                                                      |
+| `computerId`          | number   | Computer ID in-game                                                    |
+| `softwareName`        | string?  | Shop software name (e.g., "ShopSync")                                  |
+| `softwareVersion`     | string?  | Shop software version                                                  |
+| `locationCoordinates` | string?  | Location coordinates (e.g., "100, 64, -200")                           |
+| `locationDescription` | string?  | Human-readable location description                                    |
+| `locationDimension`   | string?  | Dimension: `"overworld"`, `"nether"`, or `"end"`                       |
+| `sourceType`          | string   | How the shop was added: `"modem"` (direct) or `"radio_tower"` (remote) |
+| `items`               | Item[]   | Array of items in the shop                                             |
+| `addresses`           | string[] | Associated Kromer addresses                                            |
+| `createdDate`         | string?  | ISO 8601 timestamp                                                     |
+| `updatedDate`         | string?  | ISO 8601 timestamp                                                     |
 
 ```lua
 {
@@ -201,6 +202,7 @@ local shops, err = krawlet.searchShops("diamond")
     locationCoordinates = "100, 64, -200",
     locationDescription = "Spawn area",
     locationDimension = "overworld",
+    sourceType = "modem",
     items = { ... },
     addresses = { "ks0d5iqb6p" },
     createdDate = "...",

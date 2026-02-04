@@ -10,6 +10,8 @@ interface RequestLogAttributes {
   ipAddress: string;
   userAgent?: string;
   referer?: string;
+  ccServer?: string;
+  ccComputerId?: number;
   apiKeyId?: string;
   tier: 'anonymous' | 'free' | 'premium';
   rateLimitCount: number;
@@ -31,6 +33,8 @@ interface RequestLogCreationAttributes
     | 'createdAt'
     | 'userAgent'
     | 'referer'
+    | 'ccServer'
+    | 'ccComputerId'
     | 'apiKeyId'
     | 'blockReason'
     | 'responseStatus'
@@ -49,6 +53,8 @@ export class RequestLog
   declare ipAddress: string;
   declare userAgent?: string;
   declare referer?: string;
+  declare ccServer?: string;
+  declare ccComputerId?: number;
   declare apiKeyId?: string;
   declare tier: 'anonymous' | 'free' | 'premium';
   declare rateLimitCount: number;
@@ -153,6 +159,16 @@ RequestLog.init(
       type: DataTypes.STRING(500),
       allowNull: true,
       field: 'referer',
+    },
+    ccServer: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: 'cc_server',
+    },
+    ccComputerId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      field: 'cc_computer_id',
     },
     apiKeyId: {
       type: DataTypes.UUID,

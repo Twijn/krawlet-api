@@ -484,6 +484,8 @@ router.get('/api/logs', adminAuth, async (req, res) => {
         'ipAddress',
         'userAgent',
         'referer',
+        'ccServer',
+        'ccComputerId',
         'apiKeyId',
         'tier',
         'wasBlocked',

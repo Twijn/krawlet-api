@@ -1114,6 +1114,10 @@ components:
         locationDimension:
           type: string
           nullable: true
+        sourceType:
+          type: string
+          enum: [modem, radio_tower]
+          description: How the shop was added (modem=direct connection, radio_tower=CC Radio Tower)
         items:
           type: array
           items:
@@ -1342,6 +1346,11 @@ components:
         - info
         - items
       properties:
+        sourceType:
+          type: string
+          enum: [modem, radio_tower]
+          default: modem
+          description: How the shop is being added (modem=direct connection, radio_tower=CC Radio Tower)
         info:
           type: object
           required:

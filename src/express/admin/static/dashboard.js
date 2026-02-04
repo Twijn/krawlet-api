@@ -639,6 +639,24 @@ async function viewLogDetails(requestId) {
       '</span></div>';
     html += '</div></div>';
 
+    // ComputerCraft Info Section (only show if CC headers present)
+    if (log.ccServer || log.ccComputerId) {
+      html += '<div class="detail-section">';
+      html += '<h4>🖳 ComputerCraft Information</h4>';
+      html += '<div class="detail-grid">';
+      html +=
+        '<div class="detail-row"><span class="detail-label">CC Server:</span><span class="detail-value">' +
+        escapeHtml(log.ccServer || 'N/A') +
+        '</span></div>';
+      html +=
+        '<div class="detail-row"><span class="detail-label">Computer ID:</span><span class="detail-value">' +
+        (log.ccComputerId !== null && log.ccComputerId !== undefined
+          ? escapeHtml(String(log.ccComputerId))
+          : 'N/A') +
+        '</span></div>';
+      html += '</div></div>';
+    }
+
     // API Key Info Section
     html += '<div class="detail-section">';
     html += '<h4>🔑 API Key Information</h4>';

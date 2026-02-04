@@ -3,6 +3,8 @@ import { sequelize } from './database.js';
 import { ShopSyncData } from '../shopSyncValidate';
 import { Listing, RawListing, updateListings } from './listing.model';
 
+export type ShopSourceType = 'modem' | 'radio_tower';
+
 export interface RawShop {
   id: string;
 
@@ -20,6 +22,7 @@ export interface RawShop {
   locationDimension: string | null;
 
   hidden: boolean;
+  sourceType: ShopSourceType;
 
   items?: RawListing[];
   addresses?: string[];
@@ -86,7 +89,7 @@ export async function getShops(): Promise<Shop[]> {
   return shops.filter(isShopVisible);
 }
 
-export async function updateShop(data: ShopSyncData): Promise<void> {
+export async function updateShop(data: ShopSyncData, sourceType?: ShopSourceType): Promise<void> {
   let locationCoordinates = null;
 
   if (
@@ -95,6 +98,10 @@ export async function updateShop(data: ShopSyncData): Promise<void> {
   ) {
     locationCoordinates = data.info.location.coordinates.join(' ');
   }
+
+  // Get existing shop to preserve sourceType if not provided
+  const existingShop = await Shop.findByPk(getShopId(data));
+  const finalSourceType = sourceType ?? existingShop?.sourceType ?? 'modem';
 
   await Shop.upsert({
     id: getShopId(data),
@@ -108,6 +115,7 @@ export async function updateShop(data: ShopSyncData): Promise<void> {
     locationDescription: data.info.location?.description || null,
     locationDimension: data.info.location?.dimension || null,
     hidden: false, // New shops are not hidden by default
+    sourceType: finalSourceType,
   });
 
   await updateListings(data);
@@ -132,6 +140,7 @@ export class Shop
   declare locationDimension: string | null;
 
   declare hidden: boolean;
+  declare sourceType: ShopSourceType;
 
   declare items?: Listing[];
 
@@ -163,6 +172,7 @@ export class Shop
       locationDescription: this.locationDescription,
       locationDimension: this.locationDimension,
       hidden: this.hidden,
+      sourceType: this.sourceType,
       items,
       addresses,
       createdDate: this.createdAt ? this.createdAt.toISOString() : null,
@@ -217,6 +227,12 @@ Shop.init(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
+    },
+    sourceType: {
+      type: DataTypes.ENUM('modem', 'radio_tower'),
+      allowNull: false,
+      defaultValue: 'modem',
+      field: 'source_type',
     },
   },
   {

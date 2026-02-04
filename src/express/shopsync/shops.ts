@@ -1,7 +1,13 @@
 import { Router, json } from 'express';
 import authenticate from '../../lib/authenticate';
 import { ShopSyncData, validateShopSyncData } from '../../lib/shopSyncValidate';
-import { updateShop, getShop, getShops, getListingsByShopId } from '../../lib/models';
+import {
+  updateShop,
+  getShop,
+  getShops,
+  getListingsByShopId,
+  ShopSourceType,
+} from '../../lib/models';
 import {
   recordValidationFailure,
   recordSuccessfulPost,
@@ -90,11 +96,15 @@ router.post(
       // Data is valid
       const shopSyncData: ShopSyncData = req.body;
 
+      // Extract sourceType from request body (optional, defaults to modem)
+      const sourceType: ShopSourceType | undefined =
+        req.body.sourceType === 'radio_tower' ? 'radio_tower' : 'modem';
+
       // Detect changes before updating (for reporting)
       await detectAndRecordShopChanges(shopSyncData);
       await detectAndRecordItemChanges(shopSyncData);
 
-      await updateShop(shopSyncData);
+      await updateShop(shopSyncData, sourceType);
 
       // Record successful POST
       recordSuccessfulPost(shopSyncData);
