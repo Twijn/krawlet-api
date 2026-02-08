@@ -16,6 +16,7 @@ info:
     - Anonymous requests: 100 requests/hour
     - Free tier: 1,000 requests/hour
     - Premium tier: 5,000 requests/hour
+    - Service tiers (shopsync, enderstorage, internal): Configurable per key
 
     Rate limit information is included in response headers:
     - `X-RateLimit-Limit`: Maximum requests per hour
@@ -1247,7 +1248,7 @@ components:
           description: Email associated with the key
         tier:
           type: string
-          enum: [free, premium]
+          enum: [free, premium, shopsync, enderstorage, internal]
           description: API key tier
         rateLimit:
           type: integer
@@ -1467,7 +1468,7 @@ components:
           description: Name associated with the API key
         tier:
           type: string
-          enum: [free, premium]
+          enum: [free, premium, shopsync, enderstorage, internal]
           description: API key tier
         rateLimit:
           type: integer

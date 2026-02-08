@@ -87,7 +87,13 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
   const ccComputerId = request.get('x-cc-id')
     ? parseInt(request.get('x-cc-id') as string, 10)
     : undefined;
-  const tier = (request.apiKey?.tier || 'anonymous') as 'anonymous' | 'free' | 'premium';
+  const tier = (request.apiKey?.tier || 'anonymous') as
+    | 'anonymous'
+    | 'free'
+    | 'premium'
+    | 'shopsync'
+    | 'enderstorage'
+    | 'internal';
 
   // Track request start time
   const startTime = Date.now();

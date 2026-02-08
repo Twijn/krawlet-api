@@ -83,23 +83,23 @@ async function getUsageStats(apiKeyId: string): Promise<{
 }
 
 async function displayApiKey(apiKey: ApiKey, showUsage: boolean): Promise<void> {
-  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-  console.log('📋 API Key Details:');
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('\n------------------------------------------------------------------------');
+  console.log('API Key Details:');
+  console.log('------------------------------------------------------------------------');
   console.log(`   ID:            ${apiKey.id}`);
   console.log(`   Name:          ${apiKey.name}`);
   console.log(`   Email:         ${apiKey.email || 'N/A'}`);
   console.log(`   Tier:          ${apiKey.tier}`);
   console.log(`   Rate Limit:    ${apiKey.rateLimit} requests/hour`);
-  console.log(`   Status:        ${apiKey.isActive ? '✅ Active' : '❌ Inactive'}`);
+  console.log(`   Status:        ${apiKey.isActive ? 'Active' : 'Inactive'}`);
   console.log(`   Request Count: ${apiKey.requestCount.toLocaleString()}`);
   console.log(`   Last Used:     ${apiKey.lastUsedAt ? apiKey.lastUsedAt.toISOString() : 'Never'}`);
   console.log(`   Created:       ${apiKey.createdAt.toISOString()}`);
   console.log(`   Updated:       ${apiKey.updatedAt.toISOString()}`);
 
   if (showUsage) {
-    console.log('\n📊 Usage Statistics:');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('\nUsage Statistics:');
+    console.log('------------------------------------------------------------------------');
 
     const stats = await getUsageStats(apiKey.id);
 

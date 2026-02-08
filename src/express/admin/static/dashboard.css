@@ -272,6 +272,24 @@ tr:hover {
   box-shadow: 0 1px 3px rgba(29, 161, 242, 0.3);
 }
 
+.tier-badge.tier-shopsync {
+  background: linear-gradient(135deg, #e67e22 0%, #f39c12 100%);
+  color: #0f1419;
+  box-shadow: 0 1px 3px rgba(243, 156, 18, 0.3);
+}
+
+.tier-badge.tier-enderstorage {
+  background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
+  color: white;
+  box-shadow: 0 1px 3px rgba(155, 89, 182, 0.3);
+}
+
+.tier-badge.tier-internal {
+  background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
+  color: white;
+  box-shadow: 0 1px 3px rgba(231, 76, 60, 0.3);
+}
+
 .tier-badge.tier-enterprise {
   background: linear-gradient(135deg, #6b3fa0 0%, #794bc4 100%);
   color: white;

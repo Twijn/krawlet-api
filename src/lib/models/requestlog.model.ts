@@ -1,6 +1,14 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import { sequelize } from './database';
 
+export type RequestLogTier =
+  | 'anonymous'
+  | 'free'
+  | 'premium'
+  | 'shopsync'
+  | 'enderstorage'
+  | 'internal';
+
 interface RequestLogAttributes {
   id: string;
   requestId: string;
@@ -13,7 +21,7 @@ interface RequestLogAttributes {
   ccServer?: string;
   ccComputerId?: number;
   apiKeyId?: string;
-  tier: 'anonymous' | 'free' | 'premium';
+  tier: RequestLogTier;
   rateLimitCount: number;
   rateLimitLimit: number;
   rateLimitRemaining: number;
@@ -56,7 +64,7 @@ export class RequestLog
   declare ccServer?: string;
   declare ccComputerId?: number;
   declare apiKeyId?: string;
-  declare tier: 'anonymous' | 'free' | 'premium';
+  declare tier: RequestLogTier;
   declare rateLimitCount: number;
   declare rateLimitLimit: number;
   declare rateLimitRemaining: number;
@@ -176,7 +184,7 @@ RequestLog.init(
       field: 'api_key_id',
     },
     tier: {
-      type: DataTypes.ENUM('anonymous', 'free', 'premium'),
+      type: DataTypes.ENUM('anonymous', 'free', 'premium', 'shopsync', 'enderstorage', 'internal'),
       allowNull: false,
       defaultValue: 'anonymous',
     },

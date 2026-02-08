@@ -71,6 +71,8 @@ local VERSION = "1.0.0"
 
 ---@alias KrawletShopSourceType "modem" | "radio_tower"
 
+---@alias KrawletApiKeyTier "free" | "premium" | "shopsync" | "enderstorage" | "internal"
+
 ---@class KrawletShop
 ---@field id string Shop ID
 ---@field name string Shop name
@@ -127,7 +129,7 @@ local VERSION = "1.0.0"
 ---@field id string API key ID
 ---@field name string Key name/description
 ---@field email? string Associated email
----@field tier string Key tier (free/premium)
+---@field tier KrawletApiKeyTier Key tier
 ---@field rateLimit number Maximum requests per hour
 ---@field isActive boolean Whether key is active
 ---@field requestCount number Total requests made
@@ -154,7 +156,7 @@ local VERSION = "1.0.0"
 ---@field message string Success message
 ---@field apiKey string Full API key (kraw_...)
 ---@field name string Key name
----@field tier string Key tier
+---@field tier KrawletApiKeyTier Key tier
 ---@field rateLimit number Requests per hour
 ---@field warning string Warning to save key
 

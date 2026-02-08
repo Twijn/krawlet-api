@@ -6,16 +6,20 @@
  * Usage:
  *   npm run gen-apikey -- --name "My App" --email "user@example.com" --tier free
  *   npm run gen-apikey -- --name "Premium User" --tier premium --limit 5000
+ *   npm run gen-apikey -- --name "ShopSync Client" --tier shopsync
+ *   npm run gen-apikey -- --name "Ender Storage" --tier enderstorage
  */
 
 import 'dotenv/config';
-import { ApiKey } from '../lib/models/apikey.model';
+import { ApiKey, ApiKeyTier } from '../lib/models/apikey.model';
 import { sequelize } from '../lib/models/database';
+
+const VALID_TIERS: ApiKeyTier[] = ['free', 'premium', 'shopsync', 'enderstorage', 'internal'];
 
 interface GenerateKeyOptions {
   name: string;
   email?: string;
-  tier?: 'free' | 'premium';
+  tier?: ApiKeyTier;
   rateLimit?: number;
 }
 
@@ -43,12 +47,12 @@ async function generateApiKey(options: GenerateKeyOptions): Promise<void> {
       isActive: true,
     });
 
-    console.log('\n✅ API Key Generated Successfully!\n');
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('🔑 API KEY (save this - it will not be shown again):');
+    console.log('\n API Key Generated Successfully!\n');
+    console.log('------------------------------------------------------------------------');
+    console.log('API KEY (save this - it will not be shown again):');
     console.log(`   ${rawKey}`);
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    console.log('\n📋 Details:');
+    console.log('------------------------------------------------------------------------');
+    console.log('\nDetails:');
     console.log(`   ID:         ${apiKey.id}`);
     console.log(`   Name:       ${apiKey.name}`);
     console.log(`   Email:      ${apiKey.email || 'N/A'}`);
@@ -56,18 +60,34 @@ async function generateApiKey(options: GenerateKeyOptions): Promise<void> {
     console.log(`   Rate Limit: ${apiKey.rateLimit} requests/hour`);
     console.log(`   Status:     Active`);
     console.log(`   Created:    ${apiKey.createdAt.toISOString()}`);
-    console.log('\n💡 Usage:');
-    console.log(
-      '   curl -H "Authorization: Bearer ' + rawKey + '" http://localhost:3000/v1/players',
-    );
-    console.log(
-      '\n⚠️  IMPORTANT: Store this key securely. The raw key cannot be retrieved later.\n',
-    );
+    console.log('\nUsage:');
+
+    if (apiKey.tier === 'free' || apiKey.tier === 'premium') {
+      console.log(
+        '   curl -H "Authorization: Bearer ' + rawKey + '" http://localhost:3000/v1/players',
+      );
+    } else if (apiKey.tier === 'shopsync') {
+      console.log(
+        '   curl -X POST -H "Authorization: Bearer ' +
+          rawKey +
+          '" -H "Content-Type: application/json" -d @shop.json http://localhost:3000/v1/shops',
+      );
+    } else if (apiKey.tier === 'enderstorage') {
+      console.log(
+        '   curl -X POST -H "Authorization: Bearer ' +
+          rawKey +
+          '" -H "Content-Type: application/json" -d @storage.json http://localhost:3000/v1/storage',
+      );
+    } else {
+      console.log('   This is an internal key with access to all protected endpoints.');
+    }
+
+    console.log('\nIMPORTANT: Store this key securely. The raw key cannot be retrieved later.\n');
 
     await sequelize.close();
     process.exit(0);
   } catch (error) {
-    console.error('❌ Error generating API key:', error);
+    console.error('Error generating API key:', error);
     await sequelize.close();
     process.exit(1);
   }
@@ -97,10 +117,10 @@ function parseArgs(): GenerateKeyOptions {
         break;
       case '--tier':
         if (!next) throw new Error('--tier requires a value');
-        if (next !== 'free' && next !== 'premium') {
-          throw new Error('--tier must be "free" or "premium"');
+        if (!VALID_TIERS.includes(next as ApiKeyTier)) {
+          throw new Error(`--tier must be one of: ${VALID_TIERS.join(', ')}`);
         }
-        options.tier = next as 'free' | 'premium';
+        options.tier = next as ApiKeyTier;
         i++;
         break;
       case '--limit':
@@ -124,19 +144,24 @@ Required:
 
 Optional:
   --email <string>      Email address associated with the key
-  --tier <free|premium> Tier level (default: free)
+  --tier <tier>         API key tier (default: free)
   --limit <number>      Custom rate limit per hour (default: 1000 for free, 5000 for premium)
   --help, -h            Show this help message
 
 Tiers:
-  free     - 1,000 requests/hour (default)
-  premium  - 5,000 requests/hour (default)
+  free         - Standard API access, 1,000 requests/hour (default)
+  premium      - Standard API access, 5,000 requests/hour (default)
+  shopsync     - Access to POST /v1/shops for shop data synchronization
+  enderstorage - Access to POST /v1/storage for ender storage data
+  internal     - Full access to all protected internal endpoints
 
 Examples:
   npm run gen-apikey -- --name "Test App"
   npm run gen-apikey -- --name "My App" --email "user@example.com"
   npm run gen-apikey -- --name "Premium User" --tier premium
-  npm run gen-apikey -- --name "Custom Limit" --tier premium --limit 10000
+  npm run gen-apikey -- --name "ShopSync Client" --tier shopsync
+  npm run gen-apikey -- --name "Ender Storage Sync" --tier enderstorage
+  npm run gen-apikey -- --name "Internal Service" --tier internal
         `);
         process.exit(0);
         break;
@@ -156,7 +181,7 @@ try {
   generateApiKey(options);
 } catch (error) {
   if (error instanceof Error) {
-    console.error(`\n❌ Error: ${error.message}\n`);
+    console.error(`\nError: ${error.message}\n`);
     console.log('Use --help for usage information.\n');
   }
   process.exit(1);

@@ -5,12 +5,15 @@ import crypto from 'crypto';
 /** Quick code expiration time in minutes */
 const QC_EXPIRATION_MINUTES = 15;
 
+/** API Key tiers - includes both rate limit tiers and special access tiers */
+export type ApiKeyTier = 'free' | 'premium' | 'shopsync' | 'enderstorage' | 'internal';
+
 export class ApiKey extends Model {
   public id!: string;
   public key!: string;
   public name!: string;
   public email!: string | null;
-  public tier!: 'free' | 'premium';
+  public tier!: ApiKeyTier;
   public rateLimit!: number;
   public isActive!: boolean;
   public lastUsedAt!: Date | null;
@@ -110,7 +113,7 @@ ApiKey.init(
       allowNull: true,
     },
     tier: {
-      type: DataTypes.ENUM('free', 'premium'),
+      type: DataTypes.ENUM('free', 'premium', 'shopsync', 'enderstorage', 'internal'),
       defaultValue: 'free',
       allowNull: false,
     },

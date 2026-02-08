@@ -2,35 +2,56 @@
 
 ## Permission Levels (Tiers)
 
-The Krawlet API uses a two-tier system for API keys:
+The Krawlet API uses a tier system for API keys:
 
-### 🆓 Free Tier (Default)
+### Free Tier (Default)
 
-- **Rate Limit:** 1,000 requests/hour
+- **Rate Limit:** 1,000 requests/hour (configurable)
 - **Use Case:** Personal projects, testing, low-volume applications
-- **Features:** Full access to all V1 endpoints
+- **Features:** Full access to all public V1 endpoints
 - **Cost:** Free
 
-### 💎 Premium Tier
+### Premium Tier
 
-- **Rate Limit:** 5,000 requests/hour (default, configurable)
+- **Rate Limit:** 5,000 requests/hour (configurable)
 - **Use Case:** Production applications, high-volume integrations
-- **Features:** Full access to all V1 endpoints + higher rate limits
+- **Features:** Full access to all public V1 endpoints + higher rate limits
 - **Cost:** Custom (managed by administrators)
 
-### 📊 Comparison
+### ShopSync Tier
 
-| Feature          | Anonymous | Free Tier  | Premium Tier |
-| ---------------- | --------- | ---------- | ------------ |
-| Rate Limit       | 100/hour  | 1,000/hour | 5,000+/hour  |
-| Authentication   | None      | API Key    | API Key      |
-| Request Tracking | IP-based  | Key-based  | Key-based    |
-| Usage Analytics  | ❌        | ✅         | ✅           |
-| Custom Limits    | ❌        | ❌         | ✅           |
+- **Rate Limit:** Configurable
+- **Use Case:** Shop data synchronization from in-game modems/radio towers
+- **Features:** Access to POST /v1/shops endpoint for shop data sync
+- **Access:** Internal use only
+
+### EnderStorage Tier
+
+- **Rate Limit:** Configurable
+- **Use Case:** Ender storage data synchronization
+- **Features:** Access to POST /v1/storage endpoint for ender storage data
+- **Access:** Internal use only
+
+### Internal Tier
+
+- **Rate Limit:** Configurable
+- **Use Case:** System services requiring full access
+- **Features:** Access to all protected internal endpoints
+- **Access:** Internal use only
+
+### Comparison
+
+| Feature          | Anonymous | Free Tier  | Premium Tier | ShopSync | EnderStorage | Internal |
+| ---------------- | --------- | ---------- | ------------ | -------- | ------------ | -------- |
+| Rate Limit       | 100/hour  | 1,000/hour | 5,000+/hour  | Custom   | Custom       | Custom   |
+| Authentication   | None      | API Key    | API Key      | API Key  | API Key      | API Key  |
+| Public Endpoints | Yes       | Yes        | Yes          | No       | No           | Yes      |
+| POST /v1/shops   | No        | No         | No           | Yes      | No           | Yes      |
+| POST /v1/storage | No        | No         | No           | No       | Yes          | Yes      |
 
 ---
 
-## Quick Codes 🚀
+## Quick Codes
 
 Quick codes are 6-digit temporary codes that allow easy API key retrieval without copy-pasting long strings. Perfect for in-game chatbox interactions!
 

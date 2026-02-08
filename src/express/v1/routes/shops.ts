@@ -1,5 +1,5 @@
 import { Router, json } from 'express';
-import authenticate from '../../../lib/authenticate';
+import { authenticateApiKeyTier } from '../../../lib/authenticateApiKeyTier';
 import { ShopSyncData, validateShopSyncData } from '../../../lib/shopSyncValidate';
 import {
   updateShop,
@@ -54,47 +54,42 @@ router.get('/:id/items', async (req, res) => {
   }
 });
 
-// POST /v1/shops - Create/update shop (authenticated)
-router.post(
-  '/',
-  authenticate(process.env.SHOPSYNC_API_TOKEN ?? '123abc'),
-  json(),
-  async (req, res) => {
-    try {
-      const validation = validateShopSyncData(req.body);
+// POST /v1/shops - Create/update shop (authenticated - shopsync or internal tier keys only)
+router.post('/', authenticateApiKeyTier('shopsync', 'internal'), json(), async (req, res) => {
+  try {
+    const validation = validateShopSyncData(req.body);
 
-      if (!validation.isValid) {
-        console.error(`Received invalid response (shop ${req.body?.info?.name})`);
-        console.error(validation.errors);
+    if (!validation.isValid) {
+      console.error(`Received invalid response (shop ${req.body?.info?.name})`);
+      console.error(validation.errors);
 
-        // Record validation failure
-        recordValidationFailure(req.body, validation.errors);
+      // Record validation failure
+      recordValidationFailure(req.body, validation.errors);
 
-        return res.error('VALIDATION_ERROR', 'Invalid ShopSync data', 400, validation.errors);
-      }
-
-      // Data is valid
-      const shopSyncData: ShopSyncData = req.body;
-
-      // Extract sourceType from request body (optional, defaults to modem)
-      const sourceType: ShopSourceType | undefined =
-        req.body.sourceType === 'radio_tower' ? 'radio_tower' : 'modem';
-
-      // Detect changes before updating (for reporting)
-      await detectAndRecordShopChanges(shopSyncData);
-      await detectAndRecordItemChanges(shopSyncData);
-
-      await updateShop(shopSyncData, sourceType);
-
-      // Record successful POST
-      recordSuccessfulPost(shopSyncData);
-
-      return res.success({ message: 'Shop updated successfully' }, 201);
-    } catch (error) {
-      console.error('Error updating shop:', error);
-      return res.error('INTERNAL_ERROR', 'Failed to update shop', 500);
+      return res.error('VALIDATION_ERROR', 'Invalid ShopSync data', 400, validation.errors);
     }
-  },
-);
+
+    // Data is valid
+    const shopSyncData: ShopSyncData = req.body;
+
+    // Extract sourceType from request body (optional, defaults to modem)
+    const sourceType: ShopSourceType | undefined =
+      req.body.sourceType === 'radio_tower' ? 'radio_tower' : 'modem';
+
+    // Detect changes before updating (for reporting)
+    await detectAndRecordShopChanges(shopSyncData);
+    await detectAndRecordItemChanges(shopSyncData);
+
+    await updateShop(shopSyncData, sourceType);
+
+    // Record successful POST
+    recordSuccessfulPost(shopSyncData);
+
+    return res.success({ message: 'Shop updated successfully' }, 201);
+  } catch (error) {
+    console.error('Error updating shop:', error);
+    return res.error('INTERNAL_ERROR', 'Failed to update shop', 500);
+  }
+});
 
 export default router;

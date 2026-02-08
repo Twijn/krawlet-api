@@ -1,6 +1,6 @@
 import { Router, Request, Response, json } from 'express';
 import { writeFileSync, readFileSync, existsSync } from 'fs';
-import authenticate from '../lib/authenticate';
+import { authenticateApiKeyTier } from '../lib/authenticateApiKeyTier';
 
 const router = Router();
 
@@ -19,7 +19,7 @@ let lastJsonData: unknown = loadJsonFromFile();
 
 router.post(
   '/',
-  authenticate(process.env.ESTORAGE_API_TOKEN!),
+  authenticateApiKeyTier('enderstorage', 'internal'),
   json(),
   (req: Request, res: Response) => {
     try {
