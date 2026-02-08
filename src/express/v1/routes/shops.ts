@@ -7,6 +7,7 @@ import {
   getShops,
   getListingsByShopId,
   ShopSourceType,
+  shouldIgnoreModemShopSyncUpdate,
 } from '../../../lib/models';
 import {
   recordValidationFailure,
@@ -75,6 +76,24 @@ router.post('/', authenticateApiKeyTier('shopsync', 'internal'), json(), async (
     // Extract sourceType from request body (optional, defaults to modem)
     const sourceType: ShopSourceType | undefined =
       req.body.sourceType === 'radio_tower' ? 'radio_tower' : 'modem';
+
+    const shouldIgnoreModemUpdate =
+      sourceType === 'modem' && (await shouldIgnoreModemShopSyncUpdate(shopSyncData));
+
+    if (shouldIgnoreModemUpdate) {
+      recordSuccessfulPost(shopSyncData);
+      console.log(
+        'Ignored modem ShopSync update for ' +
+          shopSyncData.info.name +
+          ' due to recent radio tower update',
+      );
+
+      return res.success({
+        message: 'Shop update skipped due to recent radio tower update',
+        skipped: true,
+        reason: 'recent_radio_tower_update',
+      });
+    }
 
     // Detect changes before updating (for reporting)
     await detectAndRecordShopChanges(shopSyncData);

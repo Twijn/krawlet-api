@@ -121,6 +121,19 @@ export async function updateShop(data: ShopSyncData, sourceType?: ShopSourceType
   await updateListings(data);
 }
 
+const RADIO_TOWER_PRIORITY_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+export async function shouldIgnoreModemShopSyncUpdate(data: ShopSyncData): Promise<boolean> {
+  const existingShop = await Shop.findByPk(getShopId(data));
+
+  if (!existingShop || existingShop.sourceType !== 'radio_tower' || !existingShop.updatedAt) {
+    return false;
+  }
+
+  const cutoff = Date.now() - RADIO_TOWER_PRIORITY_WINDOW_MS;
+  return existingShop.updatedAt.getTime() >= cutoff;
+}
+
 export class Shop
   extends Model<InferAttributes<Shop>, InferCreationAttributes<Shop>>
   implements RawShop
