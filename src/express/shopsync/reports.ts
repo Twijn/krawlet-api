@@ -8,7 +8,9 @@
 import { Router } from 'express';
 import {
   getValidationFailures,
+  getValidationFailuresTotal,
   getSuccessfulPosts,
+  getSuccessfulPostsTotal,
   getShopChanges,
   getItemChanges,
   getReporterStats,
@@ -50,9 +52,11 @@ router.get('/validation-failures', (req, res) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
     const records = getValidationFailures(limit);
+    const total = getValidationFailuresTotal();
     res.json({
       ok: true,
       count: records.length,
+      total,
       data: records,
     });
   } catch (err) {
@@ -74,9 +78,11 @@ router.get('/successful-posts', (req, res) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
     const records = getSuccessfulPosts(limit);
+    const total = getSuccessfulPostsTotal();
     res.json({
       ok: true,
       count: records.length,
+      total,
       data: records,
     });
   } catch (err) {
@@ -119,9 +125,10 @@ router.get('/shop-changes', async (req, res) => {
       if (req.query.since) options.since = new Date(req.query.since as string);
       if (req.query.until) options.until = new Date(req.query.until as string);
 
-      const history = await getShopChangeLogs(options);
+      const { rows: history, total: historyTotal } = await getShopChangeLogs(options);
       result.history = history;
       result.historyCount = history.length;
+      result.historyTotal = historyTotal;
     }
 
     res.json(result);
@@ -167,9 +174,10 @@ router.get('/item-changes', async (req, res) => {
       if (req.query.since) options.since = new Date(req.query.since as string);
       if (req.query.until) options.until = new Date(req.query.until as string);
 
-      const history = await getItemChangeLogs(options);
+      const { rows: history, total: historyTotal } = await getItemChangeLogs(options);
       result.history = history;
       result.historyCount = history.length;
+      result.historyTotal = historyTotal;
     }
 
     res.json(result);

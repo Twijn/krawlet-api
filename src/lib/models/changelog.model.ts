@@ -244,7 +244,7 @@ export async function getShopChangeLogs(options: ChangeLogQueryOptions = {}) {
     if (options.until) where.createdAt[Op.lte] = options.until;
   }
 
-  const logs = await ShopChangeLog.findAll({
+  const { rows: logs } = await ShopChangeLog.findAndCountAll({
     where,
     order: [['createdAt', 'DESC']],
     limit: options.limit,
@@ -273,7 +273,9 @@ export async function getShopChangeLogs(options: ChangeLogQueryOptions = {}) {
       .map((shop) => shop.id),
   );
 
-  return logs.filter((log) => visibleShopIds.has(log.shopId));
+  const filteredRows = logs.filter((log) => visibleShopIds.has(log.shopId));
+
+  return { rows: filteredRows, total: filteredRows.length };
 }
 
 export async function getItemChangeLogs(
@@ -293,7 +295,7 @@ export async function getItemChangeLogs(
     if (options.until) where.createdAt[Op.lte] = options.until;
   }
 
-  const logs = await ItemChangeLog.findAll({
+  const { rows: logs } = await ItemChangeLog.findAndCountAll({
     where,
     order: [['createdAt', 'DESC']],
     limit: options.limit,
@@ -322,7 +324,9 @@ export async function getItemChangeLogs(
       .map((shop) => shop.id),
   );
 
-  return logs.filter((log) => visibleShopIds.has(log.shopId));
+  const filteredRows = logs.filter((log) => visibleShopIds.has(log.shopId));
+
+  return { rows: filteredRows, total: filteredRows.length };
 }
 
 export async function getPriceChangeLogs(
@@ -342,7 +346,7 @@ export async function getPriceChangeLogs(
     if (options.until) where.createdAt[Op.lte] = options.until;
   }
 
-  const { count: total, rows } = await PriceChangeLog.findAndCountAll({
+  const { rows } = await PriceChangeLog.findAndCountAll({
     where,
     order: [['createdAt', 'DESC']],
     limit: options.limit,

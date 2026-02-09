@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import {
   getValidationFailures,
+  getValidationFailuresTotal,
   getSuccessfulPosts,
+  getSuccessfulPostsTotal,
   getShopChanges,
   getItemChanges,
   getReporterStats,
@@ -27,8 +29,10 @@ router.get('/validation-failures', (req, res) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
     const records = getValidationFailures(limit);
+    const total = getValidationFailuresTotal();
     return res.success({
       count: records.length,
+      total,
       records,
     });
   } catch (error) {
@@ -42,8 +46,10 @@ router.get('/successful-posts', (req, res) => {
   try {
     const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : undefined;
     const records = getSuccessfulPosts(limit);
+    const total = getSuccessfulPostsTotal();
     return res.success({
       count: records.length,
+      total,
       records,
     });
   } catch (error) {
@@ -95,9 +101,10 @@ router.get('/shop-change-logs', async (req, res) => {
     const since = req.query.since ? new Date(req.query.since as string) : undefined;
     const until = req.query.until ? new Date(req.query.until as string) : undefined;
 
-    const logs = await getShopChangeLogs({ limit, offset, shopId, since, until });
+    const { rows: logs, total } = await getShopChangeLogs({ limit, offset, shopId, since, until });
     return res.success({
       count: logs.length,
+      total,
       logs,
     });
   } catch (error) {
@@ -115,9 +122,10 @@ router.get('/item-change-logs', async (req, res) => {
     const since = req.query.since ? new Date(req.query.since as string) : undefined;
     const until = req.query.until ? new Date(req.query.until as string) : undefined;
 
-    const logs = await getItemChangeLogs({ limit, offset, shopId, since, until });
+    const { rows: logs, total } = await getItemChangeLogs({ limit, offset, shopId, since, until });
     return res.success({
       count: logs.length,
+      total,
       logs,
     });
   } catch (error) {

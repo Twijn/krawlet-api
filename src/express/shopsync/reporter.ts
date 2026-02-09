@@ -104,6 +104,7 @@ export interface ReporterStats {
 // ============================================================================
 
 const MAX_RECORDS = 500; // Max records per category to keep in memory
+const MAX_RECORD_AGE_MS = 48 * 60 * 60 * 1000; // 48 hours in milliseconds
 
 // ============================================================================
 // Storage (in-memory, lightweight)
@@ -127,6 +128,79 @@ function trimArray<T>(arr: T[]): void {
     arr.shift();
   }
 }
+
+/**
+ * Remove records older than 48 hours from all in-memory arrays
+ */
+function cleanupOldRecords(): void {
+  const now = Date.now();
+  const cutoffTime = now - MAX_RECORD_AGE_MS;
+
+  // Helper to check if timestamp is too old
+  const isTooOld = (timestamp: string): boolean => {
+    return new Date(timestamp).getTime() < cutoffTime;
+  };
+
+  // Filter each array, keeping only recent records
+  const beforeValidation = validationFailures.length;
+  const beforeSuccess = successfulPosts.length;
+  const beforeShop = shopChanges.length;
+  const beforeItem = itemChanges.length;
+
+  // Remove old records
+  let i = 0;
+  while (i < validationFailures.length) {
+    if (isTooOld(validationFailures[i].timestamp)) {
+      validationFailures.splice(i, 1);
+    } else {
+      i++;
+    }
+  }
+
+  i = 0;
+  while (i < successfulPosts.length) {
+    if (isTooOld(successfulPosts[i].timestamp)) {
+      successfulPosts.splice(i, 1);
+    } else {
+      i++;
+    }
+  }
+
+  i = 0;
+  while (i < shopChanges.length) {
+    if (isTooOld(shopChanges[i].timestamp)) {
+      shopChanges.splice(i, 1);
+    } else {
+      i++;
+    }
+  }
+
+  i = 0;
+  while (i < itemChanges.length) {
+    if (isTooOld(itemChanges[i].timestamp)) {
+      itemChanges.splice(i, 1);
+    } else {
+      i++;
+    }
+  }
+
+  const removedValidation = beforeValidation - validationFailures.length;
+  const removedSuccess = beforeSuccess - successfulPosts.length;
+  const removedShop = beforeShop - shopChanges.length;
+  const removedItem = beforeItem - itemChanges.length;
+  const totalRemoved = removedValidation + removedSuccess + removedShop + removedItem;
+
+  if (totalRemoved > 0) {
+    console.log(
+      `[ShopSync Reporter] Cleaned up ${totalRemoved} old records (>48h): ` +
+        `${removedValidation} validation failures, ${removedSuccess} successful posts, ` +
+        `${removedShop} shop changes, ${removedItem} item changes`,
+    );
+  }
+}
+
+// Run cleanup every hour
+setInterval(cleanupOldRecords, 60 * 60 * 1000);
 
 /**
  * Format a price object for human-readable display
@@ -672,9 +746,17 @@ export function getValidationFailures(limit?: number): ValidationFailureRecord[]
   return limit ? records.slice(0, limit) : records;
 }
 
+export function getValidationFailuresTotal(): number {
+  return validationFailures.length;
+}
+
 export function getSuccessfulPosts(limit?: number): SuccessfulPostRecord[] {
   const records = [...successfulPosts].reverse();
   return limit ? records.slice(0, limit) : records;
+}
+
+export function getSuccessfulPostsTotal(): number {
+  return successfulPosts.length;
 }
 
 export async function getShopChanges(limit?: number, shopId?: string): Promise<ShopChangeRecord[]> {
