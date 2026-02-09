@@ -32,6 +32,8 @@ export class HATransactions {
   private failedAttempts = 0;
   private reconnectTimeout?: NodeJS.Timeout;
   private nextReconnectAt?: Date;
+  private processedTransactions = new Set<number>();
+  private readonly MAX_PROCESSED_CACHE = 1000; // Track last 1000 transaction IDs
 
   private async retrieveLatestTransaction() {
     try {
@@ -167,6 +169,24 @@ export class HATransactions {
   }
 
   private async handleTransaction(transaction: TransactionWithMeta) {
+    // Skip if we've already processed this transaction (prevents duplicates from WS + polling)
+    if (this.processedTransactions.has(transaction.id)) {
+      return;
+    }
+
+    // Mark as processed
+    this.processedTransactions.add(transaction.id);
+
+    // Trim the cache if it gets too large (keep most recent transactions)
+    if (this.processedTransactions.size > this.MAX_PROCESSED_CACHE) {
+      const sortedIds = Array.from(this.processedTransactions).sort((a, b) => a - b);
+      const toRemove = sortedIds.slice(
+        0,
+        this.processedTransactions.size - this.MAX_PROCESSED_CACHE,
+      );
+      toRemove.forEach((id) => this.processedTransactions.delete(id));
+    }
+
     this.lastTransactionId = transaction.id;
     for (const handler of this.transactionHandlers) {
       try {
