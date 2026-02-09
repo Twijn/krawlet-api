@@ -554,7 +554,23 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          count:
+                            type: integer
+                            description: Number of logs returned in this response
+                          total:
+                            type: integer
+                            description: Total number of logs matching the query
+                          logs:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/ShopChangeLog'
 
   /v1/reports/item-change-logs:
     get:
@@ -590,7 +606,23 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          count:
+                            type: integer
+                            description: Number of logs returned in this response
+                          total:
+                            type: integer
+                            description: Total number of logs matching the query
+                          logs:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/ItemChangeLog'
 
   /v1/reports/price-change-logs:
     get:
@@ -626,7 +658,23 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          count:
+                            type: integer
+                            description: Number of logs returned in this response
+                          total:
+                            type: integer
+                            description: Total number of logs matching the query
+                          logs:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/PriceChangeLog'
 
   /v1/apikey:
     get:
@@ -1430,6 +1478,92 @@ components:
                       type: string
                     requiredMeta:
                       type: string
+
+    ShopChangeLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        shopId:
+          type: string
+        shopName:
+          type: string
+        field:
+          type: string
+          description: The field that was changed (e.g., 'name', 'description', 'owner')
+        previousValue:
+          type: string
+          nullable: true
+          description: The previous value of the field
+        newValue:
+          type: string
+          nullable: true
+          description: The new value of the field
+        isNewShop:
+          type: boolean
+          description: Whether this was a new shop creation
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ItemChangeLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        shopId:
+          type: string
+        shopName:
+          type: string
+        changeType:
+          type: string
+          enum: [added, removed]
+          description: Whether the item was added or removed
+        itemName:
+          type: string
+        itemDisplayName:
+          type: string
+        itemHash:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PriceChangeLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        shopId:
+          type: string
+        shopName:
+          type: string
+        itemName:
+          type: string
+        itemDisplayName:
+          type: string
+        itemHash:
+          type: string
+        previousPrice:
+          type: number
+          nullable: true
+        newPrice:
+          type: number
+          nullable: true
+        currency:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     QuickCodeGenerated:
       type: object

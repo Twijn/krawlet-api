@@ -143,10 +143,11 @@ router.get('/price-change-logs', async (req, res) => {
     const since = req.query.since ? new Date(req.query.since as string) : undefined;
     const until = req.query.until ? new Date(req.query.until as string) : undefined;
 
-    const result = await getPriceChangeLogs({ limit, offset, shopId, since, until });
+    const { rows: logs, total } = await getPriceChangeLogs({ limit, offset, shopId, since, until });
     return res.success({
-      count: result.total,
-      logs: result.rows,
+      count: logs.length,
+      total,
+      logs,
     });
   } catch (error) {
     console.error('Error fetching price change logs:', error);

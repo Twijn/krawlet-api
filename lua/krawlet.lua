@@ -955,7 +955,7 @@ end
 
 ---Get shop change logs
 ---@param options? table Options: limit, offset, shopId, since, until
----@return table|nil logs Change logs or nil on error
+---@return table|nil result Table with count (number of logs in response), total (total matching logs), and logs array, or nil on error
 ---@return string? error Error message if request failed
 function krawlet.getShopChangeLogs(options)
     local query = buildQueryString(options or {})
@@ -970,7 +970,7 @@ end
 
 ---Get item change logs
 ---@param options? table Options: limit, offset, shopId, since, until
----@return table|nil logs Change logs or nil on error
+---@return table|nil result Table with count (number of logs in response), total (total matching logs), and logs array, or nil on error
 ---@return string? error Error message if request failed
 function krawlet.getItemChangeLogs(options)
     local query = buildQueryString(options or {})
@@ -985,7 +985,7 @@ end
 
 ---Get price change logs
 ---@param options? table Options: limit, offset, shopId, since, until
----@return table|nil logs Change logs or nil on error
+---@return table|nil result Table with count (number of logs in response), total (total matching logs), and logs array, or nil on error
 ---@return string? error Error message if request failed
 function krawlet.getPriceChangeLogs(options)
     local query = buildQueryString(options or {})
