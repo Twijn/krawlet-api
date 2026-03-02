@@ -164,7 +164,12 @@ export const formatListing = (listing: RawListing): string => {
 
   const prices =
     listing?.prices
-      ?.map((x) => `${Number(x.value).toFixed(3).replace(/\.?0$/, '')} ${safe(x.currency)}`)
+      ?.map(
+        (x) =>
+          `${Number(x.value)
+            .toFixed(5)
+            .replace(/\.?0+$/, '')} ${safe(x.currency)}`,
+      )
       .join(', ') ?? '';
   let result = `${displayName} <gray>|</gray> ${safe(listing?.shop?.name ?? '')} <gray>|</gray> ${safe(prices)}`;
 
@@ -485,7 +490,7 @@ ListingPrice.init(
       onDelete: 'CASCADE',
     },
     value: {
-      type: DataTypes.DECIMAL(15, 3), // Supports large numbers with 3 decimal places
+      type: DataTypes.DECIMAL(15, 5), // Supports large numbers with 5 decimal places
       allowNull: false,
     },
     currency: {

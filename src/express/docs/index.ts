@@ -499,7 +499,7 @@ end</code></pre>
       <div class="method">
         <div class="method-sig">krawlet.formatKromer(value, decimals?)</div>
         <div class="method-desc">Format a number as a Kromer currency string with commas.</div>
-        <div class="method-returns">Parameters: <span>value</span> (number), <span>decimals</span> (default: 2) | Returns: <span>string</span> (e.g., "1,234.56 KRO")</div>
+        <div class="method-returns">Parameters: <span>value</span> (number), <span>decimals</span> (default: 5) | Returns: <span>string</span> (e.g., "1,234.56789 KRO")</div>
       </div>
 
       <div class="method">

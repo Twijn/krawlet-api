@@ -301,14 +301,14 @@ function comparePrices(
 ): ShopChangeField[] {
   const changes: ShopChangeField[] = [];
 
-  // Normalize prices: convert value to number (rounded to 3 decimals), normalize currency and address
+  // Normalize prices: convert value to number (rounded to 5 decimals), normalize currency and address
   const normalizePrice = (p: {
     value: number | string;
     currency: string;
     address?: string | null;
   }) => ({
-    // Round to 3 decimal places to avoid floating point comparison issues
-    value: Math.round(Number(p.value) * 1000) / 1000,
+    // Round to 5 decimal places to avoid floating point comparison issues
+    value: Math.round(Number(p.value) * 100000) / 100000,
     currency: (p.currency || '').trim().toUpperCase(),
     address: (p.address || null)?.trim() || null,
   });
