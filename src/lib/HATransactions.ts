@@ -169,6 +169,11 @@ export class HATransactions {
   }
 
   private async handleTransaction(transaction: TransactionWithMeta) {
+    // Skip mined (welfare) transactions
+    if (transaction.type === 'mined') {
+      return;
+    }
+
     // Skip if we've already processed this transaction (prevents duplicates from WS + polling)
     if (this.processedTransactions.has(transaction.id)) {
       return;
