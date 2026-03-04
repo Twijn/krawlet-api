@@ -6,6 +6,7 @@ import {
   blockIpForAbuse,
 } from '../../../lib/abuseManager';
 import { getClientIp } from '../utils/getClientIp';
+import { isIgnoredIp } from '../utils/ignoredIps';
 
 /**
  * Middleware to check for blocked IPs and detect abuse patterns
@@ -17,6 +18,11 @@ export const abuseBlockMiddleware = async (
   next: NextFunction,
 ): Promise<void> => {
   const ip = getClientIp(req);
+
+  // Skip abuse checking for ignored IPs
+  if (isIgnoredIp(ip)) {
+    return next();
+  }
 
   try {
     // Check if IP is currently blocked

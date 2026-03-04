@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { RequestWithRateLimit } from '../types/request';
 import { RequestLog } from '../../../lib/models/requestlog.model';
 import { getClientIp } from '../utils/getClientIp';
+import { isIgnoredIp } from '../utils/ignoredIps';
 import {
   trackRateLimitExceeded,
   trackSuccessfulRequest,
@@ -32,6 +33,17 @@ setInterval(
 
 export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const request = req as RequestWithRateLimit;
+  const clientIp = getClientIp(request);
+
+  // Skip rate limiting for ignored IPs
+  if (isIgnoredIp(clientIp)) {
+    request.rateLimit = {
+      limit: Infinity,
+      remaining: Infinity,
+      reset: 0,
+    };
+    return next();
+  }
 
   // Determine rate limit based on authentication
   let limit: number;
