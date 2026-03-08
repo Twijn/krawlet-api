@@ -142,7 +142,6 @@ export async function checkForAbuse(ip: string): Promise<{
   };
 } | null> {
   const data = getTracking(ip);
-  const now = Date.now();
 
   // Check consecutive 429s
   if (data.consecutive429s >= ABUSE_CONFIG.MAX_CONSECUTIVE_429S) {
