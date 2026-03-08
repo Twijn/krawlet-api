@@ -174,6 +174,14 @@ export class HATransactions {
       return;
     }
 
+    const hideMetaValue = transaction.meta?.entries?.find(
+      (entry) => entry.name.toLowerCase() === 'hide',
+    );
+
+    if (hideMetaValue?.value?.toLowerCase() === 'true') {
+      return;
+    }
+
     // Skip if we've already processed this transaction (prevents duplicates from WS + polling)
     if (this.processedTransactions.has(transaction.id)) {
       return;
