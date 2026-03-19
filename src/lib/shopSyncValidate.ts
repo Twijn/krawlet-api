@@ -136,7 +136,12 @@ export function validateShopSyncData(data: any): { isValid: boolean; errors: str
   // Validate otherLocations array
   if (data.info.otherLocations !== undefined) {
     if (!Array.isArray(data.info.otherLocations)) {
-      errors.push("Field 'info.otherLocations' must be an array when provided");
+      // Convert empty object to empty array
+      if (typeof data.info.otherLocations === 'object' && Object.keys(data.info.otherLocations).length === 0) {
+        data.info.otherLocations = [];
+      } else {
+        errors.push("Field 'info.otherLocations' must be an array or an empty object");
+      }
     } else {
       data.info.otherLocations.forEach((location: any, index: number) => {
         const locationErrors = validateLocation(location, `info.otherLocations[${index}]`);
