@@ -4,6 +4,7 @@ import { getByUUID } from '../playerAddresses';
 import { rcc } from '../../chat';
 
 const REFRESH_INTERVAL = 3 * 24 * 60 * 60 * 1000; // 3 days
+const LAST_SEEN_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 class PlayerManager {
   private players: Player[] = [];
@@ -21,6 +22,17 @@ class PlayerManager {
 
   public async getPlayerFromUser(user: User): Promise<Player | null> {
     let player = this.players.find((p) => p.minecraftUUID === user.uuid) ?? null;
+    const now = new Date();
+    let shouldPersistLastSeen = false;
+
+    if (
+      player &&
+      (!player.lastSeenAt || player.lastSeenAt.getTime() + LAST_SEEN_UPDATE_INTERVAL < now.getTime())
+    ) {
+      player.lastSeenAt = now;
+      shouldPersistLastSeen = true;
+    }
+
     if (
       !player ||
       !player.updatedAt ||
@@ -33,14 +45,17 @@ class PlayerManager {
             console.log('Updating player ' + user.name);
             player.minecraftName = user.name;
             player.kromerAddress = address.data[0].address;
+            player.lastSeenAt = now;
             player.updatedAt = new Date();
             await player.save();
+            shouldPersistLastSeen = false;
           } else {
             console.log('Creating player ' + user.name);
             player = await Player.create({
               minecraftUUID: user.uuid,
               minecraftName: user.name,
               kromerAddress: address.data[0].address,
+              lastSeenAt: now,
             });
             this.players.push(player);
           }
@@ -51,6 +66,11 @@ class PlayerManager {
         console.error('Could not get address for ' + user.name, err);
       }
     }
+
+    if (player && shouldPersistLastSeen) {
+      await player.save();
+    }
+
     return player;
   }
 

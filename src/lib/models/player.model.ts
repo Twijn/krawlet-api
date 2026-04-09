@@ -14,6 +14,7 @@ export interface RawPlayer {
   kromerAddress: string;
 
   notifications: string;
+  lastSeenDate?: string | null;
 
   createdDate?: string | null;
   updatedDate?: string | null;
@@ -31,6 +32,7 @@ export class Player
   declare minecraftName: string;
   declare kromerAddress: string;
   declare notifications: CreationOptional<string>;
+  declare lastSeenAt: CreationOptional<Date | null>;
 
   declare createdAt?: Date;
   declare updatedAt?: Date;
@@ -41,6 +43,7 @@ export class Player
       minecraftName: this.minecraftName,
       kromerAddress: this.kromerAddress,
       notifications: this.notifications,
+      lastSeenDate: this.lastSeenAt ? this.lastSeenAt.toISOString() : null,
       createdDate: this.createdAt ? this.createdAt.toISOString() : null,
       updatedDate: this.updatedAt ? this.updatedAt.toISOString() : null,
     };
@@ -65,6 +68,10 @@ Player.init(
       type: DataTypes.STRING(1000),
       allowNull: false,
       defaultValue: 'none',
+    },
+    lastSeenAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
   },
   {

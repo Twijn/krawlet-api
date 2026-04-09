@@ -1121,6 +1121,10 @@ components:
           enum: [none, self, all]
           description: Notification preference
           example: 'none'
+        lastSeenDate:
+          type: string
+          format: date-time
+          nullable: true
         createdDate:
           type: string
           format: date-time
