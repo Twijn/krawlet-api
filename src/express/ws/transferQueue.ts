@@ -103,19 +103,26 @@ export async function cancelTransfer(
     throw new Error('Unauthorized to cancel this transfer');
   }
 
-  if (transfer.status !== 'pending') {
-    throw new Error('Only pending transfers can be cancelled');
+  if (transfer.status !== 'pending' && transfer.status !== 'in_progress') {
+    throw new Error('Only pending or in-progress transfers can be cancelled');
   }
 
   for (const [ws, state] of authState.entries()) {
     if (state.currentTask?.id === transferId) {
-      state.currentTask = null;
+      state.currentTaskCancelRequested = true;
       authState.set(ws, state);
-      sendJson(ws, { type: 'cancelled', payload: { id: transferId } });
+      console.log(
+        `${logPrefix(state)} sending transfer_cancel transferId=${transferId} to workerConnection=${state.connectionId} workerId=${state.workerId ?? 'unknown'}`,
+      );
+      sendJson(ws, {
+        type: 'transfer_cancel',
+        id: transferId,
+        payload: { id: transferId },
+      });
     }
   }
 
-  await transfer.update({ status: 'cancelled' });
+  await updateTransferStatus(transferId, 'cancelled', transfer.quantityTransferred);
 
   const rawTransfer = transfer.raw();
   activeTransfers = activeTransfers.filter((t) => t.id !== transferId);
@@ -129,10 +136,28 @@ export async function updateTransferStatus(
   quantityTransferred?: number,
   errorReason?: string,
 ): Promise<void> {
-  await Transfer.update(
-    { status, quantityTransferred, error: errorReason },
-    { where: { id: transferId } },
-  );
+  const transfer = await Transfer.findOne({ where: { id: transferId } });
+  if (!transfer) {
+    return;
+  }
+
+  const currentStatus = transfer.status;
+  const isPendingOrInProgress = currentStatus === 'pending' || currentStatus === 'in_progress';
+  const isAlreadyCancelled = currentStatus === 'cancelled';
+
+  if (status === 'in_progress' && !isPendingOrInProgress) {
+    return;
+  }
+
+  if ((status === 'completed' || status === 'failed') && !isPendingOrInProgress) {
+    return;
+  }
+
+  if (status === 'cancelled' && !isPendingOrInProgress && !isAlreadyCancelled) {
+    return;
+  }
+
+  await transfer.update({ status, quantityTransferred, error: errorReason });
 
   const localTransfer = activeTransfers.find((transfer) => transfer.id === transferId);
   if (localTransfer) {
@@ -145,7 +170,7 @@ export async function updateTransferStatus(
     }
   }
 
-  if (status === 'completed' || status === 'failed') {
+  if (status === 'completed' || status === 'failed' || status === 'cancelled') {
     activeTransfers = activeTransfers.filter((transfer) => transfer.id !== transferId);
   }
 }
@@ -156,6 +181,7 @@ async function assignTransferToWorker(
   state: AuthState,
 ): Promise<void> {
   state.currentTask = transfer;
+  state.currentTaskCancelRequested = false;
   authState.set(ws, state);
 
   const playerOne = await resolvePlayer(transfer.fromUUID);

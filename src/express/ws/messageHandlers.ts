@@ -137,6 +137,11 @@ function normalizeMovedQuantity(value: unknown): number | null {
   return Math.floor(value);
 }
 
+function clearCurrentTask(state: AuthState): void {
+  state.currentTask = null;
+  state.currentTaskCancelRequested = false;
+}
+
 const messageHandlers: Record<string, MessageHandler> = {
   auth: async (ws, message) => {
     if (!message.token) {
@@ -161,6 +166,16 @@ const messageHandlers: Record<string, MessageHandler> = {
 
     const transfer = getCurrentWorkerTransfer(ws, state, parsed);
     if (!transfer) {
+      return;
+    }
+
+    if (state.currentTaskCancelRequested) {
+      sendError(
+        ws,
+        'TRANSFER_CANCEL_PENDING',
+        'Transfer cancellation is pending; progress updates are ignored',
+        parsed.id,
+      );
       return;
     }
 
@@ -212,18 +227,84 @@ const messageHandlers: Record<string, MessageHandler> = {
       return;
     }
 
+    if (state.currentTaskCancelRequested) {
+      await updateTransferStatus(transfer.id, 'cancelled', moved);
+
+      console.warn(
+        `${logPrefix(state)} transfer completion received after cancel request transferId=${transfer.id} moved=${moved}; finalized as cancelled`,
+      );
+
+      clearCurrentTask(state);
+      authState.set(ws, state);
+
+      sendJson(ws, {
+        id: parsed.id,
+        type: 'transfer_complete_ok',
+        payload: {
+          transferId: transfer.id,
+          quantityTransferred: moved,
+          status: 'cancelled',
+        },
+      });
+      return;
+    }
+
     await updateTransferStatus(transfer.id, 'completed', moved);
 
     console.log(
       `${logPrefix(state)} transfer complete transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} elapsedMs=${parsed.elapsedMs ?? 'n/a'}`,
     );
 
-    state.currentTask = null;
+    clearCurrentTask(state);
     authState.set(ws, state);
 
     sendJson(ws, {
       id: parsed.id,
       type: 'transfer_complete_ok',
+      payload: {
+        transferId: transfer.id,
+        quantityTransferred: moved,
+      },
+    });
+  },
+  transfer_cancelled: async (ws, message, state) => {
+    const parsed = parseTransferUpdateMessage(ws, message);
+    if (!parsed) {
+      return;
+    }
+
+    const transfer = getCurrentWorkerTransfer(ws, state, parsed);
+    if (!transfer) {
+      return;
+    }
+
+    const moved =
+      parsed.totalMoved === undefined
+        ? transfer.quantityTransferred
+        : normalizeMovedQuantity(parsed.totalMoved);
+
+    if (moved === null) {
+      sendError(
+        ws,
+        'INVALID_TOTAL_MOVED',
+        'transfer_cancelled totalMoved must be a non-negative number',
+        parsed.id,
+      );
+      return;
+    }
+
+    await updateTransferStatus(transfer.id, 'cancelled', moved);
+
+    console.log(
+      `${logPrefix(state)} transfer cancelled transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} elapsedMs=${parsed.elapsedMs ?? 'n/a'}`,
+    );
+
+    clearCurrentTask(state);
+    authState.set(ws, state);
+
+    sendJson(ws, {
+      id: parsed.id,
+      type: 'transfer_cancelled_ok',
       payload: {
         transferId: transfer.id,
         quantityTransferred: moved,
@@ -238,6 +319,43 @@ const messageHandlers: Record<string, MessageHandler> = {
 
     const transfer = getCurrentWorkerTransfer(ws, state, parsed);
     if (!transfer) {
+      return;
+    }
+
+    if (state.currentTaskCancelRequested) {
+      const movedAfterCancel =
+        parsed.totalMoved === undefined
+          ? transfer.quantityTransferred
+          : normalizeMovedQuantity(parsed.totalMoved);
+
+      if (movedAfterCancel === null) {
+        sendError(
+          ws,
+          'INVALID_TOTAL_MOVED',
+          'transfer_failed totalMoved must be a non-negative number',
+          parsed.id,
+        );
+        return;
+      }
+
+      await updateTransferStatus(transfer.id, 'cancelled', movedAfterCancel);
+
+      console.warn(
+        `${logPrefix(state)} transfer failed after cancel request transferId=${transfer.id}; finalized as cancelled`,
+      );
+
+      clearCurrentTask(state);
+      authState.set(ws, state);
+
+      sendJson(ws, {
+        id: parsed.id,
+        type: 'transfer_failed_ok',
+        payload: {
+          transferId: transfer.id,
+          quantityTransferred: movedAfterCancel,
+          status: 'cancelled',
+        },
+      });
       return;
     }
 
@@ -276,7 +394,7 @@ const messageHandlers: Record<string, MessageHandler> = {
       },
     );
 
-    state.currentTask = null;
+    clearCurrentTask(state);
     authState.set(ws, state);
 
     sendJson(ws, {

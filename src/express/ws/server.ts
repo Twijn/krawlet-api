@@ -53,6 +53,7 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
       authenticated: false,
       timeoutHandle,
       currentTask: null,
+      currentTaskCancelRequested: false,
       connectionId,
       remoteAddress,
     });
@@ -67,7 +68,14 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
         serverTime: new Date().toISOString(),
         authRequired: true,
         authTimeoutMs: AUTH_TIMEOUT_MS,
-        messageTypes: ['auth', 'ping', 'transfer_progress', 'transfer_complete', 'transfer_failed'],
+        messageTypes: [
+          'auth',
+          'ping',
+          'transfer_progress',
+          'transfer_complete',
+          'transfer_cancelled',
+          'transfer_failed',
+        ],
       },
     });
 

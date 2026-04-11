@@ -17,7 +17,7 @@ export type ClientAuthMessage = ClientMessage & {
 
 export type TransferUpdateMessage = ClientMessage & {
   id: string;
-  type: 'transfer_progress' | 'transfer_failed' | 'transfer_complete';
+  type: 'transfer_progress' | 'transfer_failed' | 'transfer_complete' | 'transfer_cancelled';
   totalMoved?: number;
   reason?: string;
   workerId?: number;
@@ -40,6 +40,7 @@ export type AuthState = {
   authenticated: boolean;
   timeoutHandle: NodeJS.Timeout;
   currentTask: RawTransfer | null;
+  currentTaskCancelRequested: boolean;
   connectionId: number;
   remoteAddress?: string;
   apiKeyId?: string;

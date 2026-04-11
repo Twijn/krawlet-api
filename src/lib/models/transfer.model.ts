@@ -1,7 +1,7 @@
 import { DataTypes, Model } from 'sequelize';
 import { sequelize } from './database';
 
-export type TransferStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
+export type TransferStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
 
 export type RawTransfer = {
   id: string;
@@ -59,7 +59,7 @@ Transfer.init(
       primaryKey: true,
     },
     status: {
-      type: DataTypes.ENUM('pending', 'in_progress', 'completed', 'failed'),
+      type: DataTypes.ENUM('pending', 'in_progress', 'completed', 'failed', 'cancelled'),
       allowNull: false,
       defaultValue: 'pending',
     },

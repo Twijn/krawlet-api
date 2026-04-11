@@ -177,52 +177,15 @@ local function processTransfer(transfer)
     end
   end
 
-  while totalMoved < targetQuantity do
-    scheduleMove()
+  local function mainLoop()
+    while totalMoved < targetQuantity do
+      scheduleMove()
 
-    if not hasQuantityLimit then
-      print(string.format("Moved %d items, transfer complete!", totalMoved))
-      send("transfer_complete", {
-        id = transfer.id,
-        totalMoved = totalMoved,
-        requestedQuantity = transfer.quantity,
-        itemName = transfer.itemName,
-        workerId = workerComputerId,
-        elapsedMs = os.epoch("utc") - startedAt,
-      })
-      return
-    end
-
-    if leftToSchedule > 0 then
-      print(string.format("Moved %d/%d items, waiting for more to move...", totalMoved, transfer.quantity))
-      send("transfer_progress", {
-        id = transfer.id,
-        totalMoved = totalMoved,
-        requestedQuantity = transfer.quantity,
-        itemName = transfer.itemName,
-        workerId = workerComputerId,
-        elapsedMs = os.epoch("utc") - startedAt,
-      })
-
-      local timedOut = false
-      parallel.waitForAny(waitForSpaceAndItems, function()
-        sleep(timeout)
-        timedOut = true
-      end)
-
-      if timedOut then
-        print("Transfer timed out waiting for more items to move")
-        local reason = "Timed out waiting for items to move"
-        local sourceItemCount = countMatchingItems(sourceStorage)
-        if sourceItemCount == 0 then
-          reason = "Source storage was empty for too long."
-        elseif not destinationHasCapacityForMatchingItems() then
-          reason = "Destination storage was full for too long."
-        end
-        send("transfer_failed", {
+      if not hasQuantityLimit then
+        print(string.format("Moved %d items, transfer complete!", totalMoved))
+        send("transfer_complete", {
           id = transfer.id,
           totalMoved = totalMoved,
-          reason = reason,
           requestedQuantity = transfer.quantity,
           itemName = transfer.itemName,
           workerId = workerComputerId,
@@ -230,18 +193,91 @@ local function processTransfer(transfer)
         })
         return
       end
+
+      if leftToSchedule > 0 then
+        print(string.format("Moved %d/%d items, waiting for more to move...", totalMoved, transfer.quantity))
+        send("transfer_progress", {
+          id = transfer.id,
+          totalMoved = totalMoved,
+          requestedQuantity = transfer.quantity,
+          itemName = transfer.itemName,
+          workerId = workerComputerId,
+          elapsedMs = os.epoch("utc") - startedAt,
+        })
+
+        local timedOut = false
+        parallel.waitForAny(waitForSpaceAndItems, function()
+          sleep(timeout)
+          timedOut = true
+        end)
+
+        if timedOut then
+          print("Transfer timed out waiting for more items to move")
+          local reason = "Timed out waiting for items to move"
+          local sourceItemCount = countMatchingItems(sourceStorage)
+          if sourceItemCount == 0 then
+            reason = "Source storage was empty for too long."
+          elseif not destinationHasCapacityForMatchingItems() then
+            reason = "Destination storage was full for too long."
+          end
+          send("transfer_failed", {
+            id = transfer.id,
+            totalMoved = totalMoved,
+            reason = reason,
+            requestedQuantity = transfer.quantity,
+            itemName = transfer.itemName,
+            workerId = workerComputerId,
+            elapsedMs = os.epoch("utc") - startedAt,
+          })
+          return
+        end
+      end
+    end
+    
+    print(string.format("Moved %d/%d items, transfer complete!", totalMoved, transfer.quantity))
+    send("transfer_complete", {
+      id = transfer.id,
+      totalMoved = totalMoved,
+      requestedQuantity = transfer.quantity,
+      itemName = transfer.itemName,
+      workerId = workerComputerId,
+      elapsedMs = os.epoch("utc") - startedAt,
+    })
+  end
+
+  local function cancelCheckLoop()
+    while true do
+      local e, url, msg = os.pullEvent()
+
+      if url == wsUri then
+        if e == "websocket_message" then
+          local data = textutils.unserializeJSON(msg)
+          local cancelId = nil
+          if data then
+            cancelId = data.id or (data.payload and data.payload.id)
+          end
+
+          if data and data.type == "transfer_cancel" and cancelId == transfer.id then
+            print("Transfer cancelled by server")
+            send("transfer_cancelled", {
+              id = transfer.id,
+              totalMoved = totalMoved,
+              requestedQuantity = transfer.quantity,
+              itemName = transfer.itemName,
+              workerId = workerComputerId,
+              elapsedMs = os.epoch("utc") - startedAt,
+            })
+            return
+          end
+        elseif e == "websocket_closed" or e == "websocket_failure" then
+          print("Websocket closed or failed during transfer: " .. msg)
+          return
+        end
+      end
     end
   end
-  
-  print(string.format("Moved %d/%d items, transfer complete!", totalMoved, transfer.quantity))
-  send("transfer_complete", {
-    id = transfer.id,
-    totalMoved = totalMoved,
-    requestedQuantity = transfer.quantity,
-    itemName = transfer.itemName,
-    workerId = workerComputerId,
-    elapsedMs = os.epoch("utc") - startedAt,
-  })
+
+  parallel.waitForAny(mainLoop, cancelCheckLoop)
 end
 
 local function connect()
