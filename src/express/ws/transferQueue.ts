@@ -77,6 +77,39 @@ export async function queueTransfer(
   return rawTransfer;
 }
 
+export async function cancelTransfer(
+  transferId: string,
+  requesterUUID: string,
+): Promise<RawTransfer | null> {
+  const transfer = await Transfer.findOne({ where: { id: transferId } });
+  if (!transfer) {
+    return null;
+  }
+
+  if (transfer.fromUUID !== requesterUUID) {
+    throw new Error('Unauthorized to cancel this transfer');
+  }
+
+  if (transfer.status !== 'pending') {
+    throw new Error('Only pending transfers can be cancelled');
+  }
+
+  for (const [ws, state] of authState.entries()) {
+    if (state.currentTask?.id === transferId) {
+      state.currentTask = null;
+      authState.set(ws, state);
+      sendJson(ws, { type: 'cancelled', payload: { id: transferId } });
+    }
+  }
+
+  await transfer.update({ status: 'cancelled' });
+
+  const rawTransfer = transfer.raw();
+  activeTransfers = activeTransfers.filter((t) => t.id !== transferId);
+
+  return rawTransfer;
+}
+
 export async function updateTransferStatus(
   transferId: string,
   status: TransferStatus,
