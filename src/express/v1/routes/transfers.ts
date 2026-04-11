@@ -27,12 +27,13 @@ router.post('/', authenticateApiKeyTier('free', 'premium'), json(), async (req, 
       return res.error('BAD_REQUEST', 'Invalid transfer payload', 400);
     }
 
-    const transfer = await queueTransfer(
-      { uuid: request.apiKey.mcUuid, name: request.apiKey.mcName },
-      request.body.to,
-      request.body.itemName,
-      request.body.quantity,
-    );
+    const transfer = await queueTransfer({
+      from: { uuid: request.apiKey.mcUuid, name: request.apiKey.mcName },
+      to: request.body.to,
+      itemName: request.body.itemName,
+      quantity: request.body.quantity,
+      timeout: request.body.timeout,
+    });
 
     return res.success({ message: 'Transfer queued successfully', transfer });
   } catch (error) {

@@ -28,12 +28,16 @@ async function resolvePlayer(nameOrUUID: string): Promise<Player | null> {
 
 let activeTransfers: RawTransfer[] = [];
 
-export async function queueTransfer(
-  from: { uuid: string; name: string },
-  to: string,
-  itemName?: string,
-  quantity?: number,
-): Promise<RawTransfer> {
+export type QueueTransferParams = {
+  from: { uuid: string; name: string };
+  to: string;
+  itemName?: string;
+  quantity?: number;
+  timeout?: number;
+};
+
+export async function queueTransfer(params: QueueTransferParams): Promise<RawTransfer> {
+  const { from, to, itemName, quantity, timeout } = params;
   const fromPlayer = await resolvePlayer(from.uuid);
   const toPlayer = await resolvePlayer(to);
 
@@ -57,6 +61,14 @@ export async function queueTransfer(
     throw new Error('Cannot transfer to the same player');
   }
 
+  if (timeout) {
+    if (timeout < 0) {
+      throw new Error('Timeout must be a positive number');
+    } else if (timeout > 30) {
+      throw new Error('Timeout cannot exceed 30 seconds');
+    }
+  }
+
   const transfer = await Transfer.create(
     {
       fromUUID: from.uuid,
@@ -65,6 +77,7 @@ export async function queueTransfer(
       toUsername: toPlayer.minecraftName,
       itemName,
       quantity,
+      timeout,
     },
     {
       returning: true,

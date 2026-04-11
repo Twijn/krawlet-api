@@ -28,6 +28,7 @@ export class Transfer extends Model {
   public itemName?: string;
   public quantity?: number;
   public quantityTransferred!: number;
+  public timeout?: number;
   public timestamp!: Date;
 
   public readonly createdAt!: Date;
@@ -94,6 +95,10 @@ Transfer.init(
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
+    },
+    timeout: {
+      type: DataTypes.DECIMAL(3, 1), // Allows values like 0.5, 1.0, 30.0
+      allowNull: true,
     },
   },
   {
