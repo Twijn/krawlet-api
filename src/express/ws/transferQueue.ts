@@ -188,7 +188,7 @@ async function assignTransferToWorker(
   const playerTwo = await resolvePlayer(transfer.toUUID);
 
   console.log(
-    `${logPrefix(state)} assigning transfer=${transfer.id} from=${transfer.fromUUID} to=${transfer.toUUID}`,
+    `${logPrefix(state)} assigning transfer=${transfer.id} from=${transfer.fromUUID} to=${transfer.toUUID} workerid=${state.workerId ?? 'unknown'}`,
   );
 
   sendJson(ws, {
