@@ -7,6 +7,7 @@ export type RawTransfer = {
   id: string;
   status: TransferStatus;
   error: string | null;
+  workerId?: number;
   fromUUID: string;
   fromUsername: string;
   toUUID: string;
@@ -21,6 +22,7 @@ export class Transfer extends Model {
   public id!: string;
   public status!: TransferStatus;
   public error?: string | null;
+  public workerId?: number | null;
   public fromUUID!: string;
   public fromUsername!: string;
   public toUUID!: string;
@@ -39,6 +41,7 @@ export class Transfer extends Model {
       id: this.id,
       status: this.status,
       error: this.error,
+      workerId: this.workerId ?? undefined,
       fromUUID: this.fromUUID,
       fromUsername: this.fromUsername,
       toUUID: this.toUUID,
@@ -65,6 +68,10 @@ Transfer.init(
     },
     error: {
       type: DataTypes.STRING,
+      allowNull: true,
+    },
+    workerId: {
+      type: DataTypes.INTEGER,
       allowNull: true,
     },
     fromUUID: {

@@ -184,11 +184,21 @@ async function assignTransferToWorker(
   state.currentTaskCancelRequested = false;
   authState.set(ws, state);
 
+  if (state.workerId !== undefined) {
+    transfer.workerId = state.workerId;
+
+    try {
+      await Transfer.update({ workerId: state.workerId }, { where: { id: transfer.id } });
+    } catch (err) {
+      console.error(`Failed to record worker ${state.workerId} for transfer ${transfer.id}:`, err);
+    }
+  }
+
   const playerOne = await resolvePlayer(transfer.fromUUID);
   const playerTwo = await resolvePlayer(transfer.toUUID);
 
   console.log(
-    `${logPrefix(state)} assigning transfer=${transfer.id} from=${transfer.fromUUID} to=${transfer.toUUID} workerid=${state.workerId ?? 'unknown'}`,
+    `${logPrefix(state)} assigning transfer=${transfer.id} from=${transfer.fromUUID} to=${transfer.toUUID} workerId=${state.workerId ?? 'unknown'}`,
   );
 
   sendJson(ws, {
