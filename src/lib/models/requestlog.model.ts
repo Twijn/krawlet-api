@@ -7,6 +7,7 @@ export type RequestLogTier =
   | 'premium'
   | 'shopsync'
   | 'enderstorage'
+  | 'worker'
   | 'internal';
 
 interface RequestLogAttributes {
@@ -184,7 +185,15 @@ RequestLog.init(
       field: 'api_key_id',
     },
     tier: {
-      type: DataTypes.ENUM('anonymous', 'free', 'premium', 'shopsync', 'enderstorage', 'internal'),
+      type: DataTypes.ENUM(
+        'anonymous',
+        'free',
+        'premium',
+        'shopsync',
+        'enderstorage',
+        'worker',
+        'internal',
+      ),
       allowNull: false,
       defaultValue: 'anonymous',
     },

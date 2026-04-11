@@ -1,22 +1,27 @@
 import { Router } from 'express';
-import swaggerUi from 'swagger-ui-express';
+import { apiReference } from '@scalar/express-api-reference';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import YAML from 'yaml';
 
 const router = Router();
 
+function loadContent(fileName: string): string {
+  const filePath = join(process.cwd(), 'lua', fileName);
+  if (existsSync(filePath)) {
+    return readFileSync(filePath, 'utf8');
+  }
+  return '';
+}
+
 // Load OpenAPI spec from project root (works in both dev and dist)
 const openapiPath = join(process.cwd(), 'openapi.yaml');
 const openapiFile = readFileSync(openapiPath, 'utf8');
 const openapiSpec = YAML.parse(openapiFile);
 
-// Load Krawlet Lua library
-const krawletLuaPath = join(process.cwd(), 'lua', 'krawlet.lua');
-let krawletLuaContent = '';
-if (existsSync(krawletLuaPath)) {
-  krawletLuaContent = readFileSync(krawletLuaPath, 'utf8');
-}
+// Load Lua libraries
+const krawletLuaContent = loadContent('krawlet.lua');
+const workerLuaContent = loadContent('worker.lua');
 
 // Serve the OpenAPI spec as JSON
 router.get('/docs/v1/openapi.json', (req, res) => {
@@ -31,6 +36,15 @@ router.get('/krawlet.lua', (req, res) => {
   res.type('text/x-lua');
   res.set('Content-Disposition', 'inline; filename="krawlet.lua"');
   res.send(krawletLuaContent);
+});
+
+router.get('/worker.lua', (req, res) => {
+  if (!workerLuaContent) {
+    return res.status(404).send('-- Worker Lua library not found');
+  }
+  res.type('text/x-lua');
+  res.set('Content-Disposition', 'inline; filename="worker.lua"');
+  res.send(workerLuaContent);
 });
 
 // Documentation index page at root
@@ -590,20 +604,14 @@ print("Goodbye!")</code></pre>
   res.send(html);
 });
 
-// Swagger UI options
-const swaggerOptions = {
-  customCss: `
-    .swagger-ui .topbar { display: none }
-    .swagger-ui { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-    .swagger-ui .info .title { font-size: 2.5rem; }
-    .swagger-ui .scheme-container { background: #fafafa; padding: 1rem; border-radius: 4px; }
-  `,
-  customSiteTitle: 'Krawlet API v1 Documentation',
-  explorer: false,
-  swaggerUrl: '/docs/v1/openapi.json',
-};
-
 // Serve v1 docs at /docs/v1
-router.use('/docs/v1', swaggerUi.serve, swaggerUi.setup(null, swaggerOptions));
+router.use(
+  '/docs/v1',
+  apiReference({
+    theme: 'purple',
+    pageTitle: 'Krawlet API v1 Documentation',
+    url: '/docs/v1/openapi.json',
+  }),
+);
 
 export default router;

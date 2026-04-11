@@ -268,15 +268,45 @@ async function viewKey(keyId) {
         '<p style="color: #8899a6; text-align: center; padding: 20px;">No recent activity</p>';
     } else {
       html +=
-        '<table style="font-size: 13px;"><thead><tr><th>Time</th><th>Path</th><th>Status</th></tr></thead><tbody>';
+        '<table style="font-size: 13px;"><thead><tr><th>Time</th><th>Action</th><th>Status</th></tr></thead><tbody>';
       logs.forEach((log) => {
         html += '<tr>';
         html += '<td class="timestamp">' + formatDate(log.createdAt) + '</td>';
-        html += '<td class="key-display">' + escapeHtml(log.path) + '</td>';
-        html +=
-          '<td>' +
-          (log.wasBlocked ? '<span class="badge inactive">Blocked</span>' : log.responseStatus) +
-          '</td>';
+
+        if (log.type === 'transfer') {
+          const direction = log.isSender ? 'Sent' : log.isRecipient ? 'Received' : 'Transfer';
+          const itemName = log.itemName || 'all items';
+          const quantityLabel = log.quantity ? ' x' + log.quantity : ' (all)';
+          html +=
+            '<td class="key-display">' +
+            direction +
+            ' ' +
+            escapeHtml(itemName) +
+            quantityLabel +
+            ' ' +
+            (log.isSender
+              ? 'to ' + escapeHtml(log.toUsername || log.toUUID || 'unknown')
+              : 'from ' + escapeHtml(log.fromUsername || log.fromUUID || 'unknown')) +
+            '</td>';
+
+          let transferStatus = log.transferStatus || 'unknown';
+          if (transferStatus === 'failed' && log.transferError) {
+            transferStatus += ': ' + log.transferError;
+          }
+          html +=
+            '<td><span class="badge ' +
+            (log.transferStatus === 'failed' ? 'inactive' : 'active') +
+            '">' +
+            escapeHtml(transferStatus) +
+            '</span></td>';
+        } else {
+          html += '<td class="key-display">' + escapeHtml(log.path) + '</td>';
+          html +=
+            '<td>' +
+            (log.wasBlocked ? '<span class="badge inactive">Blocked</span>' : log.responseStatus) +
+            '</td>';
+        }
+
         html += '</tr>';
       });
       html += '</tbody></table>';

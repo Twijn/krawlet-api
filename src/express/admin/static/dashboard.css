@@ -229,6 +229,10 @@ tr:hover {
   background: #1da1f2;
   color: white;
 }
+.badge.worker {
+  background: #20c997;
+  color: #0f1419;
+}
 .badge.enterprise {
   background: #794bc4;
   color: white;
@@ -282,6 +286,12 @@ tr:hover {
   background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
   color: white;
   box-shadow: 0 1px 3px rgba(155, 89, 182, 0.3);
+}
+
+.tier-badge.tier-worker {
+  background: linear-gradient(135deg, #17a67f 0%, #20c997 100%);
+  color: #0f1419;
+  box-shadow: 0 1px 3px rgba(32, 201, 151, 0.3);
 }
 
 .tier-badge.tier-internal {

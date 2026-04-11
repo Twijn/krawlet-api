@@ -8,13 +8,21 @@
  *   npm run gen-apikey -- --name "Premium User" --tier premium --limit 5000
  *   npm run gen-apikey -- --name "ShopSync Client" --tier shopsync
  *   npm run gen-apikey -- --name "Ender Storage" --tier enderstorage
+ *   npm run gen-apikey -- --name "Worker Service" --tier worker
  */
 
 import 'dotenv/config';
 import { ApiKey, ApiKeyTier } from '../lib/models/apikey.model';
 import { sequelize } from '../lib/models/database';
 
-const VALID_TIERS: ApiKeyTier[] = ['free', 'premium', 'shopsync', 'enderstorage', 'internal'];
+const VALID_TIERS: ApiKeyTier[] = [
+  'free',
+  'premium',
+  'shopsync',
+  'enderstorage',
+  'internal',
+  'worker',
+];
 
 interface GenerateKeyOptions {
   name: string;
@@ -77,6 +85,10 @@ async function generateApiKey(options: GenerateKeyOptions): Promise<void> {
         '   curl -X POST -H "Authorization: Bearer ' +
           rawKey +
           '" -H "Content-Type: application/json" -d @storage.json http://localhost:3000/v1/storage',
+      );
+    } else if (apiKey.tier === 'worker') {
+      console.log(
+        '   curl -H "Authorization: Bearer ' + rawKey + '" http://localhost:3000/v1/players',
       );
     } else {
       console.log('   This is an internal key with access to all protected endpoints.');
@@ -153,6 +165,7 @@ Tiers:
   premium      - Standard API access, 5,000 requests/hour (default)
   shopsync     - Access to POST /v1/shops for shop data synchronization
   enderstorage - Access to POST /v1/storage for ender storage data
+  worker       - Service worker access to standard authenticated V1 endpoints
   internal     - Full access to all protected internal endpoints
 
 Examples:
@@ -161,6 +174,7 @@ Examples:
   npm run gen-apikey -- --name "Premium User" --tier premium
   npm run gen-apikey -- --name "ShopSync Client" --tier shopsync
   npm run gen-apikey -- --name "Ender Storage Sync" --tier enderstorage
+  npm run gen-apikey -- --name "Worker Service" --tier worker
   npm run gen-apikey -- --name "Internal Service" --tier internal
         `);
         process.exit(0);

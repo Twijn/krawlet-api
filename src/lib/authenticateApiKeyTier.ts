@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { ApiKey, ApiKeyTier } from './models/apikey.model';
+import { RequestWithRateLimit } from '../express/v1/types/request';
 
 /**
  * Middleware to authenticate requests using API keys with specific tier requirements.
@@ -10,6 +11,7 @@ import { ApiKey, ApiKeyTier } from './models/apikey.model';
  */
 export function authenticateApiKeyTier(...allowedTiers: ApiKeyTier[]): RequestHandler {
   return async (req: Request, res: Response, next: NextFunction) => {
+    const request = req as RequestWithRateLimit;
     const authHeader = req.headers.authorization;
 
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -51,7 +53,19 @@ export function authenticateApiKeyTier(...allowedTiers: ApiKeyTier[]): RequestHa
       await apiKey.incrementUsage();
 
       // Attach the API key to the request for downstream use
-      (req as Request & { apiKey?: ApiKey }).apiKey = apiKey;
+      request.apiKey = {
+        id: apiKey.id,
+        name: apiKey.name,
+        email: apiKey.email,
+        tier: apiKey.tier,
+        rateLimit: apiKey.rateLimit,
+        isActive: apiKey.isActive,
+        requestCount: apiKey.requestCount,
+        lastUsedAt: apiKey.lastUsedAt,
+        createdAt: apiKey.createdAt,
+        mcUuid: apiKey.mcUuid,
+        mcName: apiKey.mcName,
+      };
 
       next();
     } catch (error) {

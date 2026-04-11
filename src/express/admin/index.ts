@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { ApiKey } from '../../lib/models/apikey.model';
 import { RequestLog } from '../../lib/models/requestlog.model';
 import { BlockedIp } from '../../lib/models/blockedip.model';
+import { Transfer } from '../../lib/models/transfer.model';
 import { Op } from 'sequelize';
 import { sequelize } from '../../lib/models/database';
 import { removeFromCache, getAbuseStats, ABUSE_CONFIG } from '../../lib/abuseManager';
@@ -323,7 +324,15 @@ router.get('/api/keys/:id/logs', adminAuth, async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 100, 1000);
 
-    const logs = await RequestLog.findAll({
+    const key = await ApiKey.findByPk(req.params.id, {
+      attributes: ['id', 'mcUuid'],
+    });
+
+    if (!key) {
+      return res.status(404).json({ ok: false, error: 'API key not found' });
+    }
+
+    const logsPromise = RequestLog.findAll({
       where: { apiKeyId: req.params.id },
       order: [['createdAt', 'DESC']],
       limit,
@@ -339,7 +348,65 @@ router.get('/api/keys/:id/logs', adminAuth, async (req, res) => {
       ],
     });
 
-    res.json(logs);
+    const transferPromise = key.mcUuid
+      ? Transfer.findAll({
+          where: {
+            [Op.or]: [{ fromUUID: key.mcUuid }, { toUUID: key.mcUuid }],
+          },
+          order: [['updatedAt', 'DESC']],
+          limit,
+          attributes: [
+            'id',
+            'status',
+            'error',
+            'fromUUID',
+            'fromUsername',
+            'toUUID',
+            'toUsername',
+            'itemName',
+            'quantity',
+            'quantityTransferred',
+            'updatedAt',
+          ],
+        })
+      : Promise.resolve([]);
+
+    const [logs, transfers] = await Promise.all([logsPromise, transferPromise]);
+
+    const requestActivity = logs.map((log) => ({
+      type: 'request',
+      createdAt: log.createdAt,
+      requestId: log.requestId,
+      method: log.method,
+      path: log.path,
+      ipAddress: log.ipAddress,
+      wasBlocked: log.wasBlocked,
+      blockReason: log.blockReason,
+      responseStatus: log.responseStatus,
+    }));
+
+    const transferActivity = transfers.map((transfer) => ({
+      type: 'transfer',
+      createdAt: transfer.updatedAt,
+      transferId: transfer.id,
+      transferStatus: transfer.status,
+      transferError: transfer.error,
+      fromUUID: transfer.fromUUID,
+      fromUsername: transfer.fromUsername,
+      toUUID: transfer.toUUID,
+      toUsername: transfer.toUsername,
+      itemName: transfer.itemName,
+      quantity: transfer.quantity,
+      quantityTransferred: transfer.quantityTransferred,
+      isSender: key.mcUuid ? transfer.fromUUID === key.mcUuid : false,
+      isRecipient: key.mcUuid ? transfer.toUUID === key.mcUuid : false,
+    }));
+
+    const merged = [...requestActivity, ...transferActivity]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+
+    res.json(merged);
   } catch (error) {
     console.error('Error fetching key logs:', error);
     res.status(500).json({ ok: false, error: 'Failed to fetch key logs' });

@@ -27,7 +27,8 @@ class PlayerManager {
 
     if (
       player &&
-      (!player.lastSeenAt || player.lastSeenAt.getTime() + LAST_SEEN_UPDATE_INTERVAL < now.getTime())
+      (!player.lastSeenAt ||
+        player.lastSeenAt.getTime() + LAST_SEEN_UPDATE_INTERVAL < now.getTime())
     ) {
       player.lastSeenAt = now;
       shouldPersistLastSeen = true;

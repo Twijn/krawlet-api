@@ -1,0 +1,104 @@
+import { DataTypes, Model } from 'sequelize';
+import { sequelize } from './database';
+
+export type TransferStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
+
+export type RawTransfer = {
+  id: string;
+  status: TransferStatus;
+  error: string | null;
+  fromUUID: string;
+  fromUsername: string;
+  toUUID: string;
+  toUsername: string;
+  itemName?: string;
+  quantity?: number;
+  quantityTransferred: number;
+  timestamp: string;
+};
+
+export class Transfer extends Model {
+  public id!: string;
+  public status!: TransferStatus;
+  public error?: string | null;
+  public fromUUID!: string;
+  public fromUsername!: string;
+  public toUUID!: string;
+  public toUsername!: string;
+  public itemName?: string;
+  public quantity?: number;
+  public quantityTransferred!: number;
+  public timestamp!: Date;
+
+  public readonly createdAt!: Date;
+  public readonly updatedAt!: Date;
+
+  raw() {
+    return {
+      id: this.id,
+      status: this.status,
+      error: this.error,
+      fromUUID: this.fromUUID,
+      fromUsername: this.fromUsername,
+      toUUID: this.toUUID,
+      toUsername: this.toUsername,
+      itemName: this.itemName ?? undefined,
+      quantity: this.quantity ?? undefined,
+      quantityTransferred: this.quantityTransferred,
+      timestamp: this.createdAt.toISOString(),
+    } as RawTransfer;
+  }
+}
+
+Transfer.init(
+  {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true,
+    },
+    status: {
+      type: DataTypes.ENUM('pending', 'in_progress', 'completed', 'failed'),
+      allowNull: false,
+      defaultValue: 'pending',
+    },
+    error: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    fromUUID: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    fromUsername: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    toUUID: {
+      type: DataTypes.UUID,
+      allowNull: false,
+    },
+    toUsername: {
+      type: DataTypes.STRING,
+      allowNull: false,
+    },
+    itemName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    quantity: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    quantityTransferred: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
+  },
+  {
+    sequelize,
+    tableName: 'transfers',
+    modelName: 'Transfer',
+  },
+);

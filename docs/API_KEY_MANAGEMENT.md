@@ -32,6 +32,13 @@ The Krawlet API uses a tier system for API keys:
 - **Features:** Access to POST /v1/storage endpoint for ender storage data
 - **Access:** Internal use only
 
+### Worker Tier
+
+- **Rate Limit:** Configurable
+- **Use Case:** Background jobs and worker services that need authenticated API access
+- **Features:** Full access to all public V1 endpoints with service-level limits
+- **Access:** Internal service use
+
 ### Internal Tier
 
 - **Rate Limit:** Configurable
@@ -41,13 +48,13 @@ The Krawlet API uses a tier system for API keys:
 
 ### Comparison
 
-| Feature          | Anonymous | Free Tier  | Premium Tier | ShopSync | EnderStorage | Internal |
-| ---------------- | --------- | ---------- | ------------ | -------- | ------------ | -------- |
-| Rate Limit       | 100/hour  | 1,000/hour | 5,000+/hour  | Custom   | Custom       | Custom   |
-| Authentication   | None      | API Key    | API Key      | API Key  | API Key      | API Key  |
-| Public Endpoints | Yes       | Yes        | Yes          | No       | No           | Yes      |
-| POST /v1/shops   | No        | No         | No           | Yes      | No           | Yes      |
-| POST /v1/storage | No        | No         | No           | No       | Yes          | Yes      |
+| Feature          | Anonymous | Free Tier  | Premium Tier | ShopSync | EnderStorage | Worker | Internal |
+| ---------------- | --------- | ---------- | ------------ | -------- | ------------ | ------ | -------- |
+| Rate Limit       | 100/hour  | 1,000/hour | 5,000+/hour  | Custom   | Custom       | Custom | Custom   |
+| Authentication   | None      | API Key    | API Key      | API Key  | API Key      | API Key | API Key  |
+| Public Endpoints | Yes       | Yes        | Yes          | No       | No           | Yes    | Yes      |
+| POST /v1/shops   | No        | No         | No           | Yes      | No           | No     | Yes      |
+| POST /v1/storage | No        | No         | No           | No       | Yes          | No     | Yes      |
 
 ---
 

@@ -94,6 +94,8 @@ export const optionalApiKeyAuth = async (req: Request, res: Response, next: Next
       requestCount: apiKey.requestCount,
       lastUsedAt: apiKey.lastUsedAt,
       createdAt: apiKey.createdAt,
+      mcUuid: apiKey.mcUuid,
+      mcName: apiKey.mcName,
     };
 
     // Update usage (async, don't wait)

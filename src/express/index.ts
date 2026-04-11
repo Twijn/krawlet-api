@@ -12,6 +12,7 @@ import { getPackageName, getPackageVersion } from '../lib/packageData';
 import v1Router from './v1';
 import docsRouter from './docs';
 import adminRouter from './admin';
+import { initWebSockets } from './ws';
 
 const PORT = process.env.PORT ?? 3000;
 
@@ -43,6 +44,7 @@ apiRouter.get('/', (req, res) => {
       documentation: 'https://krawlet.cc',
       endpoints: {
         v1: '/v1',
+        websocket: '/v1/ws',
         legacy: ['/playeraddresses', '/enderstorage', '/shopsync', '/knownaddresses', '/turtles'],
       },
     },
@@ -72,11 +74,15 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Express server listening on port ${PORT}`);
   console.log(`Documentation available at http://localhost:${PORT}/`);
   console.log(`V1 API available at http://localhost:${PORT}/api/v1`);
+  console.log(`V1 WebSocket available at ws://localhost:${PORT}/api/v1/ws`);
+  console.log(`Legacy WebSocket alias available at ws://localhost:${PORT}/api/ws`);
   if (process.env.ADMIN_PASSWORD) {
     console.log(`Admin dashboard available at http://localhost:${PORT}/admin`);
   }
 });
+
+initWebSockets(server);

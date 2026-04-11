@@ -14,6 +14,7 @@ import storageRouter from './routes/storage';
 import reportsRouter from './routes/reports';
 import healthRouter from './routes/health';
 import apikeyRouter from './routes/apikey';
+import transfersRouter from './routes/transfers';
 
 const router = Router();
 
@@ -36,6 +37,7 @@ router.use('/storage', storageRouter);
 router.use('/reports', reportsRouter);
 router.use('/health', healthRouter);
 router.use('/apikey', apikeyRouter);
+router.use('/transfers', transfersRouter);
 
 // V1 root endpoint
 router.get('/', (req, res) => {
@@ -50,6 +52,7 @@ router.get('/', (req, res) => {
       '/v1/reports',
       '/v1/health',
       '/v1/apikey',
+      '/v1/ws',
       '/v1/apikey/quickcode/generate',
       '/v1/apikey/quickcode/redeem',
     ],

@@ -6,7 +6,7 @@ import crypto from 'crypto';
 const QC_EXPIRATION_MINUTES = 15;
 
 /** API Key tiers - includes both rate limit tiers and special access tiers */
-export type ApiKeyTier = 'free' | 'premium' | 'shopsync' | 'enderstorage' | 'internal';
+export type ApiKeyTier = 'free' | 'premium' | 'shopsync' | 'enderstorage' | 'worker' | 'internal';
 
 export class ApiKey extends Model {
   public id!: string;
@@ -113,7 +113,7 @@ ApiKey.init(
       allowNull: true,
     },
     tier: {
-      type: DataTypes.ENUM('free', 'premium', 'shopsync', 'enderstorage', 'internal'),
+      type: DataTypes.ENUM('free', 'premium', 'shopsync', 'enderstorage', 'worker', 'internal'),
       defaultValue: 'free',
       allowNull: false,
     },

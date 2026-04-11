@@ -105,6 +105,7 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
     | 'premium'
     | 'shopsync'
     | 'enderstorage'
+    | 'worker'
     | 'internal';
 
   // Track request start time

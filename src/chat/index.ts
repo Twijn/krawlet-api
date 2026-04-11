@@ -2,6 +2,7 @@ import { Client } from 'reconnectedchat';
 
 import commands from './commands';
 import playerManager from '../lib/managers/playerManager';
+import { RawTransfer } from '../lib/models';
 
 const PREFIX = process.env.PREFIX ?? '';
 
@@ -35,6 +36,39 @@ export function getChatStatus(): ChatStatus {
     owner: rcc.owner,
     playerCount: rcc.players?.length,
   };
+}
+
+export function completeTransfer(transfer: RawTransfer, error: string | null = null) {
+  const from = rcc.players?.find((p) => p.uuid === transfer.fromUUID);
+  const to = rcc.players?.find((p) => p.uuid === transfer.toUUID);
+
+  let quantityDisplay = transfer.quantityTransferred.toLocaleString();
+  if (transfer.quantity && transfer.quantityTransferred !== transfer.quantity) {
+    quantityDisplay += `/${transfer.quantity.toLocaleString()}`;
+  }
+
+  let fromMessage = `<gold>Your transfer to ${transfer.toUsername} has been completed</gold>`;
+  let toMessage = `<gold>You have received a transfer from ${transfer.fromUsername}</gold>`;
+
+  if (transfer.status === 'failed' || error) {
+    fromMessage = `<red>Your transfer to ${transfer.toUsername} has failed</red>`;
+    toMessage = `<red>A transfer from ${transfer.fromUsername} has failed</red>`;
+  }
+
+  if (transfer.itemName) {
+    fromMessage += `<yellow>: ${transfer.itemName} x${quantityDisplay}</yellow>`;
+    toMessage += `<yellow>: ${transfer.itemName} x${quantityDisplay}</yellow>`;
+  } else {
+    fromMessage += `<yellow>: ${quantityDisplay} items</yellow>`;
+    toMessage += `<yellow>: ${quantityDisplay} items</yellow>`;
+  }
+
+  if (from) {
+    rcc.tell(from.uuid, fromMessage);
+  }
+  if (to) {
+    rcc.tell(to.uuid, toMessage);
+  }
 }
 
 rcc.on('command', async (cmd) => {
