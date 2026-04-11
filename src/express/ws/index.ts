@@ -1,5 +1,9 @@
 import { initWebSockets } from './server';
-import { processTransfers, queueTransfer } from './transferQueue';
+import { initializeTransferQueue, processTransfers, queueTransfer } from './transferQueue';
+
+void initializeTransferQueue().catch((err) => {
+  console.error('Failed to hydrate transfer queue on startup:', err);
+});
 
 setInterval(processTransfers, 1000);
 

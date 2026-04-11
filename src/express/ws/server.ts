@@ -4,6 +4,7 @@ import { handleMessage } from './messageHandlers';
 import { logPrefix, sendJson } from './protocol';
 import { AUTH_TIMEOUT_MS, authState, getNextConnectionId } from './state';
 import { RoutedWebSocket } from './types';
+import { requeueTransferForRetry } from './transferQueue';
 
 function createWebSocketServer(server: HttpServer, path: string): WebSocketServer {
   const wss = new WebSocketServer({ noServer: true, perMessageDeflate: false });
@@ -102,6 +103,16 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
         console.warn(
           `${logPrefix(state)} disconnected with active transfer ${state.currentTask.id}; transfer will be retried`,
         );
+
+        void requeueTransferForRetry(
+          state.currentTask.id,
+          `Worker disconnected (connection ${state.connectionId}) before completion`,
+        ).catch((err) => {
+          console.error(
+            `${logPrefix(state)} failed to requeue transfer ${state.currentTask?.id} after disconnect:`,
+            err,
+          );
+        });
       }
 
       console.log(`${logPrefix(state)} disconnected`);

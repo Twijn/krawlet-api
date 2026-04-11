@@ -28,6 +28,9 @@ async function resolvePlayer(nameOrUUID: string): Promise<Player | null> {
 
 let activeTransfers: RawTransfer[] = [];
 
+let queueHydrated = false;
+let queueHydrationPromise: Promise<void> | null = null;
+
 export type QueueTransferParams = {
   from: { uuid: string; name: string };
   to: string;
@@ -86,6 +89,95 @@ export async function queueTransfer(params: QueueTransferParams): Promise<RawTra
 
   const rawTransfer = transfer.raw();
   activeTransfers.push(rawTransfer);
+
+  return rawTransfer;
+}
+
+function ensureActiveTransfer(rawTransfer: RawTransfer): void {
+  const existingIndex = activeTransfers.findIndex((transfer) => transfer.id === rawTransfer.id);
+  if (existingIndex === -1) {
+    activeTransfers.push(rawTransfer);
+    return;
+  }
+
+  activeTransfers[existingIndex] = {
+    ...activeTransfers[existingIndex],
+    ...rawTransfer,
+  };
+}
+
+export async function initializeTransferQueue(): Promise<void> {
+  if (queueHydrated) {
+    return;
+  }
+
+  if (queueHydrationPromise) {
+    await queueHydrationPromise;
+    return;
+  }
+
+  queueHydrationPromise = (async () => {
+    const staleInProgress = await Transfer.findAll({
+      where: { status: 'in_progress' },
+    });
+
+    for (const transfer of staleInProgress) {
+      await transfer.update({ status: 'pending', workerId: null, error: null });
+      ensureActiveTransfer(transfer.raw());
+    }
+
+    const pendingTransfers = await Transfer.findAll({
+      where: { status: 'pending' },
+      order: [['createdAt', 'ASC']],
+    });
+
+    for (const transfer of pendingTransfers) {
+      ensureActiveTransfer(transfer.raw());
+    }
+
+    queueHydrated = true;
+
+    if (staleInProgress.length > 0 || pendingTransfers.length > 0) {
+      console.log(
+        `Transfer queue hydrated: pending=${pendingTransfers.length} requeuedInProgress=${staleInProgress.length}`,
+      );
+    }
+  })();
+
+  try {
+    await queueHydrationPromise;
+  } finally {
+    queueHydrationPromise = null;
+  }
+}
+
+export async function requeueTransferForRetry(
+  transferId: string,
+  reason: string,
+): Promise<RawTransfer | null> {
+  const transfer = await Transfer.findOne({ where: { id: transferId } });
+  if (!transfer) {
+    return null;
+  }
+
+  if (
+    transfer.status === 'completed' ||
+    transfer.status === 'failed' ||
+    transfer.status === 'cancelled'
+  ) {
+    return null;
+  }
+
+  await transfer.update({
+    status: 'pending',
+    workerId: null,
+    error: null,
+  });
+
+  const rawTransfer = transfer.raw();
+  ensureActiveTransfer(rawTransfer);
+
+  console.warn(`Requeued transfer ${transferId} for retry: ${reason}`);
 
   return rawTransfer;
 }
@@ -213,7 +305,7 @@ async function assignTransferToWorker(
   });
 
   try {
-    await updateTransferStatus(transfer.id, 'in_progress');
+    await updateTransferStatus(transfer.id, 'in_progress', transfer.quantityTransferred);
   } catch (err) {
     console.error(`Failed to process transfer ${transfer.id}:`, err);
   }
@@ -222,6 +314,8 @@ async function assignTransferToWorker(
 let processingTransfers = false;
 
 export async function processTransfers(): Promise<void> {
+  await initializeTransferQueue();
+
   if (processingTransfers) {
     return;
   }
