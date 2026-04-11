@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Krawlet API
-  version: 1.0.0
+  version: 1.22.1
   description: |
     REST API for the Krawlet Minecraft economy tracking system.
 
@@ -38,6 +38,78 @@ security:
   - {}
 
 tags:
+  - name: TypeScript / JavaScript
+    description: |
+      Install the official Node.js client from npm:
+      ```bash
+      npm install krawlet-js
+      # or
+      pnpm add krawlet-js
+      ```
+
+      ### Quick start
+      ```typescript
+      import { KrawletClient } from 'krawlet-js';
+
+      const client = new KrawletClient({ apiKey: 'kraw_...' });
+
+      // Check API health
+      const health = await client.health.check();
+
+      // Look up a player
+      const [player] = await client.players.getByNames(['Twijn']);
+
+      // Get all shops
+      const shops = await client.shops.getAll();
+      ```
+
+      ### Authentication
+      Pass your API key when constructing the client. For unauthenticated use (anonymous rate limits apply), omit the `apiKey` option:
+      ```typescript
+      const anonClient = new KrawletClient();
+      ```
+
+      Source and full docs: [github.com/Twijn/krawlet-js](https://github.com/Twijn/krawlet-js)
+
+  - name: Lua (CC:Tweaked)
+    description: |
+      The Lua library runs inside [CC: Tweaked](https://tweaked.cc/) computers in Minecraft.
+
+      ### Installation
+      Run this in your CC: Tweaked computer to download the library:
+      ```lua
+      shell.run("wget", "https://krawlet.cc/krawlet.lua", "krawlet.lua")
+      ```
+      Or from within a script:
+      ```lua
+      local krawlet = require('krawlet')
+      krawlet.install() -- downloads/updates krawlet.lua to /krawlet.lua
+      ```
+
+      ### Quick start
+      ```lua
+      local krawlet = require('krawlet')
+
+      -- Optional: set API key for authenticated requests
+      krawlet.setApiKey('kraw_...')
+
+      -- Check API health
+      local ok, health = krawlet.healthCheck()
+
+      -- Look up a player
+      local player = krawlet.getPlayerByName('Twijn')
+
+      -- Get all shops
+      local shops = krawlet.getShops()
+
+      -- Find best prices for an item
+      local results = krawlet.findBestPrices('minecraft:diamond')
+      ```
+
+      ### Authentication
+      Set your API key with `krawlet.setApiKey('kraw_...')` before making authenticated requests.
+      You can generate and redeem a quick code in-game via the `\krawlet api` chat command.
+
   - name: Health
     description: API health checks
   - name: Players
@@ -56,6 +128,10 @@ tags:
     description: API key information and usage statistics
 
 x-tagGroups:
+  - name: Libraries
+    tags:
+      - TypeScript / JavaScript
+      - Lua (CC:Tweaked)
   - name: Getting Started
     tags:
       - Health
@@ -80,6 +156,21 @@ paths:
     get:
       tags: [Health]
       summary: Health check
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const health = await client.health.check();
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            krawlet.setApiKey('kraw_...')
+
+            local health = krawlet.healthCheck()
       description: Check if the API is operational
       responses:
         '200':
@@ -115,6 +206,36 @@ paths:
     get:
       tags: [Players]
       summary: Get players
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+
+            // By address
+            const byAddress = await client.players.getByAddresses(['ks0d5iqb6p']);
+
+            // By name
+            const byName = await client.players.getByNames(['Twijn']);
+
+            // By UUID
+            const byUuid = await client.players.getByUuids(['d98440d6-5117-4ac8-bd50-70b086101e3e']);
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            krawlet.setApiKey('kraw_...')
+
+            -- By address
+            local player = krawlet.getPlayerByAddress('ks0d5iqb6p')
+
+            -- By name
+            local player = krawlet.getPlayerByName('Twijn')
+
+            -- By UUID
+            local player = krawlet.getPlayerByUUID('d98440d6-5117-4ac8-bd50-70b086101e3e')
       description: |
         Retrieve players by addresses, names, UUIDs, or get all players.
 
@@ -229,6 +350,21 @@ paths:
     get:
       tags: [Shops]
       summary: Get all shops
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const shops = await client.shops.getAll();
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            krawlet.setApiKey('kraw_...')
+
+            local shops = krawlet.getShops()
       description: Retrieve a list of all shops with their items and addresses
       responses:
         '200':
@@ -297,6 +433,21 @@ paths:
     get:
       tags: [Shops]
       summary: Get shop by ID
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const shop = await client.shops.get('123');
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            krawlet.setApiKey('kraw_...')
+
+            local shop = krawlet.getShop('123')
       description: Retrieve detailed information about a specific shop
       parameters:
         - name: id
@@ -371,6 +522,21 @@ paths:
     get:
       tags: [Items]
       summary: Get all items
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const items = await client.items.getAll();
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            krawlet.setApiKey('kraw_...')
+
+            local items = krawlet.getItems()
       description: Retrieve all item listings with prices
       responses:
         '200':
@@ -399,6 +565,21 @@ paths:
     get:
       tags: [Addresses]
       summary: Get known addresses
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const addresses = await client.addresses.getAll();
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            krawlet.setApiKey('kraw_...')
+
+            local addresses = krawlet.getKnownAddresses()
       description: Retrieve list of all known addresses
       responses:
         '200':
@@ -427,6 +608,21 @@ paths:
     get:
       tags: [Storage]
       summary: Get ender storage data
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const storage = await client.storage.get();
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            krawlet.setApiKey('kraw_...')
+
+            local storage = krawlet.getEnderStorage()
       description: Retrieve the last stored ender storage data
       responses:
         '200':
@@ -464,6 +660,15 @@ paths:
     post:
       tags: [Storage]
       summary: Store ender storage data
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const payload = [{ colors: [{ name: 'white', color: 0 }], contents: {} }];
+            const result = await client.storage.set(payload, 'kraw_storage_token');
       description: Submit new ender storage data (requires authentication)
       security:
         - EnderStorageAuth: []
@@ -499,6 +704,21 @@ paths:
     get:
       tags: [Reports]
       summary: Get report statistics
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const stats = await client.reports.getStats();
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            krawlet.setApiKey('kraw_...')
+
+            local stats = krawlet.getReportStats()
       description: Retrieve overall statistics for ShopSync reports
       responses:
         '200':
@@ -520,6 +740,14 @@ paths:
     get:
       tags: [Reports]
       summary: Get validation failures
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const failures = await client.reports.getValidationFailures({ limit: 25 });
       description: Retrieve recent validation failures
       parameters:
         - name: limit
@@ -548,6 +776,14 @@ paths:
     get:
       tags: [Reports]
       summary: Get successful posts
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const posts = await client.reports.getSuccessfulPosts({ limit: 25 });
       description: Retrieve recent successful ShopSync posts
       parameters:
         - name: limit
@@ -576,6 +812,18 @@ paths:
     get:
       tags: [Reports]
       summary: Get shop changes
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const changes = await client.reports.getShopChanges({
+              limit: 50,
+              shopId: '123',
+              since: '2026-01-01T00:00:00Z',
+            });
       description: Retrieve recent shop change events
       parameters:
         - name: limit
@@ -609,6 +857,18 @@ paths:
     get:
       tags: [Reports]
       summary: Get item changes
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const changes = await client.reports.getItemChanges({
+              limit: 50,
+              shopId: '123',
+              changeType: 'added',
+            });
       description: Retrieve recent item change events
       parameters:
         - name: limit
@@ -642,6 +902,21 @@ paths:
     get:
       tags: [Reports]
       summary: Get shop change logs
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const logs = await client.reports.getShopChangeLogs({ limit: 100, offset: 0 });
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            krawlet.setApiKey('kraw_...')
+
+            local logs = krawlet.getShopChangeLogs({ limit = 100, offset = 0 })
       description: Retrieve shop change logs from database
       parameters:
         - name: limit
@@ -704,6 +979,21 @@ paths:
     get:
       tags: [Reports]
       summary: Get item change logs
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const logs = await client.reports.getItemChangeLogs({ limit: 100, offset: 0 });
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            krawlet.setApiKey('kraw_...')
+
+            local logs = krawlet.getItemChangeLogs({ limit = 100, offset = 0 })
       description: Retrieve item change logs from database
       parameters:
         - name: limit
@@ -764,6 +1054,21 @@ paths:
     get:
       tags: [Reports]
       summary: Get price change logs
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const logs = await client.reports.getPriceChangeLogs({ limit: 100, offset: 0 });
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            krawlet.setApiKey('kraw_...')
+
+            local logs = krawlet.getPriceChangeLogs({ limit = 100, offset = 0 })
       description: Retrieve price change logs from database
       parameters:
         - name: limit
@@ -824,6 +1129,21 @@ paths:
     get:
       tags: [API Key]
       summary: Get current API key info
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const info = await client.apiKey.getInfo({ usage: true });
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            krawlet.setApiKey('kraw_...')
+
+            local info = krawlet.getApiKeyInfo(true)
       description: |
         Retrieve information about your current API key, including usage statistics.
 
@@ -903,6 +1223,21 @@ paths:
     get:
       tags: [API Key]
       summary: Get detailed usage statistics
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const usage = await client.apiKey.getUsage();
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            krawlet.setApiKey('kraw_...')
+
+            local usage = krawlet.getApiKeyUsage()
       description: |
         Retrieve detailed usage statistics for your API key.
 
@@ -959,6 +1294,21 @@ paths:
     get:
       tags: [API Key]
       summary: Get recent request logs
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const logs = await client.apiKey.getLogs({ limit: 20 });
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            krawlet.setApiKey('kraw_...')
+
+            local logs = krawlet.getApiKeyLogs(20)
       description: |
         Retrieve recent request logs for your API key.
 
@@ -1038,6 +1388,22 @@ paths:
     post:
       tags: [API Key]
       summary: Generate a quick code
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            const client = new KrawletClient({ apiKey: 'kraw_...' });
+            const { quickCode, expiresIn } = await client.apiKey.generateQuickCode();
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            krawlet.setApiKey('kraw_...')
+
+            local code = krawlet.generateQuickCode()
+            -- code.quickCode, code.expiresIn, code.message
       description: |
         Generate a 6-digit quick code for your API key. Quick codes are short-lived (15 minutes) 
         and allow easy key retrieval, especially useful for in-game chatbox interactions.
@@ -1090,6 +1456,24 @@ paths:
     post:
       tags: [API Key]
       summary: Redeem a quick code
+      x-codeSamples:
+        - lang: typescript
+          label: TypeScript
+          source: |
+            import { KrawletClient } from 'krawlet-js';
+
+            // No API key needed to redeem
+            const client = new KrawletClient();
+            const result = await client.apiKey.redeemQuickCode('123456');
+            // result.apiKey is your new key — save it securely!
+        - lang: lua
+          label: Lua (CC:Tweaked)
+          source: |
+            local krawlet = require('krawlet')
+            -- No API key needed to redeem
+
+            local result = krawlet.redeemQuickCode('123456')
+            -- result.apiKey is your new key — save it securely!
       description: |
         Redeem a 6-digit quick code to receive a full API key. Quick codes are generated via 
         the `\krawlet api` chatbox command or the `/v1/apikey/quickcode/generate` endpoint.
