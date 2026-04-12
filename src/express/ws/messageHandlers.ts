@@ -193,7 +193,7 @@ const messageHandlers: Record<string, MessageHandler> = {
     await updateTransferStatus(transfer.id, 'in_progress', moved);
 
     console.log(
-      `${logPrefix(state)} transfer progress transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'}`,
+      `${logPrefix(state)} transfer progress transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} nbt=${parsed.itemNbt ?? 'any'}`,
     );
 
     sendJson(ws, {
@@ -252,7 +252,7 @@ const messageHandlers: Record<string, MessageHandler> = {
     await updateTransferStatus(transfer.id, 'completed', moved);
 
     console.log(
-      `${logPrefix(state)} transfer complete transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} elapsedMs=${parsed.elapsedMs ?? 'n/a'}`,
+      `${logPrefix(state)} transfer complete transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} nbt=${parsed.itemNbt ?? 'any'} elapsedMs=${parsed.elapsedMs ?? 'n/a'}`,
     );
 
     clearCurrentTask(state);
@@ -296,7 +296,7 @@ const messageHandlers: Record<string, MessageHandler> = {
     await updateTransferStatus(transfer.id, 'cancelled', moved);
 
     console.log(
-      `${logPrefix(state)} transfer cancelled transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} elapsedMs=${parsed.elapsedMs ?? 'n/a'}`,
+      `${logPrefix(state)} transfer cancelled transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} nbt=${parsed.itemNbt ?? 'any'} elapsedMs=${parsed.elapsedMs ?? 'n/a'}`,
     );
 
     clearCurrentTask(state);
@@ -389,6 +389,7 @@ const messageHandlers: Record<string, MessageHandler> = {
           workerId: parsed.workerId,
           requestedQuantity: parsed.requestedQuantity,
           itemName: parsed.itemName,
+          itemNbt: parsed.itemNbt,
           elapsedMs: parsed.elapsedMs,
         },
       },

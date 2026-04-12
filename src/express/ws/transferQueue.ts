@@ -35,12 +35,13 @@ export type QueueTransferParams = {
   from: { uuid: string; name: string };
   to: string;
   itemName?: string;
+  itemNbt?: string;
   quantity?: number;
   timeout?: number;
 };
 
 export async function queueTransfer(params: QueueTransferParams): Promise<RawTransfer> {
-  const { from, to, itemName, quantity, timeout } = params;
+  const { from, to, itemName, itemNbt, quantity, timeout } = params;
   const fromPlayer = await resolvePlayer(from.uuid);
   const toPlayer = await resolvePlayer(to);
 
@@ -79,6 +80,7 @@ export async function queueTransfer(params: QueueTransferParams): Promise<RawTra
       toUUID: toPlayer.minecraftUUID,
       toUsername: toPlayer.minecraftName,
       itemName,
+      itemNbt,
       quantity,
       timeout,
     },
@@ -300,6 +302,7 @@ async function assignTransferToWorker(
       from: [playerOne?.estorageColorA, playerOne?.estorageColorB, playerOne?.estorageColorC],
       to: [playerTwo?.estorageColorA, playerTwo?.estorageColorB, playerTwo?.estorageColorC],
       itemName: transfer.itemName,
+      itemNbt: transfer.itemNbt,
       quantity: transfer.quantity,
     },
   });

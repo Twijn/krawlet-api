@@ -56,8 +56,12 @@ export function completeTransfer(transfer: RawTransfer, error: string | null = n
   }
 
   if (transfer.itemName) {
-    fromMessage += `<yellow>: ${transfer.itemName} x${quantityDisplay}</yellow>`;
-    toMessage += `<yellow>: ${transfer.itemName} x${quantityDisplay}</yellow>`;
+    const nbtSuffix = transfer.itemNbt ? ` (NBT: ${transfer.itemNbt})` : '';
+    fromMessage += `<yellow>: ${transfer.itemName}${nbtSuffix} x${quantityDisplay}</yellow>`;
+    toMessage += `<yellow>: ${transfer.itemName}${nbtSuffix} x${quantityDisplay}</yellow>`;
+  } else if (transfer.itemNbt) {
+    fromMessage += `<yellow>: items (NBT: ${transfer.itemNbt}) x${quantityDisplay}</yellow>`;
+    toMessage += `<yellow>: items (NBT: ${transfer.itemNbt}) x${quantityDisplay}</yellow>`;
   } else {
     fromMessage += `<yellow>: ${quantityDisplay} items</yellow>`;
     toMessage += `<yellow>: ${quantityDisplay} items</yellow>`;

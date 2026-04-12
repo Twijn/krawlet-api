@@ -276,12 +276,14 @@ async function viewKey(keyId) {
         if (log.type === 'transfer') {
           const direction = log.isSender ? 'Sent' : log.isRecipient ? 'Received' : 'Transfer';
           const itemName = log.itemName || 'all items';
+          const itemNbt = log.itemNbt ? ' (nbt: ' + log.itemNbt + ')' : '';
           const quantityLabel = log.quantity ? ' x' + log.quantity : ' (all)';
           html +=
             '<td class="key-display">' +
             direction +
             ' ' +
             escapeHtml(itemName) +
+            escapeHtml(itemNbt) +
             quantityLabel +
             ' ' +
             (log.isSender

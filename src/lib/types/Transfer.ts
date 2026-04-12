@@ -1,6 +1,7 @@
 export type TransferPayload = {
   to: string;
   itemName?: string;
+  itemNbt?: string;
   quantity?: number;
 };
 
@@ -10,6 +11,7 @@ export function isTransferPayload(obj: any): obj is TransferPayload {
     typeof obj === 'object' &&
     typeof obj.to === 'string' &&
     (!obj.itemName || typeof obj.itemName === 'string') &&
+    (!obj.itemNbt || typeof obj.itemNbt === 'string') &&
     (!obj.quantity || typeof obj.quantity === 'number')
   );
 }

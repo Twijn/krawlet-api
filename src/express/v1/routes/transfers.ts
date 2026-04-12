@@ -5,12 +5,39 @@ import { RequestWithRateLimit } from '../types/request';
 import { queueTransfer } from '../../ws';
 import { cancelTransfer } from '../../ws/transferQueue';
 import { RawTransfer, Transfer } from '../../../lib/models';
+import { Op } from 'sequelize';
 
 const router = Router();
 
 export type RequestWithTransfer = RequestWithRateLimit & {
   transfer: RawTransfer;
 };
+
+router.get('/', authenticateApiKeyTier('free', 'premium'), async (req, res) => {
+  const request = req as RequestWithRateLimit;
+
+  if (!request.apiKey) {
+    return res.error('UNAUTHORIZED', 'API key required to access this endpoint', 401);
+  }
+
+  if (!request.apiKey.mcUuid || !request.apiKey.mcName) {
+    return res.error('BAD_REQUEST', 'API key is missing associated Minecraft player data', 400);
+  }
+
+  try {
+    const transfers = await Transfer.findAll({
+      where: {
+        [Op.or]: [{ fromUUID: request.apiKey.mcUuid }, { toUUID: request.apiKey.mcUuid }],
+      },
+      order: [['createdAt', 'DESC']],
+    });
+
+    return res.success({ transfers: transfers.map((t) => t.raw()) });
+  } catch (error) {
+    console.error('Error fetching transfers:', error);
+    return res.error('INTERNAL_SERVER_ERROR', 'Failed to fetch transfers', 500);
+  }
+});
 
 router.post('/', authenticateApiKeyTier('free', 'premium'), json(), async (req, res) => {
   const request = req as RequestWithRateLimit;
@@ -31,6 +58,7 @@ router.post('/', authenticateApiKeyTier('free', 'premium'), json(), async (req, 
       from: { uuid: request.apiKey.mcUuid, name: request.apiKey.mcName },
       to: request.body.to,
       itemName: request.body.itemName,
+      itemNbt: request.body.itemNbt,
       quantity: request.body.quantity,
       timeout: request.body.timeout,
     });

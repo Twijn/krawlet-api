@@ -13,6 +13,7 @@ export type RawTransfer = {
   toUUID: string;
   toUsername: string;
   itemName?: string;
+  itemNbt?: string;
   quantity?: number;
   quantityTransferred: number;
   timestamp: string;
@@ -28,6 +29,7 @@ export class Transfer extends Model {
   public toUUID!: string;
   public toUsername!: string;
   public itemName?: string;
+  public itemNbt?: string;
   public quantity?: number;
   public quantityTransferred!: number;
   public timeout?: number;
@@ -47,6 +49,7 @@ export class Transfer extends Model {
       toUUID: this.toUUID,
       toUsername: this.toUsername,
       itemName: this.itemName ?? undefined,
+      itemNbt: this.itemNbt ?? undefined,
       quantity: this.quantity ?? undefined,
       quantityTransferred: this.quantityTransferred,
       timestamp: this.createdAt.toISOString(),
@@ -91,6 +94,10 @@ Transfer.init(
       allowNull: false,
     },
     itemName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    itemNbt: {
       type: DataTypes.STRING,
       allowNull: true,
     },

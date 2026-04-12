@@ -73,7 +73,8 @@ local function processTransfer(transfer)
   local destinationStorageName = peripheral.getName(destinationStorage)
   local startedAt = os.epoch("utc")
 
-  local hasItemFilter = transfer.itemName ~= nil
+  local hasItemNameFilter = transfer.itemName ~= nil
+  local hasItemNbtFilter = transfer.itemNbt ~= nil
   local hasQuantityLimit = type(transfer.quantity) == "number" and transfer.quantity > 0
   local targetQuantity = hasQuantityLimit and transfer.quantity or math.huge
 
@@ -86,6 +87,18 @@ local function processTransfer(transfer)
 
   local leftToSchedule = targetQuantity
   local totalMoved = 0
+
+  local function matchesItemFilter(item)
+    if hasItemNameFilter and item.name ~= transfer.itemName then
+      return false
+    end
+
+    if hasItemNbtFilter and item.nbt ~= transfer.itemNbt then
+      return false
+    end
+
+    return true
+  end
 
   local function moveItem(sourceInv, destination, slot, count)
     return function()
@@ -100,7 +113,7 @@ local function processTransfer(transfer)
 
     local currentItems = sourceStorage.list()
     for slot, item in pairs(currentItems) do
-      if not hasItemFilter or item.name == transfer.itemName then
+      if matchesItemFilter(item) then
         local maxMovable = math.min(item.count, leftToSchedule)
         leftToSchedule = leftToSchedule - maxMovable
         table.insert(requests, moveItem(sourceStorage, destinationStorageName, slot, maxMovable))
@@ -116,7 +129,7 @@ local function processTransfer(transfer)
     local items = inv.list()
     local count = 0
     for _, item in pairs(items) do
-      if not hasItemFilter or item.name == transfer.itemName then
+      if matchesItemFilter(item) then
         count = count + item.count
       end
     end
@@ -158,7 +171,7 @@ local function processTransfer(transfer)
     local sourceItems = sourceStorage.list()
 
     for _, sourceItem in pairs(sourceItems) do
-      if (not hasItemFilter or sourceItem.name == transfer.itemName) and destinationCanAcceptItem(sourceItem) then
+      if matchesItemFilter(sourceItem) and destinationCanAcceptItem(sourceItem) then
         return true
       end
     end
@@ -188,6 +201,7 @@ local function processTransfer(transfer)
           totalMoved = totalMoved,
           requestedQuantity = transfer.quantity,
           itemName = transfer.itemName,
+          itemNbt = transfer.itemNbt,
           workerId = workerComputerId,
           elapsedMs = os.epoch("utc") - startedAt,
         })
@@ -201,6 +215,7 @@ local function processTransfer(transfer)
           totalMoved = totalMoved,
           requestedQuantity = transfer.quantity,
           itemName = transfer.itemName,
+          itemNbt = transfer.itemNbt,
           workerId = workerComputerId,
           elapsedMs = os.epoch("utc") - startedAt,
         })
@@ -226,6 +241,7 @@ local function processTransfer(transfer)
             reason = reason,
             requestedQuantity = transfer.quantity,
             itemName = transfer.itemName,
+            itemNbt = transfer.itemNbt,
             workerId = workerComputerId,
             elapsedMs = os.epoch("utc") - startedAt,
           })
@@ -240,6 +256,7 @@ local function processTransfer(transfer)
       totalMoved = totalMoved,
       requestedQuantity = transfer.quantity,
       itemName = transfer.itemName,
+      itemNbt = transfer.itemNbt,
       workerId = workerComputerId,
       elapsedMs = os.epoch("utc") - startedAt,
     })
@@ -264,6 +281,7 @@ local function processTransfer(transfer)
               totalMoved = totalMoved,
               requestedQuantity = transfer.quantity,
               itemName = transfer.itemName,
+              itemNbt = transfer.itemNbt,
               workerId = workerComputerId,
               elapsedMs = os.epoch("utc") - startedAt,
             })
