@@ -48,6 +48,14 @@ export type AuthState = {
   workerId?: number;
 };
 
+export type StorageListResultMessage = ClientMessage & {
+  id: string;
+  type: 'storage_list_result';
+  payload: {
+    items: { name: string; count: number; nbt?: string }[];
+  };
+};
+
 export type MessageHandler = (
   ws: WebSocket,
   message: ClientMessage,

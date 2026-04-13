@@ -5,6 +5,7 @@ import { logPrefix, sendJson } from './protocol';
 import { AUTH_TIMEOUT_MS, authState, getNextConnectionId } from './state';
 import { RoutedWebSocket } from './types';
 import { requeueTransferForRetry } from './transferQueue';
+import { rejectStorageQueriesForWorker } from './storageQuery';
 
 function createWebSocketServer(server: HttpServer, path: string): WebSocketServer {
   const wss = new WebSocketServer({ noServer: true, perMessageDeflate: false });
@@ -76,6 +77,7 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
           'transfer_complete',
           'transfer_cancelled',
           'transfer_failed',
+          'storage_list_result',
         ],
       },
     });
@@ -98,6 +100,8 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
       if (!state) {
         return;
       }
+
+      rejectStorageQueriesForWorker(ws);
 
       if (state.currentTask) {
         console.warn(

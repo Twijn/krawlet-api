@@ -330,6 +330,28 @@ local function connect()
             end)
           elseif data.type == "transfer" then
             processTransfer(data.payload)
+          elseif data.type == "storage_list" then
+            local requestId = data.id
+            local colors = data.payload and data.payload.colors
+            if not requestId or not colors or #colors ~= 3 then
+              print("storage_list: invalid payload, ignoring")
+            else
+              print("Listing storage contents for colors: " .. table.concat(colors, ","))
+              enderStorageA.setFrequency(table.unpack(colors))
+              local rawItems = enderStorageA.list()
+              local items = {}
+              for _, item in pairs(rawItems) do
+                table.insert(items, {
+                  name = item.name,
+                  count = item.count,
+                  nbt = item.nbt,
+                })
+              end
+              send("storage_list_result", {
+                id = requestId,
+                payload = { items = items },
+              })
+            end
           end
         end
       elseif e == "websocket_failure" then

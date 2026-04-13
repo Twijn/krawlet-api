@@ -8,9 +8,11 @@ import {
   ClientAuthMessage,
   ClientMessage,
   MessageHandler,
+  StorageListResultMessage,
   TransferUpdateMessage,
 } from './types';
 import { updateTransferStatus } from './transferQueue';
+import { pendingStorageQueries } from './storageQuery';
 
 function getSocketAuthState(ws: WebSocket, messageId?: string | number): AuthState | null {
   const state = authState.get(ws);
@@ -310,6 +312,26 @@ const messageHandlers: Record<string, MessageHandler> = {
         quantityTransferred: moved,
       },
     });
+  },
+  storage_list_result: (ws, message, state) => {
+    const parsed = message as StorageListResultMessage;
+    const requestId = typeof parsed.id === 'string' ? parsed.id : String(parsed.id);
+    const pending = pendingStorageQueries.get(requestId);
+
+    if (!pending) {
+      // Already timed out or unknown — ignore
+      console.warn(`${logPrefix(state)} storage_list_result for unknown requestId=${requestId}`);
+      return;
+    }
+
+    clearTimeout(pending.timeoutHandle);
+    pendingStorageQueries.delete(requestId);
+
+    const items = (parsed.payload?.items ?? []) as { name: string; count: number; nbt?: string }[];
+    console.log(
+      `${logPrefix(state)} storage_list_result requestId=${requestId} itemSlots=${items.length}`,
+    );
+    pending.resolve(items);
   },
   transfer_failed: async (ws, message, state) => {
     const parsed = parseTransferUpdateMessage(ws, message);

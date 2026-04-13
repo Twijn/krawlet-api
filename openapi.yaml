@@ -703,6 +703,87 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /v1/transfers/contents:
+    get:
+      tags: [Transfers]
+      summary: Get live ender storage contents
+      description: |
+        Query a worker to list the current items in the authenticated player's ender storage.
+        The worker sets the frequency, calls `list()`, and returns the result synchronously.
+        Typically completes in under 30ms when a worker is available.
+
+        **Requires authentication:** This endpoint requires a valid API key with an associated
+        Minecraft account that has ender storage color data configured.
+
+        **Error conditions:**
+        - `503` — No free worker is available; retry after a moment
+        - `503` — Worker timed out (5s) or disconnected mid-query
+        - `400` — API key has no associated Minecraft player or the player has no color data
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Current contents of the player's ender storage
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/StorageSlotItem'
+              example:
+                success: true
+                data:
+                  items:
+                    - name: 'minecraft:diamond'
+                      count: 32
+                    - name: 'minecraft:enchanted_book'
+                      count: 1
+                      nbt: '{StoredEnchantments:[{id:"minecraft:sharpness",lvl:5}]}'
+                meta:
+                  timestamp: '2026-04-12T10:30:00.000Z'
+                  elapsed: 14
+                  version: '1.0.0'
+                  requestId: 'abc-123'
+        '400':
+          description: API key missing Minecraft player data or player missing color data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Player not found for this API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '503':
+          description: No worker available or worker timed out / disconnected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /v1/reports/stats:
     get:
       tags: [Reports]
@@ -2519,6 +2600,24 @@ components:
         warning:
           type: string
           description: Warning to save the key securely
+
+    StorageSlotItem:
+      type: object
+      description: A single item stack in an ender storage inventory slot
+      properties:
+        name:
+          type: string
+          description: Minecraft item ID
+          example: 'minecraft:diamond'
+        count:
+          type: integer
+          description: Number of items in this stack
+          example: 32
+        nbt:
+          type: string
+          nullable: true
+          description: NBT data for the item (present only for NBT-bearing items)
+          example: '{StoredEnchantments:[{id:"minecraft:sharpness",lvl:5}]}'
 
     Transfer:
       type: object
