@@ -136,7 +136,6 @@ ApiKey.init(
     mcUuid: {
       type: DataTypes.UUID,
       allowNull: true,
-      unique: true,
       field: 'mc_uuid',
     },
     mcName: {

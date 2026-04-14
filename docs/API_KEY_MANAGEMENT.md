@@ -48,13 +48,13 @@ The Krawlet API uses a tier system for API keys:
 
 ### Comparison
 
-| Feature          | Anonymous | Free Tier  | Premium Tier | ShopSync | EnderStorage | Worker | Internal |
-| ---------------- | --------- | ---------- | ------------ | -------- | ------------ | ------ | -------- |
-| Rate Limit       | 100/hour  | 1,000/hour | 5,000+/hour  | Custom   | Custom       | Custom | Custom   |
+| Feature          | Anonymous | Free Tier  | Premium Tier | ShopSync | EnderStorage | Worker  | Internal |
+| ---------------- | --------- | ---------- | ------------ | -------- | ------------ | ------- | -------- |
+| Rate Limit       | 100/hour  | 1,000/hour | 5,000+/hour  | Custom   | Custom       | Custom  | Custom   |
 | Authentication   | None      | API Key    | API Key      | API Key  | API Key      | API Key | API Key  |
-| Public Endpoints | Yes       | Yes        | Yes          | No       | No           | Yes    | Yes      |
-| POST /v1/shops   | No        | No         | No           | Yes      | No           | No     | Yes      |
-| POST /v1/storage | No        | No         | No           | No       | Yes          | No     | Yes      |
+| Public Endpoints | Yes       | Yes        | Yes          | No       | No           | Yes     | Yes      |
+| POST /v1/shops   | No        | No         | No           | Yes      | No           | No      | Yes      |
+| POST /v1/storage | No        | No         | No           | No       | Yes          | No      | Yes      |
 
 ---
 
@@ -449,7 +449,7 @@ When generating a key, you'll see:
 
 ### Can I retrieve a lost API key?
 
-No. API keys are hashed before storage and cannot be retrieved. However, you can use `\krawlet api` in-game to generate a **quick code** that will regenerate your key. The quick code is easy to type and redeemable via the API.
+No. API keys are hashed before storage and cannot be retrieved. However, you can use `\krawlet api` in-game to create a new API key and receive a **quick code** to claim it. The quick code is easy to type and redeemable via the API.
 
 ### How do I increase my rate limit?
 
@@ -473,4 +473,4 @@ Quick codes are 6-digit temporary codes (e.g., `003721`) that make it easy to re
 
 ### Does redeeming a quick code invalidate my old key?
 
-Yes! Redeeming a quick code generates a new API key, which invalidates your previous key. Any applications using the old key will need to be updated.
+It depends on how the quick code was created. Quick codes from `\krawlet api` reveal a newly created API key and do not affect your other keys. Quick codes generated from an existing API key rotate that key's token, so any applications using the old token will need to be updated.

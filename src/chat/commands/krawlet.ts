@@ -10,41 +10,20 @@ const PREFIX = '\\' + (process.env.PREFIX ?? '');
 
 const NOTIFICATION_SETTINGS = ['all', 'self', 'none'];
 
+async function findLatestApiKeyForPlayer(uuid: string): Promise<ApiKey | null> {
+  return ApiKey.findOne({
+    where: {
+      mcUuid: uuid,
+    },
+    order: [['createdAt', 'DESC']],
+  });
+}
+
 async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
   const uuid = cmd.user.uuid;
   const mcName = cmd.user.name;
 
   try {
-    // Check if this user already has an API key
-    const existingKey = await ApiKey.findOne({
-      where: {
-        mcUuid: uuid,
-      },
-    });
-
-    if (existingKey) {
-      // Generate a quick code for the existing key
-      const quickCode = await existingKey.setQuickCode();
-      rcc
-        .tell(
-          cmd.user,
-          `<yellow>You already have an API key!</yellow> Here's a quick code to retrieve it:<br><gold><bold>${quickCode}</bold></gold> <gray>(expires in 15 min)</gray>`,
-        )
-        .catch(console.error);
-      rcc
-        .tell(
-          cmd.user,
-          `Import to Krawlet: [Click Here](https://www.kromer.club/settings/advanced#${quickCode})`,
-          undefined,
-          'markdown',
-        )
-        .catch(console.error);
-      rcc
-        .tell(cmd.user, `<red>Note:</red> <gray>Redeeming will regenerate your API key!</gray>`)
-        .catch(console.error);
-      return;
-    }
-
     // Generate a new API key
     const rawKey = ApiKey.generateKey();
     const hashedKey = ApiKey.hashKey(rawKey);
@@ -63,7 +42,7 @@ async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
     const quickCode = await newKey.setQuickCode();
 
     rcc
-      .tell(cmd.user, `<green>API Key generated!</green> Use this quick code to retrieve it:`)
+      .tell(cmd.user, `<green>API key created!</green> Use this quick code to retrieve it:`)
       .catch(console.error);
     rcc
       .tell(cmd.user, `<gold><bold>${quickCode}</bold></gold> <gray>(expires in 15 min)</gray>`)
@@ -88,12 +67,7 @@ async function handleApiKeyRegeneration(cmd: ChatboxCommand, confirmed: boolean)
   const uuid = cmd.user.uuid;
 
   try {
-    // Check if this user has an existing API key
-    const existingKey = await ApiKey.findOne({
-      where: {
-        mcUuid: uuid,
-      },
-    });
+    const existingKey = await findLatestApiKeyForPlayer(uuid);
 
     if (!existingKey) {
       rcc
@@ -109,11 +83,14 @@ async function handleApiKeyRegeneration(cmd: ChatboxCommand, confirmed: boolean)
       rcc
         .tell(
           cmd.user,
-          `<yellow><bold>Warning:</bold></yellow> Regenerating your API key will <red>invalidate your current key</red>.`,
+          `<yellow><bold>Warning:</bold></yellow> Regenerating your newest API key will <red>invalidate its current token</red>.`,
         )
         .catch(console.error);
       rcc
-        .tell(cmd.user, `<gray>Any applications using your old key will stop working.</gray>`)
+        .tell(
+          cmd.user,
+          `<gray>Any applications using that key will stop working until updated.</gray>`,
+        )
         .catch(console.error);
       rcc
         .tell(
@@ -130,7 +107,7 @@ async function handleApiKeyRegeneration(cmd: ChatboxCommand, confirmed: boolean)
     rcc
       .tell(
         cmd.user,
-        `<green>Ready to regenerate!</green> Use this quick code:<br><gold><bold>${quickCode}</bold></gold> <gray>(expires in 15 min)</gray>`,
+        `<green>Ready to regenerate your newest key!</green> Use this quick code:<br><gold><bold>${quickCode}</bold></gold> <gray>(expires in 15 min)</gray>`,
       )
       .catch(console.error);
     rcc
@@ -144,7 +121,7 @@ async function handleApiKeyRegeneration(cmd: ChatboxCommand, confirmed: boolean)
     rcc
       .tell(
         cmd.user,
-        `<red>Note:</red> <gray>Your old key will be invalidated when you redeem!</gray>`,
+        `<red>Note:</red> <gray>That key's current token will be invalidated when you redeem!</gray>`,
       )
       .catch(console.error);
   } catch (err) {
