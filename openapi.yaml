@@ -22,21 +22,17 @@ info:
     - `X-RateLimit-Limit`: Maximum requests per hour
     - `X-RateLimit-Remaining`: Requests remaining in current window
     - `X-RateLimit-Reset`: Unix timestamp when the limit resets
-
   contact:
     name: Krawlet API Support
     url: https://github.com/Twijn/krawlet-api
-
 servers:
   - url: https://api.krawlet.cc
     description: Production API
   - url: http://localhost:3000/api
     description: Local development
-
 security:
   - ApiKeyAuth: []
   - {}
-
 tags:
   - name: TypeScript / JavaScript
     description: |
@@ -70,7 +66,6 @@ tags:
       ```
 
       Source and full docs: [github.com/Twijn/krawlet-js](https://github.com/Twijn/krawlet-js)
-
   - name: Lua (CC:Tweaked)
     description: |
       The Lua library runs inside [CC: Tweaked](https://tweaked.cc/) computers in Minecraft.
@@ -137,7 +132,6 @@ tags:
       - `GET /v1/transfers/{transferId}`
       - `POST /v1/transfers/{transferId}/cancel`
       - `POST /v1/apikey/quickcode/redeem` (when no API key is configured)
-
   - name: Health
     description: API health checks
   - name: Players
@@ -156,7 +150,6 @@ tags:
     description: API key information and usage statistics
   - name: Transfers
     description: Ender storage item transfers between players
-
 x-tagGroups:
   - name: Libraries
     tags:
@@ -181,29 +174,28 @@ x-tagGroups:
     tags:
       - API Key
       - Transfers
-
 paths:
   /v1/:
     get:
-      tags: [Health]
+      tags:
+        - Health
       summary: Get API version info
       description: Retrieve API version metadata, common endpoint list, and documentation links.
       responses:
-        '200':
+        "200":
           description: API version info
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
@@ -219,10 +211,10 @@ paths:
                             type: string
                           github:
                             type: string
-
   /v1/health:
     get:
-      tags: [Health]
+      tags:
+        - Health
       summary: Health check
       x-codeSamples:
         - lang: typescript
@@ -241,65 +233,63 @@ paths:
             local health = krawlet.healthCheck()
       description: Check if the API is operational
       responses:
-        '200':
+        "200":
           description: API is healthy
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
+                $ref: "#/components/schemas/SuccessResponse"
               example:
                 success: true
                 data:
-                  status: 'ok'
-                  timestamp: '2026-01-12T10:30:00.000Z'
+                  status: ok
+                  timestamp: 2026-01-12T10:30:00.000Z
                 meta:
-                  timestamp: '2026-01-12T10:30:00.000Z'
+                  timestamp: 2026-01-12T10:30:00.000Z
                   elapsed: 5
-                  version: '1.0.0'
-                  requestId: 'abc-123'
+                  version: 1.0.0
+                  requestId: abc-123
                   rateLimit:
                     limit: 1000
                     remaining: 999
                     reset: 1736686200
-
   /v1/health/detailed:
     get:
-      tags: [Health]
+      tags:
+        - Health
       summary: Detailed health check
       description: Retrieve detailed service and runtime health diagnostics.
       responses:
-        '200':
+        "200":
           description: Detailed health data (healthy)
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '503':
+                $ref: "#/components/schemas/SuccessResponse"
+        "503":
           description: Detailed health data (degraded)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
-
+                $ref: "#/components/schemas/SuccessResponse"
   /v1/players:
     get:
-      tags: [Players]
+      tags:
+        - Players
       summary: Get players
       x-codeSamples:
         - lang: typescript
@@ -349,10 +339,10 @@ paths:
             type: string
           examples:
             single:
-              value: 'ks0d5iqb6p'
+              value: ks0d5iqb6p
               summary: Single address lookup
             multiple:
-              value: 'ks0d5iqb6p,k12345678'
+              value: ks0d5iqb6p,k12345678
               summary: Multiple addresses
         - name: names
           in: query
@@ -361,10 +351,10 @@ paths:
             type: string
           examples:
             single:
-              value: 'Twijn'
+              value: Twijn
               summary: Single player name
             multiple:
-              value: 'Twijn,Player2'
+              value: Twijn,Player2
               summary: Multiple player names
         - name: uuids
           in: query
@@ -373,77 +363,79 @@ paths:
             type: string
           examples:
             single:
-              value: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
+              value: d98440d6-5117-4ac8-bd50-70b086101e3e
               summary: Single UUID lookup
             multiple:
-              value: 'd98440d6-5117-4ac8-bd50-70b086101e3e,a1234567-89ab-cdef-0123-456789abcdef'
+              value: d98440d6-5117-4ac8-bd50-70b086101e3e,a1234567-89ab-cdef-0123-456789abcdef
               summary: Multiple UUIDs
       responses:
-        '200':
+        "200":
           description: List of players matching the query
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Player'
+                          $ref: "#/components/schemas/Player"
               examples:
                 byAddress:
                   summary: Player by address
                   value:
                     success: true
                     data:
-                      - name: 'Twijn'
-                        uuid: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
-                        addresses: ['ks0d5iqb6p']
+                      - name: Twijn
+                        uuid: d98440d6-5117-4ac8-bd50-70b086101e3e
+                        addresses:
+                          - ks0d5iqb6p
                     meta:
-                      timestamp: '2026-01-13T10:30:00.000Z'
+                      timestamp: 2026-01-13T10:30:00.000Z
                       elapsed: 12
-                      version: '1.0.0'
-                      requestId: 'abc-123'
+                      version: 1.0.0
+                      requestId: abc-123
                 byName:
                   summary: Player by name
                   value:
                     success: true
                     data:
-                      - name: 'Twijn'
-                        uuid: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
-                        addresses: ['ks0d5iqb6p']
+                      - name: Twijn
+                        uuid: d98440d6-5117-4ac8-bd50-70b086101e3e
+                        addresses:
+                          - ks0d5iqb6p
                     meta:
-                      timestamp: '2026-01-13T10:30:00.000Z'
+                      timestamp: 2026-01-13T10:30:00.000Z
                       elapsed: 8
-                      version: '1.0.0'
-                      requestId: 'def-456'
+                      version: 1.0.0
+                      requestId: def-456
                 byUuid:
                   summary: Player by UUID
                   value:
                     success: true
                     data:
-                      - name: 'Twijn'
-                        uuid: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
-                        addresses: ['ks0d5iqb6p']
+                      - name: Twijn
+                        uuid: d98440d6-5117-4ac8-bd50-70b086101e3e
+                        addresses:
+                          - ks0d5iqb6p
                     meta:
-                      timestamp: '2026-01-13T10:30:00.000Z'
+                      timestamp: 2026-01-13T10:30:00.000Z
                       elapsed: 10
-                      version: '1.0.0'
-                      requestId: 'ghi-789'
-
+                      version: 1.0.0
+                      requestId: ghi-789
   /v1/shops:
     get:
-      tags: [Shops]
+      tags:
+        - Shops
       summary: Get all shops
       x-codeSamples:
         - lang: typescript
@@ -462,30 +454,29 @@ paths:
             local shops = krawlet.getShops()
       description: Retrieve a list of all shops with their items and addresses
       responses:
-        '200':
+        "200":
           description: List of shops
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Shop'
-
+                          $ref: "#/components/schemas/Shop"
     post:
-      tags: [Shops]
+      tags:
+        - Shops
       summary: Create or update shop
       description: Submit ShopSync data to create or update a shop (requires ShopSync authentication)
       security:
@@ -495,38 +486,37 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ShopSyncData'
+              $ref: "#/components/schemas/ShopSyncData"
       responses:
-        '201':
+        "201":
           description: Shop updated successfully
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '400':
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
           description: Validation error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/shops/{id}:
     get:
-      tags: [Shops]
+      tags:
+        - Shops
       summary: Get shop by ID
       x-codeSamples:
         - lang: typescript
@@ -552,35 +542,34 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Shop details
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/Shop'
-        '404':
+                        $ref: "#/components/schemas/Shop"
+        "404":
           description: Shop not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/shops/{id}/items:
     get:
-      tags: [Shops]
+      tags:
+        - Shops
       summary: Get shop items
       description: Retrieve all items/listings for a specific shop
       parameters:
@@ -591,31 +580,30 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: List of items
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Item'
-
+                          $ref: "#/components/schemas/Item"
   /v1/items:
     get:
-      tags: [Items]
+      tags:
+        - Items
       summary: Get all items
       x-codeSamples:
         - lang: typescript
@@ -634,31 +622,30 @@ paths:
             local items = krawlet.getItems()
       description: Retrieve all item listings with prices
       responses:
-        '200':
+        "200":
           description: List of items
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Item'
-
+                          $ref: "#/components/schemas/Item"
   /v1/addresses:
     get:
-      tags: [Addresses]
+      tags:
+        - Addresses
       summary: Get known addresses
       x-codeSamples:
         - lang: typescript
@@ -677,31 +664,30 @@ paths:
             local addresses = krawlet.getKnownAddresses()
       description: Retrieve list of all known addresses
       responses:
-        '200':
+        "200":
           description: List of known addresses
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/KnownAddress'
-
+                          $ref: "#/components/schemas/KnownAddress"
   /v1/storage:
     get:
-      tags: [Storage]
+      tags:
+        - Storage
       summary: Get ender storage data
       x-codeSamples:
         - lang: typescript
@@ -720,21 +706,20 @@ paths:
             local storage = krawlet.getEnderStorage()
       description: Retrieve the last stored ender storage data
       responses:
-        '200':
+        "200":
           description: Ender storage data
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
@@ -745,15 +730,15 @@ paths:
                           retrievedAt:
                             type: string
                             format: date-time
-        '404':
+        "404":
           description: No storage data available
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/ErrorResponse"
     post:
-      tags: [Storage]
+      tags:
+        - Storage
       summary: Store ender storage data
       x-codeSamples:
         - lang: typescript
@@ -774,30 +759,29 @@ paths:
             schema:
               type: object
       responses:
-        '200':
+        "200":
           description: Data stored successfully
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '401':
+                $ref: "#/components/schemas/SuccessResponse"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/transfers/contents:
     get:
-      tags: [Transfers]
+      tags:
+        - Transfers
       summary: Get live ender storage contents
       description: |
         Query a worker to list the current items in the authenticated player's ender storage.
@@ -820,20 +804,20 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Current contents of the player's ender storage
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
@@ -842,55 +826,55 @@ paths:
                           items:
                             type: array
                             items:
-                              $ref: '#/components/schemas/StorageSlotItem'
+                              $ref: "#/components/schemas/StorageSlotItem"
               example:
                 success: true
                 data:
                   items:
-                    - name: 'minecraft:diamond'
+                    - name: minecraft:diamond
                       count: 32
-                    - name: 'minecraft:enchanted_book'
+                    - name: minecraft:enchanted_book
                       count: 1
-                      nbt: '312db0d27bebe67a3084cbcff45c56cd'
+                      nbt: 312db0d27bebe67a3084cbcff45c56cd
                 meta:
-                  timestamp: '2026-04-12T10:30:00.000Z'
+                  timestamp: 2026-04-12T10:30:00.000Z
                   elapsed: 14
-                  version: '1.0.0'
-                  requestId: 'abc-123'
-        '400':
+                  version: 1.0.0
+                  requestId: abc-123
+        "400":
           description: API key missing Minecraft player data or player missing color data
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
           description: Player not found for this API key
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '429':
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
           description: Too many concurrent worker jobs for this Minecraft user
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '503':
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
           description: No worker available or worker timed out / disconnected
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/transfers/targets:
     get:
-      tags: [Transfers]
+      tags:
+        - Transfers
       summary: List transfer targets
       description: |
         Retrieve active transfer targets (excluding service/public entities) with linked lookup values.
@@ -899,20 +883,20 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: List of transfer targets
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
@@ -935,22 +919,22 @@ paths:
                                     type: string
                                   value:
                                     type: string
-        '401':
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Failed to fetch transfer targets
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/reports/stats:
     get:
-      tags: [Reports]
+      tags:
+        - Reports
       summary: Get report statistics
       x-codeSamples:
         - lang: typescript
@@ -969,24 +953,23 @@ paths:
             local stats = krawlet.getReportStats()
       description: Retrieve overall statistics for ShopSync reports
       responses:
-        '200':
+        "200":
           description: Report statistics
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
-
+                $ref: "#/components/schemas/SuccessResponse"
   /v1/reports/validation-failures:
     get:
-      tags: [Reports]
+      tags:
+        - Reports
       summary: Get validation failures
       x-codeSamples:
         - lang: typescript
@@ -1005,24 +988,23 @@ paths:
             type: integer
             default: 50
       responses:
-        '200':
+        "200":
           description: Validation failures
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
-
+                $ref: "#/components/schemas/SuccessResponse"
   /v1/reports/successful-posts:
     get:
-      tags: [Reports]
+      tags:
+        - Reports
       summary: Get successful posts
       x-codeSamples:
         - lang: typescript
@@ -1041,24 +1023,23 @@ paths:
             type: integer
             default: 50
       responses:
-        '200':
+        "200":
           description: Successful posts
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
-
+                $ref: "#/components/schemas/SuccessResponse"
   /v1/reports/shop-changes:
     get:
-      tags: [Reports]
+      tags:
+        - Reports
       summary: Get shop changes
       x-codeSamples:
         - lang: typescript
@@ -1086,24 +1067,23 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Shop changes
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
-
+                $ref: "#/components/schemas/SuccessResponse"
   /v1/reports/item-changes:
     get:
-      tags: [Reports]
+      tags:
+        - Reports
       summary: Get item changes
       x-codeSamples:
         - lang: typescript
@@ -1131,24 +1111,23 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Item changes
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
-
+                $ref: "#/components/schemas/SuccessResponse"
   /v1/reports/shop-change-logs:
     get:
-      tags: [Reports]
+      tags:
+        - Reports
       summary: Get shop change logs
       x-codeSamples:
         - lang: typescript
@@ -1192,21 +1171,20 @@ paths:
             type: string
             format: date-time
       responses:
-        '200':
+        "200":
           description: Shop change logs
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
@@ -1221,11 +1199,11 @@ paths:
                           logs:
                             type: array
                             items:
-                              $ref: '#/components/schemas/ShopChangeLog'
-
+                              $ref: "#/components/schemas/ShopChangeLog"
   /v1/reports/item-change-logs:
     get:
-      tags: [Reports]
+      tags:
+        - Reports
       summary: Get item change logs
       x-codeSamples:
         - lang: typescript
@@ -1267,21 +1245,20 @@ paths:
             type: string
             format: date-time
       responses:
-        '200':
+        "200":
           description: Item change logs
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
@@ -1296,11 +1273,11 @@ paths:
                           logs:
                             type: array
                             items:
-                              $ref: '#/components/schemas/ItemChangeLog'
-
+                              $ref: "#/components/schemas/ItemChangeLog"
   /v1/reports/price-change-logs:
     get:
-      tags: [Reports]
+      tags:
+        - Reports
       summary: Get price change logs
       x-codeSamples:
         - lang: typescript
@@ -1342,21 +1319,20 @@ paths:
             type: string
             format: date-time
       responses:
-        '200':
+        "200":
           description: Price change logs
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
@@ -1371,11 +1347,11 @@ paths:
                           logs:
                             type: array
                             items:
-                              $ref: '#/components/schemas/PriceChangeLog'
-
+                              $ref: "#/components/schemas/PriceChangeLog"
   /v1/reports/{id}:
     get:
-      tags: [Reports]
+      tags:
+        - Reports
       summary: Get report record by ID
       description: Retrieve a specific report record by identifier.
       parameters:
@@ -1386,36 +1362,35 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Report record found
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SuccessResponse'
-        '404':
+                $ref: "#/components/schemas/SuccessResponse"
+        "404":
           description: Report record not found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Failed to fetch report record
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/apikey:
     get:
-      tags: [API Key]
+      tags:
+        - API Key
       summary: Get current API key info
       x-codeSamples:
         - lang: typescript
@@ -1444,40 +1419,41 @@ paths:
           description: Set to 'false' to skip fetching detailed usage statistics
           schema:
             type: string
-            enum: ['true', 'false']
-            default: 'true'
+            enum:
+              - "true"
+              - "false"
+            default: "true"
       responses:
-        '200':
+        "200":
           description: API key information
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/ApiKeyInfo'
+                        $ref: "#/components/schemas/ApiKeyInfo"
               example:
                 success: true
                 data:
-                  id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
-                  name: 'My Application'
-                  email: 'user@example.com'
-                  tier: 'free'
+                  id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                  name: My Application
+                  email: user@example.com
+                  tier: free
                   rateLimit: 1000
                   isActive: true
                   requestCount: 1234
-                  lastUsedAt: '2026-01-25T10:30:00.000Z'
-                  createdAt: '2026-01-12T10:00:00.000Z'
+                  lastUsedAt: 2026-01-25T10:30:00.000Z
+                  createdAt: 2026-01-12T10:00:00.000Z
                   usage:
                     totalRequests: 1234
                     last24h: 50
@@ -1486,30 +1462,30 @@ paths:
                     blockedRequests: 5
                     avgResponseTimeMs: 45.23
                     topEndpoints:
-                      - path: '/v1/players'
+                      - path: /v1/players
                         count: 500
-                      - path: '/v1/shops'
+                      - path: /v1/shops
                         count: 300
                 meta:
-                  timestamp: '2026-01-25T10:30:00.000Z'
+                  timestamp: 2026-01-25T10:30:00.000Z
                   elapsed: 25
-                  version: '1.0.0'
-                  requestId: 'abc-123'
-        '401':
+                  version: 1.0.0
+                  requestId: abc-123
+        "401":
           description: Unauthorized - API key required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
               example:
                 success: false
                 error:
-                  code: 'UNAUTHORIZED'
-                  message: 'API key required to access this endpoint'
-
+                  code: UNAUTHORIZED
+                  message: API key required to access this endpoint
   /v1/apikey/usage:
     get:
-      tags: [API Key]
+      tags:
+        - API Key
       summary: Get detailed usage statistics
       x-codeSamples:
         - lang: typescript
@@ -1533,25 +1509,24 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Usage statistics
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/ApiKeyUsage'
+                        $ref: "#/components/schemas/ApiKeyUsage"
               example:
                 success: true
                 data:
@@ -1562,25 +1537,25 @@ paths:
                   blockedRequests: 5
                   avgResponseTimeMs: 45.23
                   topEndpoints:
-                    - path: '/v1/players'
+                    - path: /v1/players
                       count: 500
-                    - path: '/v1/shops'
+                    - path: /v1/shops
                       count: 300
                 meta:
-                  timestamp: '2026-01-25T10:30:00.000Z'
+                  timestamp: 2026-01-25T10:30:00.000Z
                   elapsed: 15
-                  version: '1.0.0'
-                  requestId: 'def-456'
-        '401':
+                  version: 1.0.0
+                  requestId: def-456
+        "401":
           description: Unauthorized - API key required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/apikey/logs:
     get:
-      tags: [API Key]
+      tags:
+        - API Key
       summary: Get recent request logs
       x-codeSamples:
         - lang: typescript
@@ -1613,21 +1588,20 @@ paths:
             maximum: 100
             default: 50
       responses:
-        '200':
+        "200":
           description: Request logs
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
@@ -1638,43 +1612,43 @@ paths:
                           logs:
                             type: array
                             items:
-                              $ref: '#/components/schemas/RequestLog'
+                              $ref: "#/components/schemas/RequestLog"
               example:
                 success: true
                 data:
                   count: 2
                   logs:
-                    - requestId: 'req-123'
-                      timestamp: '2026-01-25T10:30:00.000Z'
-                      method: 'GET'
-                      path: '/v1/players'
+                    - requestId: req-123
+                      timestamp: 2026-01-25T10:30:00.000Z
+                      method: GET
+                      path: /v1/players
                       responseStatus: 200
                       responseTimeMs: 45
                       wasBlocked: false
                       blockReason: null
-                    - requestId: 'req-124'
-                      timestamp: '2026-01-25T10:29:00.000Z'
-                      method: 'GET'
-                      path: '/v1/shops'
+                    - requestId: req-124
+                      timestamp: 2026-01-25T10:29:00.000Z
+                      method: GET
+                      path: /v1/shops
                       responseStatus: 200
                       responseTimeMs: 32
                       wasBlocked: false
                       blockReason: null
                 meta:
-                  timestamp: '2026-01-25T10:30:00.000Z'
+                  timestamp: 2026-01-25T10:30:00.000Z
                   elapsed: 20
-                  version: '1.0.0'
-                  requestId: 'ghi-789'
-        '401':
+                  version: 1.0.0
+                  requestId: ghi-789
+        "401":
           description: Unauthorized - API key required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/apikey/quickcode/generate:
     post:
-      tags: [API Key]
+      tags:
+        - API Key
       summary: Generate a quick code
       x-codeSamples:
         - lang: typescript
@@ -1702,47 +1676,46 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: Quick code generated
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/QuickCodeGenerated'
+                        $ref: "#/components/schemas/QuickCodeGenerated"
               example:
                 success: true
                 data:
-                  quickCode: '003721'
-                  expiresAt: '2026-01-27T12:15:00.000Z'
-                  expiresIn: '15 minutes'
-                  message: 'Use this code to retrieve your full API key. Redeeming will regenerate your key.'
+                  quickCode: "003721"
+                  expiresAt: 2026-01-27T12:15:00.000Z
+                  expiresIn: 15 minutes
+                  message: Use this code to retrieve your full API key. Redeeming will regenerate your key.
                 meta:
-                  timestamp: '2026-01-27T12:00:00.000Z'
+                  timestamp: 2026-01-27T12:00:00.000Z
                   elapsed: 15
-                  version: '1.0.0'
-                  requestId: 'qc-gen-123'
-        '401':
+                  version: 1.0.0
+                  requestId: qc-gen-123
+        "401":
           description: Unauthorized - API key required
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/apikey/quickcode/redeem:
     post:
-      tags: [API Key]
+      tags:
+        - API Key
       summary: Redeem a quick code
       x-codeSamples:
         - lang: typescript
@@ -1781,68 +1754,67 @@ paths:
                 code:
                   type: string
                   description: The 6-digit quick code
-                  pattern: '^\d{6}$'
-                  example: '003721'
+                  pattern: ^\d{6}$
+                  example: "003721"
       responses:
-        '200':
+        "200":
           description: Quick code redeemed successfully
-
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/QuickCodeRedeemed'
+                        $ref: "#/components/schemas/QuickCodeRedeemed"
               example:
                 success: true
                 data:
-                  message: 'Quick code redeemed successfully'
-                  apiKey: 'kraw_abc123def456789...'
-                  name: "PlayerName's API Key"
-                  tier: 'free'
+                  message: Quick code redeemed successfully
+                  apiKey: kraw_abc123def456789...
+                  name: PlayerName's API Key
+                  tier: free
                   rateLimit: 1000
-                  warning: 'Save this API key securely - it will not be shown again!'
+                  warning: Save this API key securely - it will not be shown again!
                 meta:
-                  timestamp: '2026-01-27T12:05:00.000Z'
+                  timestamp: 2026-01-27T12:05:00.000Z
                   elapsed: 25
-                  version: '1.0.0'
-                  requestId: 'qc-redeem-456'
-        '400':
+                  version: 1.0.0
+                  requestId: qc-redeem-456
+        "400":
           description: Invalid request - missing or malformed quick code
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
               example:
                 success: false
                 error:
-                  code: 'INVALID_REQUEST'
-                  message: 'Quick code must be a 6-digit number'
-        '404':
+                  code: INVALID_REQUEST
+                  message: Quick code must be a 6-digit number
+        "404":
           description: Quick code not found or expired
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
               example:
                 success: false
                 error:
-                  code: 'NOT_FOUND'
-                  message: 'Invalid or expired quick code'
-
+                  code: NOT_FOUND
+                  message: Invalid or expired quick code
   /v1/transfers:
     get:
-      tags: [Transfers]
+      tags:
+        - Transfers
       summary: List transfers
       description: |
         Retrieve all transfers where the authenticated player is the sender or recipient.
@@ -1851,61 +1823,61 @@ paths:
       security:
         - ApiKeyAuth: []
       responses:
-        '200':
+        "200":
           description: List of transfers
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
                         type: array
                         items:
-                          $ref: '#/components/schemas/Transfer'
+                          $ref: "#/components/schemas/Transfer"
               example:
                 success: true
                 data:
-                  - id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+                  - id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
                     status: completed
                     error: null
-                    fromUUID: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
+                    fromUUID: d98440d6-5117-4ac8-bd50-70b086101e3e
                     fromUsername: Twijn
-                    toUUID: 'a1234567-89ab-cdef-0123-456789abcdef'
+                    toUUID: a1234567-89ab-cdef-0123-456789abcdef
                     toUsername: Player2
-                    itemName: 'minecraft:diamond'
+                    itemName: minecraft:diamond
                     itemNbt: null
                     quantity: 64
                     quantityTransferred: 64
-                    timestamp: '2026-04-12T10:30:00.000Z'
+                    timestamp: 2026-04-12T10:30:00.000Z
                 meta:
-                  timestamp: '2026-04-12T10:30:00.000Z'
+                  timestamp: 2026-04-12T10:30:00.000Z
                   elapsed: 12
-                  version: '1.0.0'
-                  requestId: 'abc-123'
-        '400':
+                  version: 1.0.0
+                  requestId: abc-123
+        "400":
           description: API key is missing Minecraft player data
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/ErrorResponse"
     post:
-      tags: [Transfers]
+      tags:
+        - Transfers
       summary: Queue a transfer
       x-codeSamples:
         - lang: lua
@@ -1953,7 +1925,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TransferCreateRequest'
+              $ref: "#/components/schemas/TransferCreateRequest"
             examples:
               allItems:
                 summary: Transfer all items
@@ -1963,76 +1935,76 @@ paths:
                 summary: Transfer specific item by name
                 value:
                   to: Player2
-                  itemName: 'minecraft:diamond'
+                  itemName: minecraft:diamond
                   quantity: 64
               byNbt:
                 summary: Transfer items matching name + NBT hash
                 value:
                   to: Player2
-                  itemName: 'minecraft:enchanted_book'
-                  itemNbt: '312db0d27bebe67a3084cbcff45c56cd'
+                  itemName: minecraft:enchanted_book
+                  itemNbt: 312db0d27bebe67a3084cbcff45c56cd
                   quantity: 1
       responses:
-        '200':
+        "200":
           description: Transfer queued successfully
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/Transfer'
+                        $ref: "#/components/schemas/Transfer"
               example:
                 success: true
                 data:
-                  id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+                  id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
                   status: pending
                   error: null
-                  fromUUID: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
+                  fromUUID: d98440d6-5117-4ac8-bd50-70b086101e3e
                   fromUsername: Twijn
-                  toUUID: 'a1234567-89ab-cdef-0123-456789abcdef'
+                  toUUID: a1234567-89ab-cdef-0123-456789abcdef
                   toUsername: Player2
-                  itemName: 'minecraft:diamond'
+                  itemName: minecraft:diamond
                   itemNbt: null
                   quantity: 64
                   quantityTransferred: 0
-                  timestamp: '2026-04-12T10:30:00.000Z'
+                  timestamp: 2026-04-12T10:30:00.000Z
                 meta:
-                  timestamp: '2026-04-12T10:30:00.000Z'
+                  timestamp: 2026-04-12T10:30:00.000Z
                   elapsed: 18
-                  version: '1.0.0'
-                  requestId: 'def-456'
-        '400':
+                  version: 1.0.0
+                  requestId: def-456
+        "400":
           description: Invalid payload or player data missing
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '429':
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
           description: Too many concurrent worker jobs for this Minecraft user
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/requests/public-storage:
     post:
-      tags: [Transfers]
+      tags:
+        - Transfers
       summary: Request transfer from public storage
       description: |
         Queue a transfer from a public/service ender storage frequency to the authenticated player's linked storage.
@@ -2081,27 +2053,27 @@ paths:
                     minimum: 0
                     maximum: 15
       responses:
-        '200':
+        "200":
           description: Public storage transfer queued successfully
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
                         type: object
                         properties:
                           transfer:
-                            $ref: '#/components/schemas/Transfer'
+                            $ref: "#/components/schemas/Transfer"
                           sourceEntity:
                             type: object
                             properties:
@@ -2113,34 +2085,34 @@ paths:
                                 type: string
                               alias:
                                 type: string
-        '400':
+        "400":
           description: Invalid payload or API key player is not linked to an entity
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '429':
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
           description: Too many concurrent worker jobs for this Minecraft user
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
           description: Failed to create public transfer request
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/transfers/{transferId}:
     get:
-      tags: [Transfers]
+      tags:
+        - Transfers
       summary: Get transfer by ID
       description: |
         Retrieve details for a specific transfer. Only accessible by the sender or recipient.
@@ -2157,46 +2129,46 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Transfer details
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/Transfer'
-        '403':
-          description: You do not have permission to access this transfer
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Transfer not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
+                        $ref: "#/components/schemas/Transfer"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: You do not have permission to access this transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Transfer not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/transfers/{transferId}/cancel:
     post:
-      tags: [Transfers]
+      tags:
+        - Transfers
       summary: Cancel a transfer
       x-codeSamples:
         - lang: lua
@@ -2230,69 +2202,68 @@ paths:
             type: string
             format: uuid
       responses:
-        '200':
+        "200":
           description: Transfer cancelled successfully
           headers:
             X-RateLimit-Limit:
-              $ref: '#/components/headers/X-RateLimit-Limit'
+              $ref: "#/components/headers/X-RateLimit-Limit"
             X-RateLimit-Remaining:
-              $ref: '#/components/headers/X-RateLimit-Remaining'
+              $ref: "#/components/headers/X-RateLimit-Remaining"
             X-RateLimit-Reset:
-              $ref: '#/components/headers/X-RateLimit-Reset'
+              $ref: "#/components/headers/X-RateLimit-Reset"
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/SuccessResponse'
+                  - $ref: "#/components/schemas/SuccessResponse"
                   - type: object
                     properties:
                       data:
-                        $ref: '#/components/schemas/Transfer'
+                        $ref: "#/components/schemas/Transfer"
               example:
                 success: true
                 data:
-                  id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+                  id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
                   status: cancelled
                   error: null
-                  fromUUID: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
+                  fromUUID: d98440d6-5117-4ac8-bd50-70b086101e3e
                   fromUsername: Twijn
-                  toUUID: 'a1234567-89ab-cdef-0123-456789abcdef'
+                  toUUID: a1234567-89ab-cdef-0123-456789abcdef
                   toUsername: Player2
-                  itemName: 'minecraft:diamond'
+                  itemName: minecraft:diamond
                   itemNbt: null
                   quantity: 64
                   quantityTransferred: 32
-                  timestamp: '2026-04-12T10:30:00.000Z'
+                  timestamp: 2026-04-12T10:30:00.000Z
                 meta:
-                  timestamp: '2026-04-12T10:30:00.000Z'
+                  timestamp: 2026-04-12T10:30:00.000Z
                   elapsed: 10
-                  version: '1.0.0'
-                  requestId: 'ghi-789'
-        '400':
+                  version: 1.0.0
+                  requestId: ghi-789
+        "400":
           description: Transfer cannot be cancelled (already completed/failed)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '403':
-          description: Unauthorized to cancel this transfer
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '404':
-          description: Transfer not found or cannot be cancelled
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Unauthorized to cancel this transfer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Transfer not found or cannot be cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   headers:
     X-RateLimit-Limit:
@@ -2310,24 +2281,20 @@ components:
       schema:
         type: integer
       example: 1736686200
-
   securitySchemes:
     ApiKeyAuth:
       type: http
       scheme: bearer
       bearerFormat: API Key
-      description: 'API key authentication. Format: Bearer kraw_your_key_here'
-
+      description: "API key authentication. Format: Bearer kraw_your_key_here"
     ShopSyncAuth:
       type: http
       scheme: bearer
       description: ShopSync authentication token
-
     EnderStorageAuth:
       type: http
       scheme: bearer
       description: Ender storage authentication token
-
   schemas:
     SuccessResponse:
       type: object
@@ -2360,7 +2327,7 @@ components:
             version:
               type: string
               description: API version
-              example: '1.0.0'
+              example: 1.0.0
             requestId:
               type: string
               format: uuid
@@ -2378,7 +2345,6 @@ components:
                 reset:
                   type: integer
                   description: Unix timestamp when limit resets
-
     ErrorResponse:
       type: object
       required:
@@ -2426,7 +2392,6 @@ components:
             requestId:
               type: string
               format: uuid
-
     Player:
       type: object
       properties:
@@ -2434,20 +2399,23 @@ components:
           type: string
           format: uuid
           description: Player's Minecraft UUID
-          example: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
+          example: d98440d6-5117-4ac8-bd50-70b086101e3e
         minecraftName:
           type: string
           description: Player's Minecraft username
-          example: 'Twijn'
+          example: Twijn
         kromerAddress:
           type: string
           description: 10-character Kromer address
-          example: 'ks0d5iqb6p'
+          example: ks0d5iqb6p
         notifications:
           type: string
-          enum: [none, self, all]
+          enum:
+            - none
+            - self
+            - all
           description: Notification preference
-          example: 'none'
+          example: none
         lastSeenDate:
           type: string
           format: date-time
@@ -2463,7 +2431,6 @@ components:
         online:
           type: boolean
           description: Whether the player is currently online
-
     Shop:
       type: object
       properties:
@@ -2496,12 +2463,14 @@ components:
           nullable: true
         sourceType:
           type: string
-          enum: [modem, radio_tower]
+          enum:
+            - modem
+            - radio_tower
           description: How the shop was added (modem=direct connection, radio_tower=CC Radio Tower)
         items:
           type: array
           items:
-            $ref: '#/components/schemas/Item'
+            $ref: "#/components/schemas/Item"
         addresses:
           type: array
           items:
@@ -2514,7 +2483,6 @@ components:
           type: string
           format: date-time
           nullable: true
-
     Item:
       type: object
       properties:
@@ -2528,7 +2496,7 @@ components:
           type: string
           nullable: true
           description: Opaque hash string of the item's NBT data
-          example: '312db0d27bebe67a3084cbcff45c56cd'
+          example: 312db0d27bebe67a3084cbcff45c56cd
         itemDisplayName:
           type: string
           nullable: true
@@ -2552,7 +2520,7 @@ components:
         prices:
           type: array
           items:
-            $ref: '#/components/schemas/Price'
+            $ref: "#/components/schemas/Price"
         addresses:
           type: array
           items:
@@ -2565,7 +2533,6 @@ components:
           type: string
           format: date-time
           nullable: true
-
     Price:
       type: object
       properties:
@@ -2582,7 +2549,6 @@ components:
         requiredMeta:
           type: string
           nullable: true
-
     KnownAddress:
       type: object
       properties:
@@ -2590,7 +2556,12 @@ components:
           type: string
         type:
           type: string
-          enum: [official, shop, gamble, service, company]
+          enum:
+            - official
+            - shop
+            - gamble
+            - service
+            - company
           description: Type of known address
         address:
           type: string
@@ -2611,7 +2582,6 @@ components:
           type: string
           format: date-time
           nullable: true
-
     ApiKeyInfo:
       type: object
       description: API key information with optional usage statistics
@@ -2629,7 +2599,13 @@ components:
           description: Email associated with the key
         tier:
           type: string
-          enum: [free, premium, shopsync, enderstorage, worker, internal]
+          enum:
+            - free
+            - premium
+            - shopsync
+            - enderstorage
+            - worker
+            - internal
           description: API key tier
         rateLimit:
           type: integer
@@ -2650,8 +2626,7 @@ components:
           format: date-time
           description: When the key was created
         usage:
-          $ref: '#/components/schemas/ApiKeyUsage'
-
+          $ref: "#/components/schemas/ApiKeyUsage"
     ApiKeyUsage:
       type: object
       description: Detailed API key usage statistics
@@ -2687,7 +2662,6 @@ components:
               count:
                 type: integer
                 description: Number of requests
-
     RequestLog:
       type: object
       description: Individual request log entry
@@ -2720,7 +2694,6 @@ components:
           type: string
           nullable: true
           description: Reason for blocking (if blocked)
-
     ShopSyncData:
       type: object
       description: Full ShopSync data structure for shop creation/updates
@@ -2730,7 +2703,9 @@ components:
       properties:
         sourceType:
           type: string
-          enum: [modem, radio_tower]
+          enum:
+            - modem
+            - radio_tower
           default: modem
           description: How the shop is being added (modem=direct connection, radio_tower=CC Radio Tower)
         info:
@@ -2780,7 +2755,7 @@ components:
               nbt:
                 type: string
                 description: Opaque hash string of the item's NBT data
-                example: '312db0d27bebe67a3084cbcff45c56cd'
+                example: 312db0d27bebe67a3084cbcff45c56cd
               displayName:
                 type: string
               description:
@@ -2813,7 +2788,6 @@ components:
                       type: string
                     requiredMeta:
                       type: string
-
     ShopChangeLog:
       type: object
       properties:
@@ -2843,7 +2817,6 @@ components:
         updatedAt:
           type: string
           format: date-time
-
     ItemChangeLog:
       type: object
       properties:
@@ -2855,7 +2828,9 @@ components:
           type: string
         changeType:
           type: string
-          enum: [added, removed]
+          enum:
+            - added
+            - removed
           description: Whether the item was added or removed
         itemName:
           type: string
@@ -2869,7 +2844,6 @@ components:
         updatedAt:
           type: string
           format: date-time
-
     PriceChangeLog:
       type: object
       properties:
@@ -2899,7 +2873,6 @@ components:
         updatedAt:
           type: string
           format: date-time
-
     QuickCodeGenerated:
       type: object
       description: Response when a quick code is generated
@@ -2907,8 +2880,8 @@ components:
         quickCode:
           type: string
           description: The 6-digit quick code
-          pattern: '^\d{6}$'
-          example: '003721'
+          pattern: ^\d{6}$
+          example: "003721"
         expiresAt:
           type: string
           format: date-time
@@ -2916,11 +2889,10 @@ components:
         expiresIn:
           type: string
           description: Human-readable expiration time
-          example: '15 minutes'
+          example: 15 minutes
         message:
           type: string
           description: Instructions for using the quick code
-
     QuickCodeRedeemed:
       type: object
       description: Response when a quick code is successfully redeemed
@@ -2931,13 +2903,19 @@ components:
         apiKey:
           type: string
           description: The full API key (starts with kraw_)
-          example: 'kraw_abc123def456...'
+          example: kraw_abc123def456...
         name:
           type: string
           description: Name associated with the API key
         tier:
           type: string
-          enum: [free, premium, shopsync, enderstorage, worker, internal]
+          enum:
+            - free
+            - premium
+            - shopsync
+            - enderstorage
+            - worker
+            - internal
           description: API key tier
         rateLimit:
           type: integer
@@ -2945,7 +2923,6 @@ components:
         warning:
           type: string
           description: Warning to save the key securely
-
     StorageSlotItem:
       type: object
       description: A single item stack in an ender storage inventory slot
@@ -2953,7 +2930,7 @@ components:
         name:
           type: string
           description: Minecraft item ID
-          example: 'minecraft:diamond'
+          example: minecraft:diamond
         count:
           type: integer
           description: Number of items in this stack
@@ -2962,8 +2939,7 @@ components:
           type: string
           nullable: true
           description: Opaque hash string of the item's NBT data (present only for NBT-bearing items)
-          example: '312db0d27bebe67a3084cbcff45c56cd'
-
+          example: 312db0d27bebe67a3084cbcff45c56cd
     Transfer:
       type: object
       description: An ender storage item transfer between two players
@@ -2974,7 +2950,12 @@ components:
           description: Unique transfer ID
         status:
           type: string
-          enum: [pending, in_progress, completed, failed, cancelled]
+          enum:
+            - pending
+            - in_progress
+            - completed
+            - failed
+            - cancelled
           description: Current status of the transfer
         error:
           type: string
@@ -3002,12 +2983,12 @@ components:
           type: string
           nullable: true
           description: Minecraft item ID filter — only items with this name are transferred
-          example: 'minecraft:diamond'
+          example: minecraft:diamond
         itemNbt:
           type: string
           nullable: true
           description: NBT filter — only items matching this NBT hash string are transferred (can be combined with itemName)
-          example: '312db0d27bebe67a3084cbcff45c56cd'
+          example: 312db0d27bebe67a3084cbcff45c56cd
         quantity:
           type: integer
           nullable: true
@@ -3020,7 +3001,6 @@ components:
           type: string
           format: date-time
           description: When the transfer was created
-
     TransferCreateRequest:
       type: object
       required:
@@ -3033,11 +3013,11 @@ components:
         itemName:
           type: string
           description: Only transfer items matching this Minecraft item ID
-          example: 'minecraft:diamond'
+          example: minecraft:diamond
         itemNbt:
           type: string
           description: Only transfer items matching this NBT hash string (can be combined with itemName)
-          example: '312db0d27bebe67a3084cbcff45c56cd'
+          example: 312db0d27bebe67a3084cbcff45c56cd
         quantity:
           type: integer
           description: Maximum number of items to transfer (omit to transfer all matching items)
