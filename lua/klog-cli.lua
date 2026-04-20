@@ -13,8 +13,8 @@ sha256         = loadstring(g(
     "function "), "Z",
   " do "))()
 
-local apiUri = "http://localhost:3000/api/v1/"
-local updateDomain = "http://localhost:3000/"
+local apiUri = "https://api.krawlet.cc/v1/"
+local updateDomain = "https://api.krawlet.cc/"
 
 local function downloadFile(url, filename)
   term.setTextColor(colors.yellow)

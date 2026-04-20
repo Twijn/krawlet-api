@@ -1,4 +1,4 @@
-local wsUri = "ws://localhost:3000/api/v1/ws"
+local wsUri = "wss://api.krawlet.cc/v1/ws"
 
 local enderStorageA = peripheral.wrap("top")
 local enderStorageB = peripheral.wrap("bottom")

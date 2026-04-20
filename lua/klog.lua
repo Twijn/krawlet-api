@@ -23,7 +23,7 @@ return function(estorageName, options)
   options = options or {}
   local inputExcludes = options.inputExcludes or textutils.unserializeJSON(settings.get("klog.inputExcludes") or "{}")
   local estorage = peripheral.wrap(estorageName)
-  local apiUrl = options.apiUrl or "http://localhost:3000/api/v1/"
+  local apiUrl = options.apiUrl or "https://api.krawlet.cc/v1/"
   local apiKey = options.apiKey or settings.get("klog.apiKey")
 
   assert(estorage, "Peripheral not found: " .. estorageName)
