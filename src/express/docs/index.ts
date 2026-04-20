@@ -26,6 +26,7 @@ const workerLuaContent = loadContent('worker.lua');
 const klogLuaContent = loadContent('klog.lua');
 const klogCLILuaContent = loadContent('klog-cli.lua');
 const configureLuaContent = loadContent('configure.lua');
+const kioskLuaContent = loadContent('kiosk.lua');
 
 const sha256 = (content: string) => crypto.createHash('sha256').update(content).digest('hex');
 
@@ -34,6 +35,7 @@ const workerLuaSha256 = sha256(workerLuaContent);
 const klogLuaSha256 = sha256(klogLuaContent);
 const klogCLILuaSha256 = sha256(klogCLILuaContent);
 const configureLuaSha256 = sha256(configureLuaContent);
+const kioskLuaSha256 = sha256(kioskLuaContent);
 
 // Serve the OpenAPI spec as JSON
 router.get('/docs/v1/openapi.json', (req, res) => {
@@ -86,6 +88,15 @@ router.get('/configure.lua', (req, res) => {
   res.send(configureLuaContent);
 });
 
+router.get('/kiosk.lua', (req, res) => {
+  if (!kioskLuaContent) {
+    return res.status(404).send('-- Kiosk Lua library not found');
+  }
+  res.type('text/x-lua');
+  res.set('Content-Disposition', 'inline; filename="kiosk.lua"');
+  res.send(kioskLuaContent);
+});
+
 router.get('/sha256', (req, res) => {
   res.json({
     'krawlet.lua': krawletLuaSha256,
@@ -93,6 +104,7 @@ router.get('/sha256', (req, res) => {
     'klog.lua': klogLuaSha256,
     'klog-cli.lua': klogCLILuaSha256,
     'configure.lua': configureLuaSha256,
+    'kiosk.lua': kioskLuaSha256,
   });
 });
 
@@ -109,6 +121,8 @@ router.get('/sha256/:fileName', (req, res) => {
       return res.send(klogCLILuaSha256);
     case 'configure.lua':
       return res.send(configureLuaSha256);
+    case 'kiosk.lua':
+      return res.send(kioskLuaSha256);
     default:
       return res.status(404).json({ error: 'File not found' });
   }
@@ -248,7 +262,9 @@ router.get('/', (req, res) => {
         <a href="https://github.com/Twijn/krawlet-api" target="_blank">GitHub</a> · 
         <a href="https://api.krawlet.cc/v1" target="_blank">API Root</a> ·
         <a href="/krawlet.lua" target="_blank">Download Lua Library</a> ·
-        <a href="/klog.lua" target="_blank">Download Klog Lua Library</a>
+        <a href="/klog.lua" target="_blank">Download Klog Lua Library</a> ·
+        <a href="/configure.lua" target="_blank">Download Ender Storage Configure Lua Library</a> ·
+        <a href="/kiosk.lua" target="_blank">Download Kiosk Lua Library</a>
       </div>
     </body>
     </html>
