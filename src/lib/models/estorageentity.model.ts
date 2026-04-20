@@ -6,7 +6,7 @@ export const VALID_COLORS = [
   1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768,
 ];
 
-export type EstorageEntityType = 'player' | 'shop' | 'service';
+export type EstorageEntityType = 'player' | 'shop' | 'service' | 'public';
 
 export class EstorageEntity extends Model {
   public id!: string;
@@ -34,7 +34,7 @@ EstorageEntity.init(
       unique: true,
     },
     entityType: {
-      type: DataTypes.ENUM('player', 'shop', 'service'),
+      type: DataTypes.ENUM('player', 'shop', 'service', 'public'),
       allowNull: false,
       field: 'entity_type',
     },

@@ -89,7 +89,7 @@ local function processTransfer(transfer)
     return
   end
 
-  if transfer.fromType == "service" then
+  if transfer.fromType == "public" then
     if not enderStoragePublic or not enderStoragePublic.setFrequency then
       local reason = "Public transfer requested but no ender storage was found on the front side"
       print(reason)

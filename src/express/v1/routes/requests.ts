@@ -114,7 +114,7 @@ router.post(
         if (!publicEntity) {
           publicEntity = await EstorageEntity.create({
             name: publicAlias,
-            entityType: 'service',
+            entityType: 'public',
             colorA: a,
             colorB: b,
             colorC: c,

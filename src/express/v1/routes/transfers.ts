@@ -83,7 +83,7 @@ router.get('/targets', authenticateApiKeyTier('free', 'premium'), async (req, re
       where: {
         active: true,
         entityType: {
-          [Op.ne]: 'service',
+          [Op.notIn]: ['service', 'public'],
         },
       },
       order: [['name', 'ASC']],
