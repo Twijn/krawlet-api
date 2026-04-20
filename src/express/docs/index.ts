@@ -25,6 +25,7 @@ const krawletLuaContent = loadContent('krawlet.lua');
 const workerLuaContent = loadContent('worker.lua');
 const klogLuaContent = loadContent('klog.lua');
 const klogCLILuaContent = loadContent('klog-cli.lua');
+const configureLuaContent = loadContent('configure.lua');
 
 const sha256 = (content: string) => crypto.createHash('sha256').update(content).digest('hex');
 
@@ -32,6 +33,7 @@ const krawletLuaSha256 = sha256(krawletLuaContent);
 const workerLuaSha256 = sha256(workerLuaContent);
 const klogLuaSha256 = sha256(klogLuaContent);
 const klogCLILuaSha256 = sha256(klogCLILuaContent);
+const configureLuaSha256 = sha256(configureLuaContent);
 
 // Serve the OpenAPI spec as JSON
 router.get('/docs/v1/openapi.json', (req, res) => {
@@ -75,12 +77,22 @@ router.get('/klog-cli.lua', (req, res) => {
   res.send(klogCLILuaContent);
 });
 
+router.get('/configure.lua', (req, res) => {
+  if (!configureLuaContent) {
+    return res.status(404).send('-- Configure Lua library not found');
+  }
+  res.type('text/x-lua');
+  res.set('Content-Disposition', 'inline; filename="configure.lua"');
+  res.send(configureLuaContent);
+});
+
 router.get('/sha256', (req, res) => {
   res.json({
     'krawlet.lua': krawletLuaSha256,
     'worker.lua': workerLuaSha256,
     'klog.lua': klogLuaSha256,
     'klog-cli.lua': klogCLILuaSha256,
+    'configure.lua': configureLuaSha256,
   });
 });
 
@@ -95,6 +107,8 @@ router.get('/sha256/:fileName', (req, res) => {
       return res.send(klogLuaSha256);
     case 'klog-cli.lua':
       return res.send(klogCLILuaSha256);
+    case 'configure.lua':
+      return res.send(configureLuaSha256);
     default:
       return res.status(404).json({ error: 'File not found' });
   }
