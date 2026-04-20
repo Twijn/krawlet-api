@@ -136,10 +136,12 @@ local function run()
     if args[1] == "storage" then
       local colors = getEnderStorageColors()
       if colors then
+        print("Ender storage colors: " .. table.concat(colors, ", "))
         local response, errMsg = post("players/" .. pkt.user.uuid .. "/link", { colors = colors })
         if response then
+          print(textutils.serialize(response))
           turtle.drop()
-          chatbox.tell(user, "<blue>Here is your private ender storage!</blue><br><gray>Setup a small modem network with input inventories (chests, barrels, etc), the ender storage, and a computer and run <u><click:copy_to_clipboard:\"wget https://krawlet.cc/klog-cli\">wget https://krawlet.cc/klog-cli</click></u></gray>", BOT_NAME, "minimessage")
+          chatbox.tell(user, "<blue>Here is your private ender storage!</blue><br><gray>Setup a small modem network with input inventories (chests, barrels, etc), the ender storage, and a computer and run <white>wget https://krawlet.cc/klog-cli.lua</white> for a simple Klog request manager.</gray>", BOT_NAME, "minimessage")
         else
           chatbox.tell(user, "<red>" .. errMsg .. "</red>", BOT_NAME, "minimessage")
         end
@@ -151,6 +153,17 @@ local function run()
     end
   end
 end
+
+local function drawMonitors()
+  local topMonitor = peripheral.wrap("top")
+  if topMonitor then
+    local monX, monY = topMonitor.getSize()
+    topMonitor.setCursorPos(2, monY)
+    topMonitor.write(string.format("\\kk%s storage", commandNumber))
+  end
+end
+
+drawMonitors()
 
 while true do
   run()
