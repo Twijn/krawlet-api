@@ -52,6 +52,20 @@ router.post(
         return res.error('NOT_FOUND', 'Player not found', 404);
       }
 
+      const existingLink = await EstorageEntityLink.findOne({
+        where: {
+          linkValue: mcUuid,
+        },
+      });
+
+      if (existingLink) {
+        return res.error(
+          'CONFLICT',
+          'You already have an ender storage linked to your player UUID. Only one link per player is allowed.',
+          409,
+        );
+      }
+
       let entity = await findEntityByLookup(player.minecraftName);
 
       if (!entity) {
