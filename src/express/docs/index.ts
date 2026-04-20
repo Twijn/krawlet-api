@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { apiReference } from '@scalar/express-api-reference';
 import { readFileSync, existsSync } from 'fs';
 import { join } from 'path';
+import crypto from 'crypto';
 import YAML from 'yaml';
 
 const router = Router();
@@ -22,6 +23,15 @@ const openapiSpec = YAML.parse(openapiFile);
 // Load Lua libraries
 const krawletLuaContent = loadContent('krawlet.lua');
 const workerLuaContent = loadContent('worker.lua');
+const klogLuaContent = loadContent('klog.lua');
+const klogCLILuaContent = loadContent('klog-cli.lua');
+
+const sha256 = (content: string) => crypto.createHash('sha256').update(content).digest('hex');
+
+const krawletLuaSha256 = sha256(krawletLuaContent);
+const workerLuaSha256 = sha256(workerLuaContent);
+const klogLuaSha256 = sha256(klogLuaContent);
+const klogCLILuaSha256 = sha256(klogCLILuaContent);
 
 // Serve the OpenAPI spec as JSON
 router.get('/docs/v1/openapi.json', (req, res) => {
@@ -45,6 +55,49 @@ router.get('/worker.lua', (req, res) => {
   res.type('text/x-lua');
   res.set('Content-Disposition', 'inline; filename="worker.lua"');
   res.send(workerLuaContent);
+});
+
+router.get('/klog.lua', (req, res) => {
+  if (!klogLuaContent) {
+    return res.status(404).send('-- Klog Lua library not found');
+  }
+  res.type('text/x-lua');
+  res.set('Content-Disposition', 'inline; filename="klog.lua"');
+  res.send(klogLuaContent);
+});
+
+router.get('/klog-cli.lua', (req, res) => {
+  if (!klogCLILuaContent) {
+    return res.status(404).send('-- Klog CLI Lua library not found');
+  }
+  res.type('text/x-lua');
+  res.set('Content-Disposition', 'inline; filename="klog-cli.lua"');
+  res.send(klogCLILuaContent);
+});
+
+router.get('/sha256', (req, res) => {
+  res.json({
+    'krawlet.lua': krawletLuaSha256,
+    'worker.lua': workerLuaSha256,
+    'klog.lua': klogLuaSha256,
+    'klog-cli.lua': klogCLILuaSha256,
+  });
+});
+
+router.get('/sha256/:fileName', (req, res) => {
+  const { fileName } = req.params;
+  switch (fileName) {
+    case 'krawlet.lua':
+      return res.send(krawletLuaSha256);
+    case 'worker.lua':
+      return res.send(workerLuaSha256);
+    case 'klog.lua':
+      return res.send(klogLuaSha256);
+    case 'klog-cli.lua':
+      return res.send(klogCLILuaSha256);
+    default:
+      return res.status(404).json({ error: 'File not found' });
+  }
 });
 
 // Documentation index page at root
@@ -180,7 +233,8 @@ router.get('/', (req, res) => {
       <div class="footer">
         <a href="https://github.com/Twijn/krawlet-api" target="_blank">GitHub</a> · 
         <a href="https://api.krawlet.cc/v1" target="_blank">API Root</a> ·
-        <a href="/krawlet.lua" target="_blank">Download Lua Library</a>
+        <a href="/krawlet.lua" target="_blank">Download Lua Library</a> ·
+        <a href="/klog.lua" target="_blank">Download Klog Lua Library</a>
       </div>
     </body>
     </html>

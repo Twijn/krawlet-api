@@ -287,8 +287,8 @@ async function viewKey(keyId) {
             quantityLabel +
             ' ' +
             (log.isSender
-              ? 'to ' + escapeHtml(log.toUsername || log.toUUID || 'unknown')
-              : 'from ' + escapeHtml(log.fromUsername || log.fromUUID || 'unknown')) +
+              ? 'to ' + escapeHtml(log.toName || log.toEntityId || 'unknown')
+              : 'from ' + escapeHtml(log.fromName || log.fromEntityId || 'unknown')) +
             '</td>';
 
           let transferStatus = log.transferStatus || 'unknown';

@@ -110,6 +110,34 @@ tags:
       Set your API key with `krawlet.setApiKey('kraw_...')` before making authenticated requests.
       You can generate and redeem a quick code in-game via the `\krawlet api` chat command.
 
+      ### Klog Transfer Helper
+      For transfer-heavy workflows, the optional `klog.lua` helper wraps the transfer endpoints and local inventory staging.
+
+      ```lua
+      local createKlog = require('klog') -- https://krawlet.cc/
+
+      local klog = createKlog('right', {
+        apiKey = settings.get('klog.apiKey'),
+        apiUrl = 'https://api.krawlet.cc/v1/'
+      })
+
+      local transfer, err = klog.transfer({
+        to = 'Player2',
+        itemName = 'minecraft:diamond',
+        quantity = 64
+      })
+
+      if not transfer then
+        printError(err)
+      end
+      ```
+
+      Klog uses these endpoints internally:
+      - `POST /v1/transfers`
+      - `GET /v1/transfers/{transferId}`
+      - `POST /v1/transfers/{transferId}/cancel`
+      - `POST /v1/apikey/quickcode/redeem` (when no API key is configured)
+
   - name: Health
     description: API health checks
   - name: Players
@@ -712,10 +740,16 @@ paths:
         The worker sets the frequency, calls `list()`, and returns the result synchronously.
         Typically completes in under 30ms when a worker is available.
 
+        **Concurrent worker cap:**
+        - A Minecraft user can have at most 3 concurrent worker jobs total across transfer jobs and storage-content queries.
+        - Requests above this limit return `429 TOO_MANY_WORKERS`.
+        - This limit is globally enforced per Minecraft UUID and may vary by API key tier in the future.
+
         **Requires authentication:** This endpoint requires a valid API key with an associated
         Minecraft account that has ender storage color data configured.
 
         **Error conditions:**
+        - `429` — User has reached the maximum concurrent worker jobs
         - `503` — No free worker is available; retry after a moment
         - `503` — Worker timed out (5s) or disconnected mid-query
         - `400` — API key has no associated Minecraft player or the player has no color data
@@ -753,7 +787,7 @@ paths:
                       count: 32
                     - name: 'minecraft:enchanted_book'
                       count: 1
-                      nbt: '{StoredEnchantments:[{id:"minecraft:sharpness",lvl:5}]}'
+                      nbt: '312db0d27bebe67a3084cbcff45c56cd'
                 meta:
                   timestamp: '2026-04-12T10:30:00.000Z'
                   elapsed: 14
@@ -773,6 +807,12 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Player not found for this API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many concurrent worker jobs for this Minecraft user
           content:
             application/json:
               schema:
@@ -1664,28 +1704,24 @@ paths:
                   - type: object
                     properties:
                       data:
-                        type: object
-                        properties:
-                          transfers:
-                            type: array
-                            items:
-                              $ref: '#/components/schemas/Transfer'
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Transfer'
               example:
                 success: true
                 data:
-                  transfers:
-                    - id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
-                      status: completed
-                      error: null
-                      fromUUID: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
-                      fromUsername: Twijn
-                      toUUID: 'a1234567-89ab-cdef-0123-456789abcdef'
-                      toUsername: Player2
-                      itemName: 'minecraft:diamond'
-                      itemNbt: null
-                      quantity: 64
-                      quantityTransferred: 64
-                      timestamp: '2026-04-12T10:30:00.000Z'
+                  - id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+                    status: completed
+                    error: null
+                    fromUUID: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
+                    fromUsername: Twijn
+                    toUUID: 'a1234567-89ab-cdef-0123-456789abcdef'
+                    toUsername: Player2
+                    itemName: 'minecraft:diamond'
+                    itemNbt: null
+                    quantity: 64
+                    quantityTransferred: 64
+                    timestamp: '2026-04-12T10:30:00.000Z'
                 meta:
                   timestamp: '2026-04-12T10:30:00.000Z'
                   elapsed: 12
@@ -1707,15 +1743,43 @@ paths:
     post:
       tags: [Transfers]
       summary: Queue a transfer
+      x-codeSamples:
+        - lang: lua
+          label: Lua (CC:Tweaked) - Klog
+          source: |
+            local createKlog = require('klog') -- https://krawlet.cc/klog.lua
+
+            local klog = createKlog('right', {
+              apiKey = settings.get('klog.apiKey'),
+              apiUrl = 'https://api.krawlet.cc/v1/'
+            })
+
+            local transfer, err = klog.transfer({
+              to = 'Player2',
+              itemName = 'minecraft:diamond',
+              quantity = 64,
+              pollInterval = 0.5
+            })
+
+            if transfer then
+              print('Transfer completed! ID:', transfer.id)
+            else
+              printError('Transfer failed: ' .. err)
+            end
       description: |
         Queue a new ender storage item transfer from the authenticated player to another player.
         The transfer will be executed by the next available worker.
+
+        **Concurrent worker cap:**
+        - A Minecraft user can have at most 3 concurrent worker jobs total across transfer jobs and storage-content queries.
+        - Requests above this limit return `429 TOO_MANY_WORKERS`.
+        - This limit is globally enforced per Minecraft UUID and may vary by API key tier in the future.
 
         **Requires authentication:** This endpoint requires a valid API key with an associated Minecraft account.
 
         **Filters:**
         - `itemName` — only transfer items matching this Minecraft item ID
-        - `itemNbt` — only transfer items matching this NBT hash/string (can be combined with `itemName`)
+        - `itemNbt` — only transfer items matching this NBT hash string (can be combined with `itemName`)
         - `quantity` — stop after moving this many items total
         - `timeout` — seconds to wait for items/space before failing (0.5–30, default 5)
       security:
@@ -1738,11 +1802,11 @@ paths:
                   itemName: 'minecraft:diamond'
                   quantity: 64
               byNbt:
-                summary: Transfer items matching name + NBT
+                summary: Transfer items matching name + NBT hash
                 value:
                   to: Player2
                   itemName: 'minecraft:enchanted_book'
-                  itemNbt: '{StoredEnchantments:[{id:"minecraft:sharpness",lvl:5}]}'
+                  itemNbt: '312db0d27bebe67a3084cbcff45c56cd'
                   quantity: 1
       responses:
         '200':
@@ -1762,29 +1826,22 @@ paths:
                   - type: object
                     properties:
                       data:
-                        type: object
-                        properties:
-                          message:
-                            type: string
-                          transfer:
-                            $ref: '#/components/schemas/Transfer'
+                        $ref: '#/components/schemas/Transfer'
               example:
                 success: true
                 data:
-                  message: Transfer queued successfully
-                  transfer:
-                    id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
-                    status: pending
-                    error: null
-                    fromUUID: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
-                    fromUsername: Twijn
-                    toUUID: 'a1234567-89ab-cdef-0123-456789abcdef'
-                    toUsername: Player2
-                    itemName: 'minecraft:diamond'
-                    itemNbt: null
-                    quantity: 64
-                    quantityTransferred: 0
-                    timestamp: '2026-04-12T10:30:00.000Z'
+                  id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+                  status: pending
+                  error: null
+                  fromUUID: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
+                  fromUsername: Twijn
+                  toUUID: 'a1234567-89ab-cdef-0123-456789abcdef'
+                  toUsername: Player2
+                  itemName: 'minecraft:diamond'
+                  itemNbt: null
+                  quantity: 64
+                  quantityTransferred: 0
+                  timestamp: '2026-04-12T10:30:00.000Z'
                 meta:
                   timestamp: '2026-04-12T10:30:00.000Z'
                   elapsed: 18
@@ -1798,6 +1855,12 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many concurrent worker jobs for this Minecraft user
           content:
             application/json:
               schema:
@@ -1839,10 +1902,7 @@ paths:
                   - type: object
                     properties:
                       data:
-                        type: object
-                        properties:
-                          transfer:
-                            $ref: '#/components/schemas/Transfer'
+                        $ref: '#/components/schemas/Transfer'
         '403':
           description: You do not have permission to access this transfer
           content:
@@ -1866,6 +1926,21 @@ paths:
     post:
       tags: [Transfers]
       summary: Cancel a transfer
+      x-codeSamples:
+        - lang: lua
+          label: Lua (CC:Tweaked) - Klog
+          source: |
+            local createKlog = require('klog') -- https://krawlet.cc/klog.lua
+
+            local klog = createKlog('right', {
+              apiKey = settings.get('klog.apiKey'),
+              apiUrl = 'https://api.krawlet.cc/v1/'
+            })
+
+            local ok, err = klog.cancelTransfer('a1b2c3d4-e5f6-7890-abcd-ef1234567890')
+            if not ok then
+              printError('Cancel failed: ' .. err)
+            end
       description: |
         Request cancellation of a pending or in-progress transfer. Only the sender can cancel.
         If a worker is actively processing the transfer, a cancel signal is sent and the transfer
@@ -1900,29 +1975,22 @@ paths:
                   - type: object
                     properties:
                       data:
-                        type: object
-                        properties:
-                          message:
-                            type: string
-                          transfer:
-                            $ref: '#/components/schemas/Transfer'
+                        $ref: '#/components/schemas/Transfer'
               example:
                 success: true
                 data:
-                  message: Transfer cancelled successfully
-                  transfer:
-                    id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
-                    status: cancelled
-                    error: null
-                    fromUUID: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
-                    fromUsername: Twijn
-                    toUUID: 'a1234567-89ab-cdef-0123-456789abcdef'
-                    toUsername: Player2
-                    itemName: 'minecraft:diamond'
-                    itemNbt: null
-                    quantity: 64
-                    quantityTransferred: 32
-                    timestamp: '2026-04-12T10:30:00.000Z'
+                  id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890'
+                  status: cancelled
+                  error: null
+                  fromUUID: 'd98440d6-5117-4ac8-bd50-70b086101e3e'
+                  fromUsername: Twijn
+                  toUUID: 'a1234567-89ab-cdef-0123-456789abcdef'
+                  toUsername: Player2
+                  itemName: 'minecraft:diamond'
+                  itemNbt: null
+                  quantity: 64
+                  quantityTransferred: 32
+                  timestamp: '2026-04-12T10:30:00.000Z'
                 meta:
                   timestamp: '2026-04-12T10:30:00.000Z'
                   elapsed: 10
@@ -2063,6 +2131,7 @@ components:
                 - UNAUTHORIZED
                 - INVALID_API_KEY
                 - RATE_LIMIT_EXCEEDED
+                - TOO_MANY_WORKERS
                 - NOT_FOUND
                 - INTERNAL_ERROR
                 - BAD_REQUEST
@@ -2186,6 +2255,8 @@ components:
         itemNbt:
           type: string
           nullable: true
+          description: Opaque hash string of the item's NBT data
+          example: '312db0d27bebe67a3084cbcff45c56cd'
         itemDisplayName:
           type: string
           nullable: true
@@ -2436,6 +2507,8 @@ components:
                 type: string
               nbt:
                 type: string
+                description: Opaque hash string of the item's NBT data
+                example: '312db0d27bebe67a3084cbcff45c56cd'
               displayName:
                 type: string
               description:
@@ -2616,8 +2689,8 @@ components:
         nbt:
           type: string
           nullable: true
-          description: NBT data for the item (present only for NBT-bearing items)
-          example: '{StoredEnchantments:[{id:"minecraft:sharpness",lvl:5}]}'
+          description: Opaque hash string of the item's NBT data (present only for NBT-bearing items)
+          example: '312db0d27bebe67a3084cbcff45c56cd'
 
     Transfer:
       type: object
@@ -2661,8 +2734,8 @@ components:
         itemNbt:
           type: string
           nullable: true
-          description: NBT filter — only items matching this NBT string are transferred (can be combined with itemName)
-          example: '{StoredEnchantments:[{id:"minecraft:sharpness",lvl:5}]}'
+          description: NBT filter — only items matching this NBT hash string are transferred (can be combined with itemName)
+          example: '312db0d27bebe67a3084cbcff45c56cd'
         quantity:
           type: integer
           nullable: true
@@ -2691,8 +2764,8 @@ components:
           example: 'minecraft:diamond'
         itemNbt:
           type: string
-          description: Only transfer items matching this NBT string (can be combined with itemName)
-          example: '{StoredEnchantments:[{id:"minecraft:sharpness",lvl:5}]}'
+          description: Only transfer items matching this NBT hash string (can be combined with itemName)
+          example: '312db0d27bebe67a3084cbcff45c56cd'
         quantity:
           type: integer
           description: Maximum number of items to transfer (omit to transfer all matching items)

@@ -1,5 +1,10 @@
 import { initWebSockets } from './server';
-import { initializeTransferQueue, processTransfers, queueTransfer } from './transferQueue';
+import {
+  initializeTransferQueue,
+  processTransfers,
+  queueTransfer,
+  queueTransferByEntities,
+} from './transferQueue';
 import { queryWorkerStorage } from './storageQuery';
 
 void initializeTransferQueue().catch((err) => {
@@ -8,4 +13,4 @@ void initializeTransferQueue().catch((err) => {
 
 setInterval(processTransfers, 1000);
 
-export { initWebSockets, queueTransfer, queryWorkerStorage };
+export { initWebSockets, queueTransfer, queueTransferByEntities, queryWorkerStorage };

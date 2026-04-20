@@ -2,6 +2,7 @@ local wsUri = "ws://localhost:3000/api/v1/ws"
 
 local enderStorageA = peripheral.wrap("top")
 local enderStorageB = peripheral.wrap("bottom")
+local enderStoragePublic = peripheral.wrap("front")
 
 assert(enderStorageA and enderStorageA.setFrequency, "Expected ender storage on top")
 assert(enderStorageB and enderStorageB.setFrequency, "Expected ender storage on bottom")
@@ -70,20 +71,78 @@ end
 
 local function processTransfer(transfer)
   local sourceStorage, destinationStorage = enderStorageA, enderStorageB
-  local destinationStorageName = peripheral.getName(destinationStorage)
   local startedAt = os.epoch("utc")
+
+  if type(transfer.from) ~= "table" or #transfer.from ~= 3 or type(transfer.to) ~= "table" or #transfer.to ~= 3 then
+    local reason = "Invalid transfer frequencies (expected from/to color triplets)"
+    print(reason)
+    send("transfer_failed", {
+      id = transfer.id,
+      totalMoved = 0,
+      reason = reason,
+      requestedQuantity = transfer.quantity,
+      itemName = transfer.itemName,
+      itemNbt = transfer.itemNbt,
+      workerId = workerComputerId,
+      elapsedMs = os.epoch("utc") - startedAt,
+    })
+    return
+  end
+
+  if transfer.fromType == "service" then
+    if not enderStoragePublic or not enderStoragePublic.setFrequency then
+      local reason = "Public transfer requested but no ender storage was found on the front side"
+      print(reason)
+      send("transfer_failed", {
+        id = transfer.id,
+        totalMoved = 0,
+        reason = reason,
+        requestedQuantity = transfer.quantity,
+        itemName = transfer.itemName,
+        itemNbt = transfer.itemNbt,
+        workerId = workerComputerId,
+        elapsedMs = os.epoch("utc") - startedAt,
+      })
+      return
+    end
+
+    if not enderStoragePublic.areComputerChangesEnabled() then
+      local reason = "Front ender storage must have computer changes enabled for public transfers"
+      print(reason)
+      send("transfer_failed", {
+        id = transfer.id,
+        totalMoved = 0,
+        reason = reason,
+        requestedQuantity = transfer.quantity,
+        itemName = transfer.itemName,
+        itemNbt = transfer.itemNbt,
+        workerId = workerComputerId,
+        elapsedMs = os.epoch("utc") - startedAt,
+      })
+      return
+    end
+
+    sourceStorage = enderStoragePublic
+  end
+
+  local destinationStorageName = peripheral.getName(destinationStorage)
+
+  local fromLabel = transfer.fromName or "source"
+  local toLabel = transfer.toName or "destination"
+  print(string.format("Starting transfer %s (%s -> %s)", transfer.id or "unknown", fromLabel, toLabel))
 
   local hasItemNameFilter = transfer.itemName ~= nil
   local hasItemNbtFilter = transfer.itemNbt ~= nil
   local hasQuantityLimit = type(transfer.quantity) == "number" and transfer.quantity > 0
   local targetQuantity = hasQuantityLimit and transfer.quantity or math.huge
 
-  local timeout = transfer.timeout or 5
+  local timeout = tonumber(transfer.timeout)
+  if not timeout or timeout <= 0 then
+    timeout = 5
+  end
 
   sourceStorage.setFrequency(table.unpack(transfer.from))
   destinationStorage.setFrequency(table.unpack(transfer.to))
-
-  local requests = {}
 
   local leftToSchedule = targetQuantity
   local totalMoved = 0
@@ -100,29 +159,27 @@ local function processTransfer(transfer)
     return true
   end
 
-  local function moveItem(sourceInv, destination, slot, count)
-    return function()
-      local moved = sourceInv.pushItems(destination, slot, count)
-      totalMoved = totalMoved + moved
-    end
-  end
-
   local function scheduleMove()
-    leftToSchedule = targetQuantity - totalMoved
-    requests = {}
+    local remainingToSchedule = targetQuantity - totalMoved
 
     local currentItems = sourceStorage.list()
     for slot, item in pairs(currentItems) do
       if matchesItemFilter(item) then
-        local maxMovable = math.min(item.count, leftToSchedule)
-        leftToSchedule = leftToSchedule - maxMovable
-        table.insert(requests, moveItem(sourceStorage, destinationStorageName, slot, maxMovable))
+        if remainingToSchedule <= 0 then
+          break
+        end
+
+        local maxMovable = math.min(item.count, remainingToSchedule)
+        local moved = sourceStorage.pushItems(destinationStorageName, slot, maxMovable)
+        if moved > 0 then
+          totalMoved = totalMoved + moved
+          remainingToSchedule = remainingToSchedule - moved
+        end
       end
     end
 
-    if #requests > 0 then
-      parallel.waitForAll(table.unpack(requests))
-    end
+    -- Remaining quantity must be based on actual moved items, not scheduled attempts.
+    leftToSchedule = targetQuantity - totalMoved
   end
 
   local function countMatchingItems(inv)
@@ -179,14 +236,19 @@ local function processTransfer(transfer)
     return false
   end
 
-  local function waitForSpaceAndItems()
+  local function waitForSpaceAndItems(deadlineMs)
     while true do
       local sourceItemCount = countMatchingItems(sourceStorage)
 
       if sourceItemCount > 0 and destinationHasCapacityForMatchingItems() then
-        return
+        return true
       end
-      sleep(0)
+
+      if os.epoch("utc") >= deadlineMs then
+        return false
+      end
+
+      sleep()
     end
   end
 
@@ -220,11 +282,8 @@ local function processTransfer(transfer)
           elapsedMs = os.epoch("utc") - startedAt,
         })
 
-        local timedOut = false
-        parallel.waitForAny(waitForSpaceAndItems, function()
-          sleep(timeout)
-          timedOut = true
-        end)
+        local deadlineMs = os.epoch("utc") + math.floor(timeout * 1000)
+        local timedOut = not waitForSpaceAndItems(deadlineMs)
 
         if timedOut then
           print("Transfer timed out waiting for more items to move")
@@ -351,6 +410,12 @@ local function connect()
                 id = requestId,
                 payload = { items = items },
               })
+            end
+          elseif data.type == "public_transfer" then
+            local transfer = data.payload
+            if transfer and transfer.id then
+              print("Received public transfer request, processing...")
+              processTransfer(transfer)
             end
           end
         end

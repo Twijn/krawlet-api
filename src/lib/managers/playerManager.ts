@@ -1,4 +1,5 @@
 import { Player, PlayerWithStatus } from '../models';
+import { EstorageEntityLink } from '../models/estoragelink.model';
 import { User } from 'reconnectedchat';
 import { getByUUID } from '../playerAddresses';
 import { rcc } from '../../chat';
@@ -8,9 +9,21 @@ const LAST_SEEN_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 class PlayerManager {
   private players: Player[] = [];
+  private linkedPlayerUUIDs: Set<string> = new Set();
 
   private async updatePlayers() {
-    this.players = await Player.findAll();
+    const [players, links] = await Promise.all([
+      Player.findAll(),
+      EstorageEntityLink.findAll({
+        where: {
+          linkType: 'player_uuid',
+        },
+        attributes: ['linkValue'],
+      }),
+    ]);
+
+    this.players = players;
+    this.linkedPlayerUUIDs = new Set(links.map((link) => link.linkValue));
   }
 
   constructor() {
@@ -78,6 +91,7 @@ class PlayerManager {
   private wrapPlayer(player: Player): PlayerWithStatus {
     return {
       ...player.raw(),
+      isKlogSetup: this.linkedPlayerUUIDs.has(player.minecraftUUID),
       online: Boolean(rcc.players.find((p) => p.uuid === player.minecraftUUID)),
     } as PlayerWithStatus;
   }

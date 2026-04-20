@@ -15,12 +15,13 @@ export interface RawPlayer {
 
   notifications: string;
   lastSeenDate?: string | null;
+  isKlogSetup?: boolean;
 
   createdDate?: string | null;
   updatedDate?: string | null;
 }
 
-export type PlayerWithStatus = Player & {
+export type PlayerWithStatus = RawPlayer & {
   online: boolean;
 };
 
@@ -33,10 +34,6 @@ export class Player
   declare kromerAddress: string;
   declare notifications: CreationOptional<string>;
   declare lastSeenAt: CreationOptional<Date | null>;
-
-  declare estorageColorA?: number;
-  declare estorageColorB?: number;
-  declare estorageColorC?: number;
 
   declare createdAt?: Date;
   declare updatedAt?: Date;
@@ -75,27 +72,6 @@ Player.init(
     },
     lastSeenAt: {
       type: DataTypes.DATE,
-      allowNull: true,
-    },
-    estorageColorA: {
-      type: DataTypes.SMALLINT.UNSIGNED,
-      validate: {
-        isIn: [[1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768]],
-      },
-      allowNull: true,
-    },
-    estorageColorB: {
-      type: DataTypes.SMALLINT.UNSIGNED,
-      validate: {
-        isIn: [[1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768]],
-      },
-      allowNull: true,
-    },
-    estorageColorC: {
-      type: DataTypes.SMALLINT.UNSIGNED,
-      validate: {
-        isIn: [[1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768]],
-      },
       allowNull: true,
     },
   },

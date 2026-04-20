@@ -1,30 +1,17 @@
 import { WebSocket } from 'ws';
-import { Player, RawTransfer, Transfer, TransferStatus } from '../../lib/models';
+import {
+  findEntityById,
+  findEntityByLookup,
+  findEntityByPlayerUuid,
+  RawTransfer,
+  Transfer,
+  TransferStatus,
+} from '../../lib/models';
 import { logPrefix, sendJson } from './protocol';
 import { authState } from './state';
 import { AuthState } from './types';
-
-const resolvePlayerCache = new Map<string, Player>();
-
-async function resolvePlayer(nameOrUUID: string): Promise<Player | null> {
-  if (resolvePlayerCache.has(nameOrUUID)) {
-    return resolvePlayerCache.get(nameOrUUID)!;
-  }
-
-  let player = await Player.findOne({ where: { minecraftUUID: nameOrUUID } });
-  if (player) {
-    resolvePlayerCache.set(nameOrUUID, player);
-    return player;
-  }
-
-  player = await Player.findOne({ where: { minecraftName: nameOrUUID } });
-  if (player) {
-    resolvePlayerCache.set(nameOrUUID, player);
-    return player;
-  }
-
-  return null;
-}
+import { reserveWorkerSlot, trackTransferFinished, trackTransferStarted } from './workerActivity';
+import { ApiKeyTier } from '../../lib/models/apikey.model';
 
 let activeTransfers: RawTransfer[] = [];
 
@@ -38,31 +25,41 @@ export type QueueTransferParams = {
   itemNbt?: string;
   quantity?: number;
   timeout?: number;
+  requesterTier?: ApiKeyTier;
 };
 
-export async function queueTransfer(params: QueueTransferParams): Promise<RawTransfer> {
-  const { from, to, itemName, itemNbt, quantity, timeout } = params;
-  const fromPlayer = await resolvePlayer(from.uuid);
-  const toPlayer = await resolvePlayer(to);
+export type QueueTransferByEntityParams = {
+  fromEntityId: string;
+  toEntityId: string;
+  itemName?: string;
+  itemNbt?: string;
+  quantity?: number;
+  timeout?: number;
+  requesterTier?: ApiKeyTier;
+};
 
-  if (!fromPlayer) {
-    throw new Error(`Player not found: ${from.uuid}`);
+async function queueTransferWithEntities({
+  fromEntityId,
+  toEntityId,
+  itemName,
+  itemNbt,
+  quantity,
+  timeout,
+  requesterTier,
+}: QueueTransferByEntityParams): Promise<RawTransfer> {
+  const fromEntity = await findEntityById(fromEntityId);
+  const toEntity = await findEntityById(toEntityId);
+
+  if (!fromEntity) {
+    throw new Error(`Source entity not found: ${fromEntityId}`);
   }
 
-  if (!fromPlayer.estorageColorA || !fromPlayer.estorageColorB || !fromPlayer.estorageColorC) {
-    throw new Error(`Player is missing estorage color data: ${from.uuid}`);
+  if (!toEntity) {
+    throw new Error(`Destination entity not found: ${toEntityId}`);
   }
 
-  if (!toPlayer) {
-    throw new Error(`Player not found: ${to}`);
-  }
-
-  if (!toPlayer.estorageColorA || !toPlayer.estorageColorB || !toPlayer.estorageColorC) {
-    throw new Error(`Player is missing estorage color data: ${to}`);
-  }
-
-  if (toPlayer.minecraftUUID === from.uuid) {
-    throw new Error('Cannot transfer to the same player');
+  if (toEntity.id === fromEntity.id) {
+    throw new Error('Cannot transfer to the same ender storage entity');
   }
 
   if (timeout) {
@@ -73,32 +70,72 @@ export async function queueTransfer(params: QueueTransferParams): Promise<RawTra
     }
   }
 
-  const transfer = await Transfer.create(
-    {
-      fromUUID: from.uuid,
-      fromUsername: from.name,
-      toUUID: toPlayer.minecraftUUID,
-      toUsername: toPlayer.minecraftName,
-      itemName,
-      itemNbt,
-      quantity,
-      timeout,
-    },
-    {
-      returning: true,
-    },
-  );
+  const releaseReservedWorkerSlot = reserveWorkerSlot(toEntity.id, requesterTier);
 
-  const rawTransfer = transfer.raw();
-  activeTransfers.push(rawTransfer);
+  try {
+    const transfer = await Transfer.create(
+      {
+        fromEntityId: fromEntity.id,
+        fromName: fromEntity.name,
+        toEntityId: toEntity.id,
+        toName: toEntity.name,
+        itemName,
+        itemNbt,
+        quantity,
+        timeout,
+      },
+      {
+        returning: true,
+      },
+    );
 
-  return rawTransfer;
+    const rawTransfer = transfer.raw();
+    activeTransfers.push(rawTransfer);
+    trackTransferStarted(rawTransfer.fromEntityId);
+
+    return rawTransfer;
+  } finally {
+    releaseReservedWorkerSlot();
+  }
+}
+
+export async function queueTransfer(params: QueueTransferParams): Promise<RawTransfer> {
+  const { from, to, itemName, itemNbt, quantity, timeout, requesterTier } = params;
+  const fromEntity = await findEntityByPlayerUuid(from.uuid);
+  const toEntity = await findEntityByLookup(to);
+
+  if (!fromEntity) {
+    throw new Error(`No ender storage entity is linked to your player UUID (${from.uuid})`);
+  }
+
+  if (!toEntity) {
+    throw new Error(
+      `Transfer target not found: ${to}. Use an entity id, entity name, or configured link value.`,
+    );
+  }
+
+  return queueTransferWithEntities({
+    fromEntityId: fromEntity.id,
+    toEntityId: toEntity.id,
+    itemName,
+    itemNbt,
+    quantity,
+    timeout,
+    requesterTier,
+  });
+}
+
+export async function queueTransferByEntities(
+  params: QueueTransferByEntityParams,
+): Promise<RawTransfer> {
+  return queueTransferWithEntities(params);
 }
 
 function ensureActiveTransfer(rawTransfer: RawTransfer): void {
   const existingIndex = activeTransfers.findIndex((transfer) => transfer.id === rawTransfer.id);
   if (existingIndex === -1) {
     activeTransfers.push(rawTransfer);
+    trackTransferStarted(rawTransfer.fromEntityId);
     return;
   }
 
@@ -186,14 +223,14 @@ export async function requeueTransferForRetry(
 
 export async function cancelTransfer(
   transferId: string,
-  requesterUUID: string,
+  requesterEntityId: string,
 ): Promise<RawTransfer | null> {
   const transfer = await Transfer.findOne({ where: { id: transferId } });
   if (!transfer) {
     return null;
   }
 
-  if (transfer.fromUUID !== requesterUUID) {
+  if (transfer.fromEntityId !== requesterEntityId) {
     throw new Error('Unauthorized to cancel this transfer');
   }
 
@@ -265,6 +302,11 @@ export async function updateTransferStatus(
   }
 
   if (status === 'completed' || status === 'failed' || status === 'cancelled') {
+    const removedTransfer = activeTransfers.find((transfer) => transfer.id === transferId);
+    if (removedTransfer) {
+      trackTransferFinished(removedTransfer.fromEntityId);
+    }
+
     activeTransfers = activeTransfers.filter((transfer) => transfer.id !== transferId);
   }
 }
@@ -288,22 +330,33 @@ async function assignTransferToWorker(
     }
   }
 
-  const playerOne = await resolvePlayer(transfer.fromUUID);
-  const playerTwo = await resolvePlayer(transfer.toUUID);
+  const fromEntity = await findEntityById(transfer.fromEntityId);
+  const toEntity = await findEntityById(transfer.toEntityId);
+
+  if (!fromEntity || !toEntity) {
+    throw new Error(
+      `Cannot assign transfer ${transfer.id}; one or more entities are missing or inactive`,
+    );
+  }
 
   console.log(
-    `${logPrefix(state)} assigning transfer=${transfer.id} from=${transfer.fromUUID} to=${transfer.toUUID} workerId=${state.workerId ?? 'unknown'}`,
+    `${logPrefix(state)} assigning transfer=${transfer.id} from=${transfer.fromEntityId} to=${transfer.toEntityId} workerId=${state.workerId ?? 'unknown'}`,
   );
 
   sendJson(ws, {
     type: 'transfer',
     payload: {
       id: transfer.id,
-      from: [playerOne?.estorageColorA, playerOne?.estorageColorB, playerOne?.estorageColorC],
-      to: [playerTwo?.estorageColorA, playerTwo?.estorageColorB, playerTwo?.estorageColorC],
+      from: [fromEntity.colorA, fromEntity.colorB, fromEntity.colorC],
+      to: [toEntity.colorA, toEntity.colorB, toEntity.colorC],
+      fromName: fromEntity.name,
+      toName: toEntity.name,
+      fromType: fromEntity.entityType,
+      toType: toEntity.entityType,
       itemName: transfer.itemName,
       itemNbt: transfer.itemNbt,
       quantity: transfer.quantity,
+      timeout: transfer.timeout,
     },
   });
 
@@ -349,9 +402,13 @@ export async function processTransfers(): Promise<void> {
           continue;
         }
 
-        await assignTransferToWorker(transfer, ws, state);
-        assigned = true;
-        break;
+        try {
+          await assignTransferToWorker(transfer, ws, state);
+          assigned = true;
+          break;
+        } catch (error) {
+          console.error(`Failed to assign transfer ${transfer.id}:`, error);
+        }
       }
 
       if (!assigned) {

@@ -8,13 +8,14 @@ export type RawTransfer = {
   status: TransferStatus;
   error: string | null;
   workerId?: number;
-  fromUUID: string;
-  fromUsername: string;
-  toUUID: string;
-  toUsername: string;
+  fromEntityId: string;
+  fromName: string;
+  toEntityId: string;
+  toName: string;
   itemName?: string;
   itemNbt?: string;
   quantity?: number;
+  timeout?: number;
   quantityTransferred: number;
   timestamp: string;
 };
@@ -24,10 +25,10 @@ export class Transfer extends Model {
   public status!: TransferStatus;
   public error?: string | null;
   public workerId?: number | null;
-  public fromUUID!: string;
-  public fromUsername!: string;
-  public toUUID!: string;
-  public toUsername!: string;
+  public fromEntityId!: string;
+  public fromName!: string;
+  public toEntityId!: string;
+  public toName!: string;
   public itemName?: string;
   public itemNbt?: string;
   public quantity?: number;
@@ -44,13 +45,15 @@ export class Transfer extends Model {
       status: this.status,
       error: this.error,
       workerId: this.workerId ?? undefined,
-      fromUUID: this.fromUUID,
-      fromUsername: this.fromUsername,
-      toUUID: this.toUUID,
-      toUsername: this.toUsername,
+      fromEntityId: this.fromEntityId,
+      fromName: this.fromName,
+      toEntityId: this.toEntityId,
+      toName: this.toName,
       itemName: this.itemName ?? undefined,
       itemNbt: this.itemNbt ?? undefined,
       quantity: this.quantity ?? undefined,
+      timeout:
+        this.timeout !== undefined && this.timeout !== null ? Number(this.timeout) : undefined,
       quantityTransferred: this.quantityTransferred,
       timestamp: this.createdAt.toISOString(),
     } as RawTransfer;
@@ -77,20 +80,20 @@ Transfer.init(
       type: DataTypes.INTEGER,
       allowNull: true,
     },
-    fromUUID: {
+    fromEntityId: {
       type: DataTypes.UUID,
       allowNull: false,
     },
-    fromUsername: {
-      type: DataTypes.STRING,
+    fromName: {
+      type: DataTypes.STRING(64),
       allowNull: false,
     },
-    toUUID: {
+    toEntityId: {
       type: DataTypes.UUID,
       allowNull: false,
     },
-    toUsername: {
-      type: DataTypes.STRING,
+    toName: {
+      type: DataTypes.STRING(64),
       allowNull: false,
     },
     itemName: {

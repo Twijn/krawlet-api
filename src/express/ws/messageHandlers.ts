@@ -12,7 +12,7 @@ import {
   TransferUpdateMessage,
 } from './types';
 import { updateTransferStatus } from './transferQueue';
-import { pendingStorageQueries } from './storageQuery';
+import { clearPendingStorageQuery, pendingStorageQueries } from './storageQuery';
 
 function getSocketAuthState(ws: WebSocket, messageId?: string | number): AuthState | null {
   const state = authState.get(ws);
@@ -324,8 +324,7 @@ const messageHandlers: Record<string, MessageHandler> = {
       return;
     }
 
-    clearTimeout(pending.timeoutHandle);
-    pendingStorageQueries.delete(requestId);
+    clearPendingStorageQuery(requestId);
 
     const items = (parsed.payload?.items ?? []) as { name: string; count: number; nbt?: string }[];
     console.log(

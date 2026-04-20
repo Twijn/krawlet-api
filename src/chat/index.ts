@@ -39,20 +39,20 @@ export function getChatStatus(): ChatStatus {
 }
 
 export function completeTransfer(transfer: RawTransfer, error: string | null = null) {
-  const from = rcc.players?.find((p) => p.uuid === transfer.fromUUID);
-  const to = rcc.players?.find((p) => p.uuid === transfer.toUUID);
+  const from = rcc.players?.find((p) => p.name === transfer.fromName);
+  const to = rcc.players?.find((p) => p.name === transfer.toName);
 
   let quantityDisplay = transfer.quantityTransferred.toLocaleString();
   if (transfer.quantity && transfer.quantityTransferred !== transfer.quantity) {
     quantityDisplay += `/${transfer.quantity.toLocaleString()}`;
   }
 
-  let fromMessage = `<gold>Your transfer to ${transfer.toUsername} has been completed</gold>`;
-  let toMessage = `<gold>You have received a transfer from ${transfer.fromUsername}</gold>`;
+  let fromMessage = `<gold>Your transfer to ${transfer.toName} has been completed</gold>`;
+  let toMessage = `<gold>You have received a transfer from ${transfer.fromName}</gold>`;
 
   if (transfer.status === 'failed' || error) {
-    fromMessage = `<red>Your transfer to ${transfer.toUsername} has failed</red>`;
-    toMessage = `<red>A transfer from ${transfer.fromUsername} has failed</red>`;
+    fromMessage = `<red>Your transfer to ${transfer.toName} has failed</red>`;
+    toMessage = `<red>A transfer from ${transfer.fromName} has failed</red>`;
   }
 
   if (transfer.itemName) {

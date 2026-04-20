@@ -4,6 +4,8 @@ import { Turtle } from './turtle.model';
 import { TurtleStat } from './turtlestat.model';
 import { ApiKey } from './apikey.model';
 import { RequestLog } from './requestlog.model';
+import { EstorageEntity } from './estorageentity.model';
+import { EstorageEntityLink } from './estoragelink.model';
 
 // Initialize model relationships
 Shop.hasMany(Listing, {
@@ -35,6 +37,16 @@ ApiKey.hasMany(RequestLog, {
   as: 'requestLogs',
 });
 
+// Ender storage entity associations
+EstorageEntity.hasMany(EstorageEntityLink, {
+  foreignKey: 'entityId',
+  as: 'links',
+});
+EstorageEntityLink.belongsTo(EstorageEntity, {
+  foreignKey: 'entityId',
+  as: 'entity',
+});
+
 export * from './database';
 export * from './player.model';
 export * from './listing.model';
@@ -47,3 +59,5 @@ export * from './apikey.model';
 export * from './requestlog.model';
 export * from './blockedip.model';
 export * from './transfer.model';
+export * from './estorageentity.model';
+export * from './estoragelink.model';

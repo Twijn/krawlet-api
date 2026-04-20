@@ -3,6 +3,7 @@ import { ApiKey } from '../../lib/models/apikey.model';
 import { RequestLog } from '../../lib/models/requestlog.model';
 import { BlockedIp } from '../../lib/models/blockedip.model';
 import { Transfer } from '../../lib/models/transfer.model';
+import { findEntityByPlayerUuid } from '../../lib/models/estorageentity.model';
 import { Op } from 'sequelize';
 import { sequelize } from '../../lib/models/database';
 import { removeFromCache, getAbuseStats, ABUSE_CONFIG } from '../../lib/abuseManager';
@@ -348,10 +349,12 @@ router.get('/api/keys/:id/logs', adminAuth, async (req, res) => {
       ],
     });
 
-    const transferPromise = key.mcUuid
+    const keyEntity = key.mcUuid ? await findEntityByPlayerUuid(key.mcUuid) : null;
+
+    const transferPromise = keyEntity
       ? Transfer.findAll({
           where: {
-            [Op.or]: [{ fromUUID: key.mcUuid }, { toUUID: key.mcUuid }],
+            [Op.or]: [{ fromEntityId: keyEntity.id }, { toEntityId: keyEntity.id }],
           },
           order: [['updatedAt', 'DESC']],
           limit,
@@ -360,10 +363,10 @@ router.get('/api/keys/:id/logs', adminAuth, async (req, res) => {
             'status',
             'error',
             'workerId',
-            'fromUUID',
-            'fromUsername',
-            'toUUID',
-            'toUsername',
+            'fromEntityId',
+            'fromName',
+            'toEntityId',
+            'toName',
             'itemName',
             'itemNbt',
             'quantity',
@@ -394,16 +397,16 @@ router.get('/api/keys/:id/logs', adminAuth, async (req, res) => {
       transferStatus: transfer.status,
       transferError: transfer.error,
       workerId: transfer.workerId,
-      fromUUID: transfer.fromUUID,
-      fromUsername: transfer.fromUsername,
-      toUUID: transfer.toUUID,
-      toUsername: transfer.toUsername,
+      fromEntityId: transfer.fromEntityId,
+      fromName: transfer.fromName,
+      toEntityId: transfer.toEntityId,
+      toName: transfer.toName,
       itemName: transfer.itemName,
       itemNbt: transfer.itemNbt,
       quantity: transfer.quantity,
       quantityTransferred: transfer.quantityTransferred,
-      isSender: key.mcUuid ? transfer.fromUUID === key.mcUuid : false,
-      isRecipient: key.mcUuid ? transfer.toUUID === key.mcUuid : false,
+      isSender: keyEntity ? transfer.fromEntityId === keyEntity.id : false,
+      isRecipient: keyEntity ? transfer.toEntityId === keyEntity.id : false,
     }));
 
     const merged = [...requestActivity, ...transferActivity]

@@ -15,6 +15,7 @@ import reportsRouter from './routes/reports';
 import healthRouter from './routes/health';
 import apikeyRouter from './routes/apikey';
 import transfersRouter from './routes/transfers';
+import requestsRouter from './routes/requests';
 
 const router = Router();
 
@@ -38,6 +39,7 @@ router.use('/reports', reportsRouter);
 router.use('/health', healthRouter);
 router.use('/apikey', apikeyRouter);
 router.use('/transfers', transfersRouter);
+router.use('/requests', requestsRouter);
 
 // V1 root endpoint
 router.get('/', (req, res) => {
@@ -55,6 +57,8 @@ router.get('/', (req, res) => {
       '/v1/ws',
       '/v1/apikey/quickcode/generate',
       '/v1/apikey/quickcode/redeem',
+      '/v1/transfers',
+      '/v1/requests/public-storage',
     ],
     documentation: 'https://krawlet.cc/docs/v1',
     github: 'https://github.com/Twijn/krawlet-api',
