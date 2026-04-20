@@ -1,5 +1,6 @@
 import { ApiKey } from '../../lib/models/apikey.model';
 import { RawTransfer } from '../../lib/models';
+import { completeTransfer } from '../../chat';
 import { RawData, WebSocket } from 'ws';
 import { parseClientMessage, sendError, sendJson, logPrefix } from './protocol';
 import { authState } from './state';
@@ -231,6 +232,14 @@ const messageHandlers: Record<string, MessageHandler> = {
 
     if (state.currentTaskCancelRequested) {
       await updateTransferStatus(transfer.id, 'cancelled', moved);
+      completeTransfer(
+        {
+          ...transfer,
+          status: 'cancelled',
+          quantityTransferred: moved,
+        },
+        'Transfer was cancelled',
+      );
 
       console.warn(
         `${logPrefix(state)} transfer completion received after cancel request transferId=${transfer.id} moved=${moved}; finalized as cancelled`,
@@ -252,6 +261,11 @@ const messageHandlers: Record<string, MessageHandler> = {
     }
 
     await updateTransferStatus(transfer.id, 'completed', moved);
+    completeTransfer({
+      ...transfer,
+      status: 'completed',
+      quantityTransferred: moved,
+    });
 
     console.log(
       `${logPrefix(state)} transfer complete transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} nbt=${parsed.itemNbt ?? 'any'} elapsedMs=${parsed.elapsedMs ?? 'n/a'}`,
@@ -296,6 +310,14 @@ const messageHandlers: Record<string, MessageHandler> = {
     }
 
     await updateTransferStatus(transfer.id, 'cancelled', moved);
+    completeTransfer(
+      {
+        ...transfer,
+        status: 'cancelled',
+        quantityTransferred: moved,
+      },
+      'Transfer was cancelled',
+    );
 
     console.log(
       `${logPrefix(state)} transfer cancelled transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} nbt=${parsed.itemNbt ?? 'any'} elapsedMs=${parsed.elapsedMs ?? 'n/a'}`,
@@ -360,6 +382,14 @@ const messageHandlers: Record<string, MessageHandler> = {
       }
 
       await updateTransferStatus(transfer.id, 'cancelled', movedAfterCancel);
+      completeTransfer(
+        {
+          ...transfer,
+          status: 'cancelled',
+          quantityTransferred: movedAfterCancel,
+        },
+        'Transfer was cancelled',
+      );
 
       console.warn(
         `${logPrefix(state)} transfer failed after cancel request transferId=${transfer.id}; finalized as cancelled`,
@@ -399,6 +429,14 @@ const messageHandlers: Record<string, MessageHandler> = {
       transfer.id,
       'failed',
       moved,
+      parsed.reason || 'Transfer failed with unknown error',
+    );
+    completeTransfer(
+      {
+        ...transfer,
+        status: 'failed',
+        quantityTransferred: moved,
+      },
       parsed.reason || 'Transfer failed with unknown error',
     );
 

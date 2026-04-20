@@ -39,8 +39,13 @@ export function getChatStatus(): ChatStatus {
 }
 
 export function completeTransfer(transfer: RawTransfer, error: string | null = null) {
-  const from = rcc.players?.find((p) => p.name === transfer.fromName);
-  const to = rcc.players?.find((p) => p.name === transfer.toName);
+  const fromPlayer = playerManager.getPlayerFromName(transfer.fromName);
+  const toPlayer = playerManager.getPlayerFromName(transfer.toName);
+
+  const from = fromPlayer
+    ? rcc.players?.find((p) => p.uuid === fromPlayer.minecraftUUID)
+    : undefined;
+  const to = toPlayer ? rcc.players?.find((p) => p.uuid === toPlayer.minecraftUUID) : undefined;
 
   let quantityDisplay = transfer.quantityTransferred.toLocaleString();
   if (transfer.quantity && transfer.quantityTransferred !== transfer.quantity) {
@@ -50,7 +55,10 @@ export function completeTransfer(transfer: RawTransfer, error: string | null = n
   let fromMessage = `<gold>Your transfer to ${transfer.toName} has been completed</gold>`;
   let toMessage = `<gold>You have received a transfer from ${transfer.fromName}</gold>`;
 
-  if (transfer.status === 'failed' || error) {
+  if (transfer.status === 'cancelled') {
+    fromMessage = `<yellow>Your transfer to ${transfer.toName} was cancelled</yellow>`;
+    toMessage = `<yellow>A transfer from ${transfer.fromName} was cancelled</yellow>`;
+  } else if (transfer.status === 'failed' || error) {
     fromMessage = `<red>Your transfer to ${transfer.toName} has failed</red>`;
     toMessage = `<red>A transfer from ${transfer.fromName} has failed</red>`;
   }
@@ -67,11 +75,21 @@ export function completeTransfer(transfer: RawTransfer, error: string | null = n
     toMessage += `<yellow>: ${quantityDisplay} items</yellow>`;
   }
 
-  if (from) {
-    rcc.tell(from.uuid, fromMessage);
+  if (transfer.memo) {
+    fromMessage += `<gray> (Memo: ${transfer.memo})</gray>`;
+    toMessage += `<gray> (Memo: ${transfer.memo})</gray>`;
   }
-  if (to) {
-    rcc.tell(to.uuid, toMessage);
+
+  if (error) {
+    fromMessage += `<gray> (${error})</gray>`;
+    toMessage += `<gray> (${error})</gray>`;
+  }
+
+  if (from && fromPlayer?.transferNotificationsEnabled) {
+    rcc.tell(from.uuid, fromMessage).catch(console.error);
+  }
+  if (to && toPlayer?.transferNotificationsEnabled) {
+    rcc.tell(to.uuid, toMessage).catch(console.error);
   }
 }
 

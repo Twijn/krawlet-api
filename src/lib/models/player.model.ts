@@ -14,6 +14,7 @@ export interface RawPlayer {
   kromerAddress: string;
 
   notifications: string;
+  transferNotificationsEnabled: boolean;
   lastSeenDate?: string | null;
   isKlogSetup?: boolean;
 
@@ -33,6 +34,7 @@ export class Player
   declare minecraftName: string;
   declare kromerAddress: string;
   declare notifications: CreationOptional<string>;
+  declare transferNotificationsEnabled: CreationOptional<boolean>;
   declare lastSeenAt: CreationOptional<Date | null>;
 
   declare createdAt?: Date;
@@ -44,6 +46,7 @@ export class Player
       minecraftName: this.minecraftName,
       kromerAddress: this.kromerAddress,
       notifications: this.notifications,
+      transferNotificationsEnabled: this.transferNotificationsEnabled,
       lastSeenDate: this.lastSeenAt ? this.lastSeenAt.toISOString() : null,
       createdDate: this.createdAt ? this.createdAt.toISOString() : null,
       updatedDate: this.updatedAt ? this.updatedAt.toISOString() : null,
@@ -69,6 +72,11 @@ Player.init(
       type: DataTypes.STRING(1000),
       allowNull: false,
       defaultValue: 'none',
+    },
+    transferNotificationsEnabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
     lastSeenAt: {
       type: DataTypes.DATE,

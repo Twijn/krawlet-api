@@ -2418,6 +2418,10 @@ components:
             - all
           description: Notification preference
           example: none
+        transferNotificationsEnabled:
+          type: boolean
+          description: Whether in-game transfer confirmation messages are enabled for this player
+          example: false
         lastSeenDate:
           type: string
           format: date-time

@@ -134,11 +134,31 @@ async function handleApiKeyRegeneration(cmd: ChatboxCommand, confirmed: boolean)
 
 const command: Command = {
   name: 'krawlet',
-  aliases: ['kromer', 'kro'],
+  aliases: ['kromer', 'kro', 'klog'],
   description: 'Shows this menu!',
-  usage: 'krawlet [notif [all/self/none] | api [regen [confirm]]]',
+  usage: 'krawlet [notif [all/self/none] | api [regen [confirm]] | optIn | optOut]',
   execute: async (cmd: ChatboxCommand) => {
     if (cmd.args.length > 0) {
+      if (['optin', 'optout'].includes(cmd.args[0].toLowerCase())) {
+        const player = await playerManager.getPlayerFromUser(cmd.user);
+
+        if (!player) {
+          rcc.tell(cmd.user, `<red>We couldn't retrieve your player!</red>`).catch(console.error);
+          return;
+        }
+
+        const enable = cmd.args[0].toLowerCase() === 'optin';
+        player.transferNotificationsEnabled = enable;
+        await player.save();
+
+        const response = enable
+          ? '<gray>Transfer confirmations enabled.</gray>'
+          : '<gray>Transfer confirmations disabled.</gray>';
+
+        rcc.tell(cmd.user, response).catch(console.error);
+        return;
+      }
+
       // Handle API key generation/regeneration subcommand
       if (['api', 'apikey', 'key'].includes(cmd.args[0].toLowerCase())) {
         // Check for regeneration subcommand
