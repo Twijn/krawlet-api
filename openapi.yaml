@@ -183,6 +183,43 @@ x-tagGroups:
       - Transfers
 
 paths:
+  /v1/:
+    get:
+      tags: [Health]
+      summary: Get API version info
+      description: Retrieve API version metadata, common endpoint list, and documentation links.
+      responses:
+        '200':
+          description: API version info
+
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          version:
+                            type: string
+                          endpoints:
+                            type: array
+                            items:
+                              type: string
+                          documentation:
+                            type: string
+                          github:
+                            type: string
+
   /v1/health:
     get:
       tags: [Health]
@@ -232,6 +269,33 @@ paths:
                     limit: 1000
                     remaining: 999
                     reset: 1736686200
+
+  /v1/health/detailed:
+    get:
+      tags: [Health]
+      summary: Detailed health check
+      description: Retrieve detailed service and runtime health diagnostics.
+      responses:
+        '200':
+          description: Detailed health data (healthy)
+
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '503':
+          description: Detailed health data (degraded)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
 
   /v1/players:
     get:
@@ -514,7 +578,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-  /shops/{id}/items:
+  /v1/shops/{id}/items:
     get:
       tags: [Shops]
       summary: Get shop items
@@ -819,6 +883,66 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '503':
           description: No worker available or worker timed out / disconnected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/transfers/targets:
+    get:
+      tags: [Transfers]
+      summary: List transfer targets
+      description: |
+        Retrieve active transfer targets (excluding service/public entities) with linked lookup values.
+
+        **Requires authentication:** This endpoint requires a valid API key.
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: List of transfer targets
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            type:
+                              type: string
+                            links:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  type:
+                                    type: string
+                                  value:
+                                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to fetch transfer targets
           content:
             application/json:
               schema:
@@ -1248,6 +1372,46 @@ paths:
                             type: array
                             items:
                               $ref: '#/components/schemas/PriceChangeLog'
+
+  /v1/reports/{id}:
+    get:
+      tags: [Reports]
+      summary: Get report record by ID
+      description: Retrieve a specific report record by identifier.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Report record ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report record found
+
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Report record not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to fetch report record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
   /v1/apikey:
     get:
@@ -1861,6 +2025,114 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '429':
           description: Too many concurrent worker jobs for this Minecraft user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /v1/requests/public-storage:
+    post:
+      tags: [Transfers]
+      summary: Request transfer from public storage
+      description: |
+        Queue a transfer from a public/service ender storage frequency to the authenticated player's linked storage.
+
+        Provide either:
+        - `source`: existing entity id/name/link lookup value
+        - `colors`: an EnderStorage frequency triplet `[a,b,c]` to resolve/create a public frequency entity
+
+        **Requires authentication:** This endpoint requires a valid API key with associated Minecraft player data.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - itemName
+                - quantity
+              properties:
+                itemName:
+                  type: string
+                  description: Minecraft item ID to transfer
+                itemNbt:
+                  type: string
+                  description: Optional exact NBT hash filter
+                quantity:
+                  type: number
+                  minimum: 1
+                  maximum: 1024
+                timeout:
+                  type: number
+                  minimum: 0.1
+                  maximum: 30
+                source:
+                  type: string
+                  description: Existing source entity id/name/link lookup value
+                colors:
+                  type: array
+                  description: EnderStorage color triplet [a,b,c]
+                  minItems: 3
+                  maxItems: 3
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 15
+      responses:
+        '200':
+          description: Public storage transfer queued successfully
+          headers:
+            X-RateLimit-Limit:
+              $ref: '#/components/headers/X-RateLimit-Limit'
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/X-RateLimit-Remaining'
+            X-RateLimit-Reset:
+              $ref: '#/components/headers/X-RateLimit-Reset'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          transfer:
+                            $ref: '#/components/schemas/Transfer'
+                          sourceEntity:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              name:
+                                type: string
+                              type:
+                                type: string
+                              alias:
+                                type: string
+        '400':
+          description: Invalid payload or API key player is not linked to an entity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many concurrent worker jobs for this Minecraft user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Failed to create public transfer request
           content:
             application/json:
               schema:
