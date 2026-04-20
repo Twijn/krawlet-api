@@ -40,18 +40,41 @@ local color1 = args[1] and colors[args[1]:lower()] or nil
 local color2 = args[2] and colors[args[2]:lower()] or nil
 local color3 = args[3] and colors[args[3]:lower()] or nil
 
+if args[1]:lower() == "emerald" then
+  while true do
+    selectItem(enderStorage)
+    turtle.placeDown()
+    sleep(0.25)
+    peripheral.call("bottom", "setFrequency", colors.white, colors.white, colors.white)
+
+    repeat
+      sleep(0.25)
+    until peripheral.call("bottom", "getOwner") and peripheral.call("bottom", "areComputerChangesEnabled")
+
+    turtle.select(16)
+    turtle.digDown()
+    if turtle.detectUp() then
+      turtle.dropUp()
+    else
+      turtle.drop()
+    end
+  end
+  return
+end
+
 if not color1 or not color2 then
-  printError("You must provide at least 2 colors as arguments. Valid colors are: white, orange, magenta, lightBlue, yellow, lime, pink, gray, lightGray, cyan, purple, blue, brown, green, red, black")
+  printError("You must provide at least 2 colors as arguments, or 'emerald' to create private changeable frequencies. Valid colors are: white, orange, magenta, lightBlue, yellow, lime, pink, gray, lightGray, cyan, purple, blue, brown, green, red, black")
   return
 end
 
 local function configureColor(color3)
   selectItem(enderStorage)
   turtle.placeDown()
+  sleep(0.25)
   peripheral.call("bottom", "setFrequency", color1, color2, color3)
   repeat
     sleep(0.25)
-  until peripheral.call("bottom", "getOwner") and peripheral.call("bottom", "areComputerChangesEnabled")
+  until peripheral.call("bottom", "getOwner")
   turtle.select(16)
   turtle.digDown()
   if turtle.detectUp() then
