@@ -1,6 +1,6 @@
 import { DataTypes, Model } from 'sequelize';
 import { sequelize } from './database';
-import { EstorageEntityLink } from './';
+import { EstorageEntityLink } from './estoragelink.model';
 
 export const VALID_COLORS = [
   1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768,
