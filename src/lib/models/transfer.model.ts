@@ -14,6 +14,7 @@ export type RawTransfer = {
   toName: string;
   itemName?: string;
   itemNbt?: string;
+  memo?: string;
   quantity?: number;
   timeout?: number;
   quantityTransferred: number;
@@ -31,6 +32,7 @@ export class Transfer extends Model {
   public toName!: string;
   public itemName?: string;
   public itemNbt?: string;
+  public memo?: string;
   public quantity?: number;
   public quantityTransferred!: number;
   public timeout?: number;
@@ -51,6 +53,7 @@ export class Transfer extends Model {
       toName: this.toName,
       itemName: this.itemName ?? undefined,
       itemNbt: this.itemNbt ?? undefined,
+      memo: this.memo ?? undefined,
       quantity: this.quantity ?? undefined,
       timeout:
         this.timeout !== undefined && this.timeout !== null ? Number(this.timeout) : undefined,
@@ -101,6 +104,10 @@ Transfer.init(
       allowNull: true,
     },
     itemNbt: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    memo: {
       type: DataTypes.STRING,
       allowNull: true,
     },

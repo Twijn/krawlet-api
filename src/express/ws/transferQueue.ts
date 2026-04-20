@@ -23,6 +23,7 @@ export type QueueTransferParams = {
   to: string;
   itemName?: string;
   itemNbt?: string;
+  memo?: string;
   quantity?: number;
   timeout?: number;
   requesterTier?: ApiKeyTier;
@@ -33,6 +34,7 @@ export type QueueTransferByEntityParams = {
   toEntityId: string;
   itemName?: string;
   itemNbt?: string;
+  memo?: string;
   quantity?: number;
   timeout?: number;
   requesterTier?: ApiKeyTier;
@@ -43,6 +45,7 @@ async function queueTransferWithEntities({
   toEntityId,
   itemName,
   itemNbt,
+  memo,
   quantity,
   timeout,
   requesterTier,
@@ -81,6 +84,7 @@ async function queueTransferWithEntities({
         toName: toEntity.name,
         itemName,
         itemNbt,
+        memo,
         quantity,
         timeout,
       },
@@ -100,7 +104,7 @@ async function queueTransferWithEntities({
 }
 
 export async function queueTransfer(params: QueueTransferParams): Promise<RawTransfer> {
-  const { from, to, itemName, itemNbt, quantity, timeout, requesterTier } = params;
+  const { from, to, itemName, itemNbt, memo, quantity, timeout, requesterTier } = params;
   const fromEntity = await findEntityByPlayerUuid(from.uuid);
   const toEntity = await findEntityByLookup(to);
 
@@ -119,6 +123,7 @@ export async function queueTransfer(params: QueueTransferParams): Promise<RawTra
     toEntityId: toEntity.id,
     itemName,
     itemNbt,
+    memo,
     quantity,
     timeout,
     requesterTier,
@@ -355,6 +360,7 @@ async function assignTransferToWorker(
       toType: toEntity.entityType,
       itemName: transfer.itemName,
       itemNbt: transfer.itemNbt,
+      memo: transfer.memo,
       quantity: transfer.quantity,
       timeout: transfer.timeout,
     },

@@ -112,6 +112,7 @@ router.post(
         toEntityId: requesterEntity.id,
         itemName,
         itemNbt,
+        memo: undefined,
         quantity,
         timeout,
         requesterTier: request.apiKey.tier,
