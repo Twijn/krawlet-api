@@ -91,6 +91,7 @@ router.get('/', async (req: Request, res: Response) => {
       requestCount: number;
       lastUsedAt: Date | null;
       createdAt: Date;
+      estorageEntityId: string | null;
       usage?: UsageStats;
     } = {
       id: request.apiKey.id,
@@ -102,6 +103,7 @@ router.get('/', async (req: Request, res: Response) => {
       requestCount: request.apiKey.requestCount,
       lastUsedAt: request.apiKey.lastUsedAt,
       createdAt: request.apiKey.createdAt,
+      estorageEntityId: request.apiKey.estorageEntityId,
     };
 
     if (includeUsage) {

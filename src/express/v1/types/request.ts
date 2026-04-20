@@ -13,6 +13,7 @@ export interface RequestApiKey {
   createdAt: Date;
   mcUuid: string | null;
   mcName: string | null;
+  estorageEntityId: string | null;
 }
 
 export interface RequestWithRateLimit extends RequestWithId {

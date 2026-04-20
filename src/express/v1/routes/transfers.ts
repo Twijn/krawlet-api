@@ -2,11 +2,13 @@ import { Router, json } from 'express';
 import authenticateApiKeyTier from '../../../lib/authenticateApiKeyTier';
 import { isTransferPayload } from '../../../lib/types';
 import { RequestWithRateLimit } from '../types/request';
-import { queueTransfer, queryWorkerStorage } from '../../ws';
+import { queueTransferByEntities, queryWorkerStorage } from '../../ws';
 import { cancelTransfer } from '../../ws/transferQueue';
 import {
   EstorageEntity,
   EstorageEntityLink,
+  findEntityById,
+  findEntityByLookup,
   findEntityByPlayerUuid,
   RawTransfer,
   Transfer,
@@ -21,6 +23,32 @@ export type RequestWithTransfer = RequestWithRateLimit & {
   requesterEntityId: string;
 };
 
+async function resolveRequesterEntity(request: RequestWithRateLimit) {
+  if (!request.apiKey) {
+    return { entity: null, error: 'API key required to access this endpoint' };
+  }
+
+  if (request.apiKey.estorageEntityId) {
+    const linkedEntity = await findEntityById(request.apiKey.estorageEntityId);
+    if (linkedEntity) {
+      return { entity: linkedEntity, error: null };
+    }
+  }
+
+  if (request.apiKey.mcUuid) {
+    const playerEntity = await findEntityByPlayerUuid(request.apiKey.mcUuid);
+    if (playerEntity) {
+      return { entity: playerEntity, error: null };
+    }
+  }
+
+  return {
+    entity: null,
+    error:
+      'API key is not linked to an ender storage entity. Ask an admin to provision this key with an entity link or attach mcUuid to a linked player entity.',
+  };
+}
+
 router.get('/', authenticateApiKeyTier('free', 'premium'), async (req, res) => {
   const request = req as RequestWithRateLimit;
 
@@ -28,17 +56,10 @@ router.get('/', authenticateApiKeyTier('free', 'premium'), async (req, res) => {
     return res.error('UNAUTHORIZED', 'API key required to access this endpoint', 401);
   }
 
-  if (!request.apiKey.mcUuid || !request.apiKey.mcName) {
-    return res.error('BAD_REQUEST', 'API key is missing associated Minecraft player data', 400);
-  }
-
-  const requesterEntity = await findEntityByPlayerUuid(request.apiKey.mcUuid);
+  const resolved = await resolveRequesterEntity(request);
+  const requesterEntity = resolved.entity;
   if (!requesterEntity) {
-    return res.error(
-      'BAD_REQUEST',
-      'No ender storage entity is linked to this API key player UUID',
-      400,
-    );
+    return res.error('BAD_REQUEST', resolved.error ?? 'Unable to resolve requester entity', 400);
   }
 
   try {
@@ -100,17 +121,28 @@ router.post('/', authenticateApiKeyTier('free', 'premium'), json(), async (req, 
       return res.error('UNAUTHORIZED', 'API key required to access this endpoint', 401);
     }
 
-    if (!request.apiKey.mcUuid || !request.apiKey.mcName) {
-      return res.error('BAD_REQUEST', 'API key is missing associated Minecraft player data', 400);
-    }
-
     if (!isTransferPayload(req.body)) {
       return res.error('BAD_REQUEST', 'Invalid transfer payload', 400);
     }
 
-    const transfer = await queueTransfer({
-      from: { uuid: request.apiKey.mcUuid, name: request.apiKey.mcName },
-      to: request.body.to,
+    const resolved = await resolveRequesterEntity(request);
+    const requesterEntity = resolved.entity;
+    if (!requesterEntity) {
+      return res.error('BAD_REQUEST', resolved.error ?? 'Unable to resolve requester entity', 400);
+    }
+
+    const toEntity = await findEntityByLookup(request.body.to);
+    if (!toEntity) {
+      return res.error(
+        'BAD_REQUEST',
+        `Transfer target not found: ${request.body.to}. Use an entity id, entity name, or configured link value.`,
+        400,
+      );
+    }
+
+    const transfer = await queueTransferByEntities({
+      fromEntityId: requesterEntity.id,
+      toEntityId: toEntity.id,
       itemName: request.body.itemName,
       itemNbt: request.body.itemNbt,
       memo: request.body.memo,
@@ -140,14 +172,11 @@ router.get('/contents', authenticateApiKeyTier('free', 'premium'), async (req, r
     return res.error('UNAUTHORIZED', 'API key required to access this endpoint', 401);
   }
 
-  if (!request.apiKey.mcUuid) {
-    return res.error('BAD_REQUEST', 'API key is missing associated Minecraft player data', 400);
-  }
-
-  const requesterEntity = await findEntityByPlayerUuid(request.apiKey.mcUuid);
+  const resolved = await resolveRequesterEntity(request);
+  const requesterEntity = resolved.entity;
 
   if (!requesterEntity) {
-    return res.error('NOT_FOUND', 'No ender storage entity found for this API key player', 404);
+    return res.error('BAD_REQUEST', resolved.error ?? 'Unable to resolve requester entity', 400);
   }
 
   try {
@@ -202,17 +231,10 @@ router.use(
       return res.error('UNAUTHORIZED', 'API key required to access this endpoint', 401);
     }
 
-    if (!request.apiKey.mcUuid || !request.apiKey.mcName) {
-      return res.error('BAD_REQUEST', 'API key is missing associated Minecraft player data', 400);
-    }
-
-    const requesterEntity = await findEntityByPlayerUuid(request.apiKey.mcUuid);
+    const resolved = await resolveRequesterEntity(request);
+    const requesterEntity = resolved.entity;
     if (!requesterEntity) {
-      return res.error(
-        'BAD_REQUEST',
-        'No ender storage entity is linked to this API key player UUID',
-        400,
-      );
+      return res.error('BAD_REQUEST', resolved.error ?? 'Unable to resolve requester entity', 400);
     }
 
     const transfer = await Transfer.findOne({ where: { id: transferId } });

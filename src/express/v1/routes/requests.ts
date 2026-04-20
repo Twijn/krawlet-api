@@ -3,6 +3,7 @@ import authenticateApiKeyTier from '../../../lib/authenticateApiKeyTier';
 import {
   EstorageEntity,
   EstorageEntityLink,
+  findEntityById,
   findEntityByLookup,
   findEntityByPlayerUuid,
   VALID_COLORS,
@@ -13,6 +14,32 @@ import { WorkerLimitExceededError } from '../../ws/workerActivity';
 
 const router = Router();
 
+async function resolveRequesterEntity(request: RequestWithRateLimit) {
+  if (!request.apiKey) {
+    return { entity: null, error: 'API key required to access this endpoint' };
+  }
+
+  if (request.apiKey.estorageEntityId) {
+    const linkedEntity = await findEntityById(request.apiKey.estorageEntityId);
+    if (linkedEntity) {
+      return { entity: linkedEntity, error: null };
+    }
+  }
+
+  if (request.apiKey.mcUuid) {
+    const playerEntity = await findEntityByPlayerUuid(request.apiKey.mcUuid);
+    if (playerEntity) {
+      return { entity: playerEntity, error: null };
+    }
+  }
+
+  return {
+    entity: null,
+    error:
+      'API key is not linked to an ender storage entity. Ask an admin to provision this key with an entity link or attach mcUuid to a linked player entity.',
+  };
+}
+
 router.post(
   '/public-storage',
   authenticateApiKeyTier('free', 'premium'),
@@ -22,10 +49,6 @@ router.post(
 
     if (!request.apiKey) {
       return res.error('UNAUTHORIZED', 'API key required to access this endpoint', 401);
-    }
-
-    if (!request.apiKey.mcUuid || !request.apiKey.mcName) {
-      return res.error('BAD_REQUEST', 'API key is missing associated Minecraft player data', 400);
     }
 
     const { itemName, itemNbt, quantity, timeout, source, colors } = req.body;
@@ -51,11 +74,12 @@ router.post(
     }
 
     try {
-      const requesterEntity = await findEntityByPlayerUuid(request.apiKey.mcUuid);
+      const resolved = await resolveRequesterEntity(request);
+      const requesterEntity = resolved.entity;
       if (!requesterEntity) {
         return res.error(
           'BAD_REQUEST',
-          'No ender storage entity is linked to this API key player UUID',
+          resolved.error ?? 'Unable to resolve requester entity',
           400,
         );
       }

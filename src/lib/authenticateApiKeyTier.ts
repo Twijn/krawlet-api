@@ -65,6 +65,7 @@ export function authenticateApiKeyTier(...allowedTiers: ApiKeyTier[]): RequestHa
         createdAt: apiKey.createdAt,
         mcUuid: apiKey.mcUuid,
         mcName: apiKey.mcName,
+        estorageEntityId: apiKey.estorageEntityId,
       };
 
       next();

@@ -20,6 +20,7 @@ export class ApiKey extends Model {
   public requestCount!: number;
   public mcUuid!: string | null;
   public mcName!: string | null;
+  public estorageEntityId!: string | null;
   public qcCode!: string | null;
   public qcExpires!: Date | null;
 
@@ -142,6 +143,11 @@ ApiKey.init(
       type: DataTypes.STRING,
       allowNull: true,
       field: 'mc_name',
+    },
+    estorageEntityId: {
+      type: DataTypes.UUID,
+      allowNull: true,
+      field: 'estorage_entity_id',
     },
     qcCode: {
       type: DataTypes.STRING(6),
