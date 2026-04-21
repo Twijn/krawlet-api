@@ -361,7 +361,7 @@ return function(estorageName, options)
     parallel.waitForAll(transferItems, sendTransfer)
 
     if errMsg then
-      return false, errMsg
+      return false, errMsg, transfer -- because I hate myself
     end
 
     return transfer, nil
