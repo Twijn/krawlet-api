@@ -408,6 +408,14 @@ return function(estorageName, options)
     return response.data
   end
 
+  function klog.getTransfers()
+    local response, errMsg = get("transfers")
+    if not response or not response.success then
+      return false, errMsg or "Failed to fetch transfers."
+    end
+    return response.data
+  end
+
   function klog.getTransferTargets()
     local response, errMsg = get("transfers/targets")
     if not response or not response.success then
