@@ -142,6 +142,12 @@ local items = {}
 
 local function rescanItems()
   local newItems = {}
+
+  local stagedItems = enderStorage.list()
+  for _, item in pairs(stagedItems) do
+    newItems[item.name] = (newItems[item.name] or 0) + item.count
+  end
+
   for i, chest in pairs(klog.getInputChests()) do
     local chestItems = chest.list()
     for slot, item in pairs(chestItems) do
@@ -427,11 +433,11 @@ local commands = {
     end,
   },
   ["list-items"] = {
-    description = "List all items currently in input storages",
+    description = "List all items currently in input storages and the Klog ender storage",
     category = "general",
     aliases = { "list", "ls" },
     execute = function(args, ctx)
-      local p = ctx.pager("Items in Inputs")
+      local p = ctx.pager("Items in Inputs + Klog Estorage")
       for itemName, quantity in pairs(items) do
         p.print(" x" .. quantity .. " - " .. itemName)
       end
