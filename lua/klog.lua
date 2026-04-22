@@ -13,6 +13,7 @@
 ---@field itemName? string Optional item name filter.
 ---@field itemNbt? string Optional exact NBT filter.
 ---@field timeout? number Seconds worker should wait for new source items or destination space (default worker behavior if omitted).
+---@field disableExternalStaging? boolean If true, do not move items from external inventories into the Klog ender storage.
 
 ---Create a Klog client bound to an ender storage peripheral.
 ---
@@ -286,6 +287,16 @@ return function(estorageName, options)
     return total
   end
 
+  local function countEstorageItems(itemName, itemNbt)
+    local total = 0
+    for _, item in pairs(estorage.list()) do
+      if (not itemName or item.name == itemName) and (not itemNbt or item.nbt == itemNbt) then
+        total = total + item.count
+      end
+    end
+    return total
+  end
+
   local function checkTransferOpts(opts)
     if not opts or type(opts) ~= "table" then
       return "Options must be provided as a table"
@@ -298,6 +309,9 @@ return function(estorageName, options)
     end
     if opts.timeout and (type(opts.timeout) ~= "number" or opts.timeout <= 0 or opts.timeout > 30) then
       return "Timeout must be a positive number between 0.1 and 30 seconds if specified"
+    end
+    if opts.disableExternalStaging ~= nil and type(opts.disableExternalStaging) ~= "boolean" then
+      return "disableExternalStaging must be a boolean if specified"
     end
     return nil
   end
@@ -331,8 +345,9 @@ return function(estorageName, options)
     end
 
     if opts.itemName then
-      local itemCount = klog.countItem(opts.itemName, opts.itemNbt)
-      opts.quantity = math.min(opts.quantity or math.huge, itemCount)
+      local stagedCount = countEstorageItems(opts.itemName, opts.itemNbt)
+      local externalCount = opts.disableExternalStaging and 0 or klog.countItem(opts.itemName, opts.itemNbt)
+      opts.quantity = math.min(opts.quantity or math.huge, stagedCount + externalCount)
       if opts.quantity <= 0 then
         local errMsg = "No items available to transfer"
         os.queueEvent("transfer_failed", {
@@ -382,7 +397,16 @@ return function(estorageName, options)
     end
 
     local function transferItems()
+      if opts.disableExternalStaging then
+        return
+      end
+
       local itemsRemaining = opts.quantity or math.huge
+      if opts.quantity then
+        local stagedCount = countEstorageItems(opts.itemName, opts.itemNbt)
+        itemsRemaining = math.max(0, opts.quantity - stagedCount)
+      end
+
       local function shouldStopItemTransfer()
         if sendTransferDone then
           return true
