@@ -396,5 +396,34 @@ return function(estorageName, options)
     return true
   end
 
+  function klog.getTransfer(transferId)
+    if not transferId or type(transferId) ~= "string" then
+      return false, "Invalid transfer ID"
+    end
+
+    local response, errMsg = get("transfers/" .. transferId)
+    if not response or not response.success then
+      return false, errMsg or "Failed to get transfer."
+    end
+    return response.data
+  end
+
+  function klog.getTransferTargets()
+    local response, errMsg = get("transfers/targets")
+    if not response or not response.success then
+      return false, errMsg or "Failed to fetch transfer targets."
+    end
+
+    local values = {}
+    for _, target in pairs(response.data) do
+      if target.name and target.name ~= "" then
+        table.insert(values, target.name)
+      end
+    end
+    table.sort(values)
+
+    return values
+  end
+
   return klog
 end
