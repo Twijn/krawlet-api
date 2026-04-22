@@ -137,54 +137,7 @@ local klog = createKlog(peripheral.getName(enderStorage), {
   apiKey = settings.get("klog.apiKey"),
 })
 
-local function get(uri)
-  local response, _, failResponse = http.get(apiUri .. uri, {
-    ["Authorization"] = "Bearer " .. settings.get("klog.apiKey")
-  })
-  if response then
-    return textutils.unserializeJSON(response.readAll()).data
-  elseif failResponse then
-    local failResponseBody = textutils.unserializeJSON(failResponse.readAll())
-    return false, failResponseBody and failResponseBody.error and failResponseBody.error.message or "Unknown error"
-  else
-    return false, "No response from server"
-  end
-end
-local function getTransferTargets()
-  local targets, errMsg = get("transfers/targets")
-  if not targets then
-    printError("Failed to fetch transfer targets: " .. errMsg)
-    return {}
-  end
-
-  local uniqueTargets = {}
-  for _, target in pairs(targets) do
-    if target.name and target.name ~= "" then
-      uniqueTargets[target.name] = true
-    end
-    if target.id and target.id ~= "" then
-      uniqueTargets[target.id] = true
-    end
-
-    if target.links then
-      for _, link in pairs(target.links) do
-        if link and link.value and link.value ~= "" then
-          uniqueTargets[link.value] = true
-        end
-      end
-    end
-  end
-
-  local values = {}
-  for value, _ in pairs(uniqueTargets) do
-    table.insert(values, value)
-  end
-  table.sort(values)
-
-  return values
-end
-
-local transferTargets = getTransferTargets()
+local transferTargets = klog.getTransferTargets()
 
 local items = {}
 
