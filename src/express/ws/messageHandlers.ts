@@ -1,19 +1,10 @@
 import { ApiKey } from '../../lib/models/apikey.model';
-import { RawTransfer } from '../../lib/models';
-import { completeTransfer } from '../../chat';
 import { RawData, WebSocket } from 'ws';
 import { parseClientMessage, sendError, sendJson, logPrefix } from './protocol';
 import { authState } from './state';
-import {
-  AuthState,
-  ClientAuthMessage,
-  ClientMessage,
-  MessageHandler,
-  StorageListResultMessage,
-  TransferUpdateMessage,
-} from './types';
-import { updateTransferStatus } from './transferQueue';
-import { clearPendingStorageQuery, pendingStorageQueries } from './storageQuery';
+import { AuthState, ClientAuthMessage, MessageHandler } from './types';
+import { workerMessageHandlers } from './workerHandlers';
+import { clientMessageHandlers } from './clientHandlers';
 
 function getSocketAuthState(ws: WebSocket, messageId?: string | number): AuthState | null {
   const state = authState.get(ws);
@@ -32,16 +23,6 @@ async function handleAuthMessage(ws: WebSocket, parsed: ClientAuthMessage): Prom
     return;
   }
 
-  if (typeof parsed.workerId !== 'number') {
-    sendError(
-      ws,
-      'INVALID_WORKER_ID',
-      'Auth message must include a numeric workerId field',
-      parsed.id,
-    );
-    return;
-  }
-
   const hashedKey = ApiKey.hashKey(parsed.token);
   const apiKey = await ApiKey.findOne({
     where: {
@@ -55,97 +36,91 @@ async function handleAuthMessage(ws: WebSocket, parsed: ClientAuthMessage): Prom
     return;
   }
 
-  if (apiKey.tier !== 'worker') {
+  const currentState = authState.get(ws);
+  if (!currentState) {
+    return;
+  }
+
+  if (apiKey.tier === 'worker') {
+    if (typeof parsed.workerId !== 'number') {
+      sendError(
+        ws,
+        'INVALID_WORKER_ID',
+        'Auth message must include a numeric workerId field',
+        parsed.id,
+      );
+      return;
+    }
+
+    clearTimeout(currentState.timeoutHandle);
+    currentState.authenticated = true;
+    currentState.role = 'worker';
+    currentState.apiKeyId = apiKey.id;
+    currentState.workerId = parsed.workerId;
+    authState.set(ws, currentState);
+
+    console.log(
+      `${logPrefix(currentState)} authenticated as worker key=${apiKey.name} tier=${apiKey.tier} requestId=${parsed.id}`,
+    );
+
+    apiKey
+      .incrementUsage()
+      .catch((err) => console.error('Failed to increment API key usage:', err));
+
+    sendJson(ws, {
+      id: parsed.id,
+      type: 'auth_ok',
+      payload: {
+        tier: apiKey.tier,
+        name: apiKey.name,
+        role: 'worker',
+      },
+    });
+  } else if (apiKey.tier === 'free' || apiKey.tier === 'premium') {
+    if (!apiKey.estorageEntityId && !apiKey.mcUuid) {
+      sendError(
+        ws,
+        'NO_ENTITY_LINK',
+        'API key is not linked to a Minecraft player or ender storage entity. Ask an admin to provision your key with an entity link.',
+        parsed.id,
+      );
+      return;
+    }
+
+    clearTimeout(currentState.timeoutHandle);
+    currentState.authenticated = true;
+    currentState.role = 'client';
+    currentState.apiKeyId = apiKey.id;
+    authState.set(ws, currentState);
+
+    console.log(
+      `${logPrefix(currentState)} authenticated as client key=${apiKey.name} tier=${apiKey.tier} requestId=${parsed.id}`,
+    );
+
+    apiKey
+      .incrementUsage()
+      .catch((err) => console.error('Failed to increment API key usage:', err));
+
+    sendJson(ws, {
+      id: parsed.id,
+      type: 'auth_ok',
+      payload: {
+        tier: apiKey.tier,
+        name: apiKey.name,
+        role: 'client',
+      },
+    });
+  } else {
     sendError(
       ws,
       'INVALID_TIER',
       `API key tier '${apiKey.tier}' is not allowed for WebSocket auth`,
       parsed.id,
     );
-    return;
   }
-
-  const currentState = authState.get(ws);
-  if (!currentState) {
-    return;
-  }
-
-  clearTimeout(currentState.timeoutHandle);
-  currentState.authenticated = true;
-  currentState.apiKeyId = apiKey.id;
-  currentState.workerId = parsed.workerId;
-  authState.set(ws, currentState);
-
-  console.log(
-    `${logPrefix(currentState)} authenticated with key=${apiKey.name} tier=${apiKey.tier} requestId=${parsed.id}`,
-  );
-
-  apiKey.incrementUsage().catch((err) => console.error('Failed to increment API key usage:', err));
-
-  sendJson(ws, {
-    id: parsed.id,
-    type: 'auth_ok',
-    payload: {
-      tier: apiKey.tier,
-      name: apiKey.name,
-    },
-  });
 }
 
-function parseTransferUpdateMessage(
-  ws: WebSocket,
-  message: ClientMessage,
-): TransferUpdateMessage | null {
-  if (typeof message.id !== 'string') {
-    sendError(
-      ws,
-      'INVALID_TRANSFER_ID',
-      'Transfer update messages must use a string transfer id',
-      message.id,
-    );
-    return null;
-  }
-
-  return message as TransferUpdateMessage;
-}
-
-function getCurrentWorkerTransfer(
-  ws: WebSocket,
-  state: AuthState,
-  message: TransferUpdateMessage,
-): RawTransfer | null {
-  if (!state.currentTask) {
-    sendError(ws, 'NO_ACTIVE_TRANSFER', 'Worker has no active transfer to update', message.id);
-    return null;
-  }
-
-  if (state.currentTask.id !== message.id) {
-    sendError(
-      ws,
-      'TRANSFER_ID_MISMATCH',
-      `Worker active transfer is ${state.currentTask.id}, received update for ${message.id}`,
-      message.id,
-    );
-    return null;
-  }
-
-  return state.currentTask;
-}
-
-function normalizeMovedQuantity(value: unknown): number | null {
-  if (typeof value !== 'number' || Number.isNaN(value) || value < 0) {
-    return null;
-  }
-
-  return Math.floor(value);
-}
-
-function clearCurrentTask(state: AuthState): void {
-  state.currentTask = null;
-  state.currentTaskCancelRequested = false;
-}
-
-const messageHandlers: Record<string, MessageHandler> = {
+const sharedMessageHandlers: Record<string, MessageHandler> = {
   auth: async (ws, message) => {
     if (!message.token) {
       sendError(ws, 'MISSING_TOKEN', 'Auth message must include a token field', message.id);
@@ -161,312 +136,23 @@ const messageHandlers: Record<string, MessageHandler> = {
       payload: { ts: Date.now() },
     });
   },
-  transfer_progress: async (ws, message, state) => {
-    const parsed = parseTransferUpdateMessage(ws, message);
-    if (!parsed) {
-      return;
-    }
-
-    const transfer = getCurrentWorkerTransfer(ws, state, parsed);
-    if (!transfer) {
-      return;
-    }
-
-    if (state.currentTaskCancelRequested) {
-      sendError(
-        ws,
-        'TRANSFER_CANCEL_PENDING',
-        'Transfer cancellation is pending; progress updates are ignored',
-        parsed.id,
-      );
-      return;
-    }
-
-    const moved = normalizeMovedQuantity(parsed.totalMoved);
-    if (moved === null) {
-      sendError(
-        ws,
-        'INVALID_TOTAL_MOVED',
-        'transfer_progress requires a non-negative numeric totalMoved',
-        parsed.id,
-      );
-      return;
-    }
-
-    await updateTransferStatus(transfer.id, 'in_progress', moved);
-
-    console.log(
-      `${logPrefix(state)} transfer progress transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} nbt=${parsed.itemNbt ?? 'any'}`,
-    );
-
-    sendJson(ws, {
-      id: parsed.id,
-      type: 'transfer_progress_ok',
-      payload: {
-        transferId: transfer.id,
-        quantityTransferred: moved,
-      },
-    });
-  },
-  transfer_complete: async (ws, message, state) => {
-    const parsed = parseTransferUpdateMessage(ws, message);
-    if (!parsed) {
-      return;
-    }
-
-    const transfer = getCurrentWorkerTransfer(ws, state, parsed);
-    if (!transfer) {
-      return;
-    }
-
-    const moved = normalizeMovedQuantity(parsed.totalMoved);
-    if (moved === null) {
-      sendError(
-        ws,
-        'INVALID_TOTAL_MOVED',
-        'transfer_complete requires a non-negative numeric totalMoved',
-        parsed.id,
-      );
-      return;
-    }
-
-    if (state.currentTaskCancelRequested) {
-      await updateTransferStatus(transfer.id, 'cancelled', moved);
-      completeTransfer(
-        {
-          ...transfer,
-          status: 'cancelled',
-          quantityTransferred: moved,
-        },
-        'Transfer was cancelled',
-      );
-
-      console.warn(
-        `${logPrefix(state)} transfer completion received after cancel request transferId=${transfer.id} moved=${moved}; finalized as cancelled`,
-      );
-
-      clearCurrentTask(state);
-      authState.set(ws, state);
-
-      sendJson(ws, {
-        id: parsed.id,
-        type: 'transfer_complete_ok',
-        payload: {
-          transferId: transfer.id,
-          quantityTransferred: moved,
-          status: 'cancelled',
-        },
-      });
-      return;
-    }
-
-    await updateTransferStatus(transfer.id, 'completed', moved);
-    completeTransfer({
-      ...transfer,
-      status: 'completed',
-      quantityTransferred: moved,
-    });
-
-    console.log(
-      `${logPrefix(state)} transfer complete transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} nbt=${parsed.itemNbt ?? 'any'} elapsedMs=${parsed.elapsedMs ?? 'n/a'}`,
-    );
-
-    clearCurrentTask(state);
-    authState.set(ws, state);
-
-    sendJson(ws, {
-      id: parsed.id,
-      type: 'transfer_complete_ok',
-      payload: {
-        transferId: transfer.id,
-        quantityTransferred: moved,
-      },
-    });
-  },
-  transfer_cancelled: async (ws, message, state) => {
-    const parsed = parseTransferUpdateMessage(ws, message);
-    if (!parsed) {
-      return;
-    }
-
-    const transfer = getCurrentWorkerTransfer(ws, state, parsed);
-    if (!transfer) {
-      return;
-    }
-
-    const moved =
-      parsed.totalMoved === undefined
-        ? transfer.quantityTransferred
-        : normalizeMovedQuantity(parsed.totalMoved);
-
-    if (moved === null) {
-      sendError(
-        ws,
-        'INVALID_TOTAL_MOVED',
-        'transfer_cancelled totalMoved must be a non-negative number',
-        parsed.id,
-      );
-      return;
-    }
-
-    await updateTransferStatus(transfer.id, 'cancelled', moved);
-    completeTransfer(
-      {
-        ...transfer,
-        status: 'cancelled',
-        quantityTransferred: moved,
-      },
-      'Transfer was cancelled',
-    );
-
-    console.log(
-      `${logPrefix(state)} transfer cancelled transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} nbt=${parsed.itemNbt ?? 'any'} elapsedMs=${parsed.elapsedMs ?? 'n/a'}`,
-    );
-
-    clearCurrentTask(state);
-    authState.set(ws, state);
-
-    sendJson(ws, {
-      id: parsed.id,
-      type: 'transfer_cancelled_ok',
-      payload: {
-        transferId: transfer.id,
-        quantityTransferred: moved,
-      },
-    });
-  },
-  storage_list_result: (ws, message, state) => {
-    const parsed = message as StorageListResultMessage;
-    const requestId = typeof parsed.id === 'string' ? parsed.id : String(parsed.id);
-    const pending = pendingStorageQueries.get(requestId);
-
-    if (!pending) {
-      // Already timed out or unknown — ignore
-      console.warn(`${logPrefix(state)} storage_list_result for unknown requestId=${requestId}`);
-      return;
-    }
-
-    clearPendingStorageQuery(requestId);
-
-    const items = (parsed.payload?.items ?? []) as { name: string; count: number; nbt?: string }[];
-    console.log(
-      `${logPrefix(state)} storage_list_result requestId=${requestId} itemSlots=${items.length}`,
-    );
-    pending.resolve(items);
-  },
-  transfer_failed: async (ws, message, state) => {
-    const parsed = parseTransferUpdateMessage(ws, message);
-    if (!parsed) {
-      return;
-    }
-
-    const transfer = getCurrentWorkerTransfer(ws, state, parsed);
-    if (!transfer) {
-      return;
-    }
-
-    if (state.currentTaskCancelRequested) {
-      const movedAfterCancel =
-        parsed.totalMoved === undefined
-          ? transfer.quantityTransferred
-          : normalizeMovedQuantity(parsed.totalMoved);
-
-      if (movedAfterCancel === null) {
-        sendError(
-          ws,
-          'INVALID_TOTAL_MOVED',
-          'transfer_failed totalMoved must be a non-negative number',
-          parsed.id,
-        );
-        return;
-      }
-
-      await updateTransferStatus(transfer.id, 'cancelled', movedAfterCancel);
-      completeTransfer(
-        {
-          ...transfer,
-          status: 'cancelled',
-          quantityTransferred: movedAfterCancel,
-        },
-        'Transfer was cancelled',
-      );
-
-      console.warn(
-        `${logPrefix(state)} transfer failed after cancel request transferId=${transfer.id}; finalized as cancelled`,
-      );
-
-      clearCurrentTask(state);
-      authState.set(ws, state);
-
-      sendJson(ws, {
-        id: parsed.id,
-        type: 'transfer_failed_ok',
-        payload: {
-          transferId: transfer.id,
-          quantityTransferred: movedAfterCancel,
-          status: 'cancelled',
-        },
-      });
-      return;
-    }
-
-    const moved =
-      parsed.totalMoved === undefined
-        ? transfer.quantityTransferred
-        : normalizeMovedQuantity(parsed.totalMoved);
-
-    if (moved === null) {
-      sendError(
-        ws,
-        'INVALID_TOTAL_MOVED',
-        'transfer_failed totalMoved must be a non-negative number',
-        parsed.id,
-      );
-      return;
-    }
-
-    await updateTransferStatus(
-      transfer.id,
-      'failed',
-      moved,
-      parsed.reason || 'Transfer failed with unknown error',
-    );
-    completeTransfer(
-      {
-        ...transfer,
-        status: 'failed',
-        quantityTransferred: moved,
-      },
-      parsed.reason || 'Transfer failed with unknown error',
-    );
-
-    console.warn(
-      `${logPrefix(state)} transfer failed transferId=${transfer.id} reason=${parsed.reason || 'no reason provided'}`,
-      {
-        workerMessage: {
-          reason: parsed.reason,
-          workerId: parsed.workerId,
-          requestedQuantity: parsed.requestedQuantity,
-          itemName: parsed.itemName,
-          itemNbt: parsed.itemNbt,
-          elapsedMs: parsed.elapsedMs,
-        },
-      },
-    );
-
-    clearCurrentTask(state);
-    authState.set(ws, state);
-
-    sendJson(ws, {
-      id: parsed.id,
-      type: 'transfer_failed_ok',
-      payload: {
-        transferId: transfer.id,
-        quantityTransferred: moved,
-      },
-    });
-  },
 };
+
+function resolveHandler(state: AuthState, messageType: string): MessageHandler | undefined {
+  if (messageType === 'auth' || messageType === 'ping') {
+    return sharedMessageHandlers[messageType];
+  }
+
+  if (state.role === 'worker') {
+    return workerMessageHandlers[messageType];
+  }
+
+  if (state.role === 'client') {
+    return clientMessageHandlers[messageType];
+  }
+
+  return undefined;
+}
 
 export async function handleMessage(ws: WebSocket, raw: RawData): Promise<void> {
   const parsed = parseClientMessage(raw);
@@ -494,12 +180,6 @@ export async function handleMessage(ws: WebSocket, raw: RawData): Promise<void> 
     `${logPrefix(state)} message type=${parsed.type} id=${parsed.id} authenticated=${state.authenticated}`,
   );
 
-  const handler = messageHandlers[parsed.type];
-  if (!handler) {
-    sendError(ws, 'UNKNOWN_MESSAGE_TYPE', `Unknown message type: ${parsed.type}`, parsed.id);
-    return;
-  }
-
   if (!state.authenticated && parsed.type !== 'auth') {
     sendError(
       ws,
@@ -507,6 +187,12 @@ export async function handleMessage(ws: WebSocket, raw: RawData): Promise<void> 
       'Authenticate first using { type: "auth", token: "kraw_...", id: "..." }',
       parsed.id,
     );
+    return;
+  }
+
+  const handler = resolveHandler(state, parsed.type);
+  if (!handler) {
+    sendError(ws, 'UNKNOWN_MESSAGE_TYPE', `Unknown message type: ${parsed.type}`, parsed.id);
     return;
   }
 

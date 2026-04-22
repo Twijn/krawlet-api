@@ -70,7 +70,7 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
         serverTime: new Date().toISOString(),
         authRequired: true,
         authTimeoutMs: AUTH_TIMEOUT_MS,
-        messageTypes: [
+        workerMessageTypes: [
           'auth',
           'ping',
           'transfer_progress',
@@ -79,6 +79,7 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
           'transfer_failed',
           'storage_list_result',
         ],
+        clientMessageTypes: ['auth', 'ping', 'create_transfer', 'get_transfer', 'cancel_transfer'],
       },
     });
 

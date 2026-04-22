@@ -12,7 +12,7 @@ export type ClientMessage = {
 export type ClientAuthMessage = ClientMessage & {
   type: 'auth';
   token: string;
-  workerId: number;
+  workerId?: number;
 };
 
 export type TransferUpdateMessage = ClientMessage & {
@@ -39,6 +39,7 @@ export type RoutedWebSocket = WebSocket & {
 
 export type AuthState = {
   authenticated: boolean;
+  role?: 'worker' | 'client';
   timeoutHandle: NodeJS.Timeout;
   currentTask: RawTransfer | null;
   currentTaskCancelRequested: boolean;

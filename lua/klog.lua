@@ -3,6 +3,7 @@
 
 ---@class KlogOptions
 ---@field apiUrl? string Base API URL (default: https://api.krawlet.cc/v1/)
+---@field wsUrl? string WebSocket URL (default: derived from apiUrl)
 ---@field apiKey? string API key; if omitted, settings key klog.apiKey is used.
 ---@field inputExcludes? string[] Inventory peripheral name patterns to exclude. Supports * wildcard.
 
@@ -24,6 +25,7 @@ return function(estorageName, options)
   local inputExcludes = options.inputExcludes or textutils.unserializeJSON(settings.get("klog.inputExcludes") or "{}")
   local estorage = peripheral.wrap(estorageName)
   local apiUrl = options.apiUrl or "https://api.krawlet.cc/v1/"
+  local wsUrl = options.wsUrl or apiUrl:gsub("^http", "ws") .. "ws"
   local apiKey = options.apiKey or settings.get("klog.apiKey")
 
   assert(estorage, "Peripheral not found: " .. estorageName)
