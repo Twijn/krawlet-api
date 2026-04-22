@@ -13,8 +13,7 @@ sha256         = loadstring(g(
     "function "), "Z",
   " do "))()
 
-local apiUri = "https://api.krawlet.cc/v1/"
-local updateDomain = "https://krawlet.cc/"
+local updateDomain = "http://localhost:3000/"
 
 local function downloadFile(url, filename)
   term.setTextColor(colors.yellow)
@@ -135,6 +134,7 @@ end
 
 local klog = createKlog(peripheral.getName(enderStorage), {
   apiKey = settings.get("klog.apiKey"),
+  apiUrl = "http://localhost:3000/api/v1/"
 })
 
 local transferTargets = klog.getTransferTargets()

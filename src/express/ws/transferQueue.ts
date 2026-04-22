@@ -12,6 +12,7 @@ import { authState } from './state';
 import { AuthState } from './types';
 import { reserveWorkerSlot, trackTransferFinished, trackTransferStarted } from './workerActivity';
 import { ApiKeyTier } from '../../lib/models/apikey.model';
+import { broadcastTransferUpdate } from './clientBroadcast';
 
 let activeTransfers: RawTransfer[] = [];
 
@@ -96,6 +97,7 @@ async function queueTransferWithEntities({
     const rawTransfer = transfer.raw();
     activeTransfers.push(rawTransfer);
     trackTransferStarted(rawTransfer.fromEntityId);
+    void broadcastTransferUpdate(rawTransfer);
 
     return rawTransfer;
   } finally {
@@ -294,6 +296,7 @@ export async function updateTransferStatus(
   }
 
   await transfer.update({ status, quantityTransferred, error: errorReason });
+  const updatedTransfer = transfer.raw();
 
   const localTransfer = activeTransfers.find((transfer) => transfer.id === transferId);
   if (localTransfer) {
@@ -314,6 +317,8 @@ export async function updateTransferStatus(
 
     activeTransfers = activeTransfers.filter((transfer) => transfer.id !== transferId);
   }
+
+  void broadcastTransferUpdate(updatedTransfer);
 }
 
 async function assignTransferToWorker(
@@ -396,6 +401,10 @@ export async function processTransfers(): Promise<void> {
 
       for (const [ws, state] of authState.entries()) {
         if (!state.authenticated) {
+          continue;
+        }
+
+        if (state.role !== 'worker') {
           continue;
         }
 

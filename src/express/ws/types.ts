@@ -47,6 +47,7 @@ export type AuthState = {
   remoteAddress?: string;
   apiKeyId?: string;
   workerId?: number;
+  clientEntityId?: string;
 };
 
 export type StorageListResultMessage = ClientMessage & {

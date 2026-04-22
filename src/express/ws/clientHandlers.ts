@@ -1,32 +1,26 @@
 import { ApiKey } from '../../lib/models/apikey.model';
 import {
   EstorageEntity,
+  EstorageEntityLink,
   findEntityById,
   findEntityByLookup,
-  findEntityByPlayerUuid,
   Transfer,
 } from '../../lib/models';
 import { isTransferPayload } from '../../lib/types/Transfer';
+import { Op } from 'sequelize';
 import { sendError, sendJson, logPrefix } from './protocol';
 import { queueTransferByEntities, cancelTransfer } from './transferQueue';
 import { WorkerLimitExceededError } from './workerActivity';
 import { MessageHandler } from './types';
+import { resolveClientEntityId } from './clientEntity';
 
 async function resolveClientEntity(apiKeyId: string): Promise<EstorageEntity | null> {
-  const apiKey = await ApiKey.findByPk(apiKeyId);
-  if (!apiKey) return null;
-
-  if (apiKey.estorageEntityId) {
-    const entity = await findEntityById(apiKey.estorageEntityId);
-    if (entity) return entity;
+  const entityId = await resolveClientEntityId(apiKeyId);
+  if (!entityId) {
+    return null;
   }
 
-  if (apiKey.mcUuid) {
-    const entity = await findEntityByPlayerUuid(apiKey.mcUuid);
-    if (entity) return entity;
-  }
-
-  return null;
+  return findEntityById(entityId);
 }
 
 export const clientMessageHandlers: Record<string, MessageHandler> = {
@@ -201,6 +195,96 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to cancel transfer';
       sendError(ws, 'BAD_REQUEST', errorMessage, message.id);
+    }
+  },
+
+  list_transfers: async (ws, message, state) => {
+    if (!state.apiKeyId) {
+      sendError(ws, 'INTERNAL_ERROR', 'API key ID missing from auth state', message.id);
+      return;
+    }
+
+    const requesterEntity = await resolveClientEntity(state.apiKeyId);
+    if (!requesterEntity) {
+      sendError(
+        ws,
+        'NO_ENTITY_LINK',
+        'API key is not linked to an ender storage entity',
+        message.id,
+      );
+      return;
+    }
+
+    try {
+      const transfers = await Transfer.findAll({
+        where: {
+          [Op.or]: [{ fromEntityId: requesterEntity.id }, { toEntityId: requesterEntity.id }],
+        },
+        order: [['createdAt', 'DESC']],
+      });
+
+      console.log(`${logPrefix(state)} list_transfers count=${transfers.length}`);
+
+      sendJson(ws, {
+        id: message.id,
+        type: 'list_transfers_ok',
+        payload: {
+          transfers: transfers.map((t) => t.raw()),
+        },
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to list transfers';
+      sendError(ws, 'INTERNAL_ERROR', errorMessage, message.id);
+    }
+  },
+
+  list_targets: async (ws, message, state) => {
+    if (!state.apiKeyId) {
+      sendError(ws, 'INTERNAL_ERROR', 'API key ID missing from auth state', message.id);
+      return;
+    }
+
+    try {
+      const entities = await EstorageEntity.findAll({
+        where: {
+          active: true,
+          entityType: {
+            [Op.notIn]: ['service', 'public'],
+          },
+        },
+        order: [['name', 'ASC']],
+        include: [
+          {
+            model: EstorageEntityLink,
+            as: 'links',
+            attributes: ['linkType', 'linkValue'],
+            required: false,
+          },
+        ],
+      });
+
+      const targets = entities.map((entity) => ({
+        id: entity.id,
+        name: entity.name,
+        type: entity.entityType,
+        links: ((entity as any).links ?? []).map((link: EstorageEntityLink) => ({
+          type: link.linkType,
+          value: link.linkValue,
+        })),
+      }));
+
+      console.log(`${logPrefix(state)} list_targets count=${targets.length}`);
+
+      sendJson(ws, {
+        id: message.id,
+        type: 'list_targets_ok',
+        payload: {
+          targets,
+        },
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to list targets';
+      sendError(ws, 'INTERNAL_ERROR', errorMessage, message.id);
     }
   },
 };

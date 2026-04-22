@@ -79,7 +79,15 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
           'transfer_failed',
           'storage_list_result',
         ],
-        clientMessageTypes: ['auth', 'ping', 'create_transfer', 'get_transfer', 'cancel_transfer'],
+        clientMessageTypes: [
+          'auth',
+          'ping',
+          'create_transfer',
+          'get_transfer',
+          'cancel_transfer',
+          'list_transfers',
+          'list_targets',
+        ],
       },
     });
 

@@ -13,7 +13,6 @@
 ---@field itemName? string Optional item name filter.
 ---@field itemNbt? string Optional exact NBT filter.
 ---@field timeout? number Seconds worker should wait for new source items or destination space (default worker behavior if omitted).
----@field pollInterval? number Status polling interval in seconds (default: 0.5).
 
 ---Create a Klog client bound to an ender storage peripheral.
 ---
@@ -30,43 +29,85 @@ return function(estorageName, options)
 
   assert(estorage, "Peripheral not found: " .. estorageName)
 
-  local function handleResponse(response, errResponse)
-    response = response or errResponse
-    if response then
-      local data = textutils.unserializeJSON(response.readAll())
-      response:close()
-      if data and data.success then
-        return data
-      else
-        return false, data and data.error and data.error.message or "Unknown error"
+  local ws = nil
+  local authenticated = false
+  local nextMessageId = 1
+  local pendingWsMessages = {}
+
+  local function getNextMessageId()
+    local id = tostring(nextMessageId)
+    nextMessageId = nextMessageId + 1
+    return id
+  end
+
+  local function connectWebSocket()
+    if ws then
+      ws.close()
+    end
+
+    ws = http.websocket(wsUrl)
+    if not ws then
+      return false, "Failed to connect to WebSocket"
+    end
+
+    authenticated = false
+
+    local authId = getNextMessageId()
+    ws.send(textutils.serializeJSON({
+      type = "auth",
+      token = apiKey,
+      id = authId,
+    }))
+
+    local timeout = os.startTimer(5)
+    while true do
+      local event, url, message = os.pullEvent()
+
+      if event == "timer" then
+        if url == timeout then
+          ws.close()
+          ws = nil
+          return false, "WebSocket auth timeout"
+        end
+      elseif event == "websocket_message" then
+        if url == wsUrl then
+          local data = textutils.unserializeJSON(message)
+          if data and data.id == authId then
+            if data.type == "auth_ok" then
+              authenticated = true
+              os.cancelTimer(timeout)
+              return true
+            elseif data.type == "error" then
+              ws.close()
+              ws = nil
+              os.cancelTimer(timeout)
+              return false, data.payload and data.payload.message or "Auth failed"
+            end
+          end
+        end
+      elseif event == "websocket_closed" then
+        if url == wsUrl then
+          ws = nil
+          return false, "WebSocket closed during auth"
+        end
       end
     end
   end
 
-  local function get(uri)
-    local headers = {}
-    if apiKey then
-      headers["Authorization"] = "Bearer " .. apiKey
+  local function queuePendingWsMessage(data)
+    if data then
+      table.insert(pendingWsMessages, data)
     end
-    local response, _, errResponse = http.get(
-      apiUrl .. uri,
-      headers
-    )
-    return handleResponse(response, errResponse)
   end
 
-  local function post(uri, data)
-    local headers = {}
-    if apiKey then
-      headers["Authorization"] = "Bearer " .. apiKey
+  local function popPendingWsMessage(matchFn)
+    for i, data in ipairs(pendingWsMessages) do
+      if matchFn(data) then
+        table.remove(pendingWsMessages, i)
+        return data
+      end
     end
-    if data then
-      headers["Content-Type"] = "application/json"
-      data = textutils.serializeJSON(data)
-    end
-
-    local response, _, errResponse = http.post(apiUrl .. uri, data, headers)
-    return handleResponse(response, errResponse)
+    return nil
   end
 
   if not apiKey then
@@ -74,16 +115,126 @@ return function(estorageName, options)
     while true do
       local input = read()
       if input and #input == 6 then
-        local response, error = post("apikey/quickcode/redeem", { code = input })
-        if not response or not response.success then
-          printError("Failed to redeem API key: " .. (error or "Unknown error"))
-          print("Please try again:")
+        local response, _, errResponse = http.post(
+          apiUrl .. "apikey/quickcode/redeem",
+          textutils.serializeJSON({ code = input }),
+          { ["Content-Type"] = "application/json" }
+        )
+        if response then
+          local data = textutils.unserializeJSON(response.readAll())
+          response:close()
+          if data and data.success then
+            print("API key redeemed successfully!")
+            apiKey = data.data.apiKey
+            settings.set("klog.apiKey", apiKey)
+            settings.save()
+            break
+          else
+            printError("Failed to redeem API key: " .. (data and data.error and data.error.message or "Unknown error"))
+            print("Please try again:")
+          end
         else
-          print("API key redeemed successfully!")
-          apiKey = response.data.apiKey
-          settings.set("klog.apiKey", apiKey)
-          settings.save()
-          break
+          printError("Failed to redeem API key")
+          print("Please try again:")
+        end
+      end
+    end
+  end
+
+  local function wsRequest(messageType, payload)
+    local msgId = getNextMessageId()
+    local timeout
+
+    ws.send(textutils.serializeJSON({
+      type = messageType,
+      id = msgId,
+      payload = payload,
+    }))
+
+    local resultType = messageType .. "_ok"
+
+    timeout = os.startTimer(10)
+
+    while true do
+      local queued = popPendingWsMessage(function(data)
+        return data and data.id == msgId
+      end)
+
+      if queued then
+        os.cancelTimer(timeout)
+        if queued.type == "error" then
+          return false, queued.payload and queued.payload.message or "Unknown error"
+        elseif queued.type == resultType then
+          return true, queued.payload
+        end
+      end
+
+      local event, url, message = os.pullEvent()
+
+      if event == "timer" then
+        if url == timeout then
+          return false, "WebSocket request timeout"
+        end
+      elseif event == "websocket_message" then
+        if url == wsUrl then
+          local data = textutils.unserializeJSON(message)
+          if data and data.id == msgId then
+            os.cancelTimer(timeout)
+            if data.type == "error" then
+              return false, data.payload and data.payload.message or "Unknown error"
+            elseif data.type == resultType then
+              return true, data.payload
+            end
+          elseif data then
+            queuePendingWsMessage(data)
+          end
+        end
+      elseif event == "websocket_closed" then
+        if url == wsUrl then
+          ws = nil
+          authenticated = false
+          os.cancelTimer(timeout)
+          return false, "WebSocket disconnected"
+        end
+      end
+    end
+  end
+
+  local function waitForTransferUpdate(transferId, timeoutSeconds)
+    local timeout = os.startTimer(timeoutSeconds or 10)
+
+    while true do
+      local queued = popPendingWsMessage(function(data)
+        return data and data.type == "transfer_update" and data.payload and data.payload.id == transferId
+      end)
+
+      if queued then
+        os.cancelTimer(timeout)
+        return true, queued.payload
+      end
+
+      local event, url, message = os.pullEvent()
+
+      if event == "timer" then
+        if url == timeout then
+          return false, "Timed out waiting for transfer update"
+        end
+      elseif event == "websocket_message" then
+        if url == wsUrl then
+          local data = textutils.unserializeJSON(message)
+          if data and data.type == "transfer_update" and data.payload and data.payload.id == transferId then
+            os.cancelTimer(timeout)
+            return true, data.payload
+          elseif data then
+            queuePendingWsMessage(data)
+          end
+        end
+      elseif event == "websocket_closed" then
+        if url == wsUrl then
+          ws = nil
+          authenticated = false
+          os.cancelTimer(timeout)
+          return false, "WebSocket disconnected"
         end
       end
     end
@@ -195,60 +346,30 @@ return function(estorageName, options)
       end
     end
 
-    local pollInterval = type(opts.pollInterval) == "number" and opts.pollInterval or 0.5
-    local transfer, errMsg = nil, nil
-    local transferId = nil
-    local transferDone = false
-    local terminalEventQueued = false
+    local transfer = nil
     local lastStatus = nil
     local lastQuantityTransferred = nil
+    local terminalEventQueued = false
+    local sendTransferDone = false
+    local sendTransferError = nil
 
-    local function countAlreadyStagedMatchingItems()
-      local count = 0
-      local stagedItems = estorage.list()
-
-      for _, item in pairs(stagedItems) do
-        local nameMatches = (not opts.itemName or item.name == opts.itemName)
-        local nbtMatches = (not opts.itemNbt or item.nbt == opts.itemNbt)
-        if nameMatches and nbtMatches then
-          count = count + item.count
-        end
+    local function markSendTransferDone(err)
+      sendTransferDone = true
+      if err and not sendTransferError then
+        sendTransferError = err
       end
-
-      return count
     end
-
-    local alreadyStaged = countAlreadyStagedMatchingItems()
-    local itemsRemaining = opts.quantity and math.max(0, opts.quantity - alreadyStaged) or math.huge
 
     local function buildTransferPayload(errorMessage)
       local payload = {}
-
       if transfer then
         for key, value in pairs(transfer) do
           payload[key] = value
         end
       end
-
-      if not payload.id and transferId then
-        payload.id = transferId
-      end
-      if not payload.to then
-        payload.to = opts.to
-      end
-      if not payload.quantity then
-        payload.quantity = opts.quantity
-      end
-      if not payload.itemName then
-        payload.itemName = opts.itemName
-      end
-      if not payload.itemNbt then
-        payload.itemNbt = opts.itemNbt
-      end
       if errorMessage and not payload.error then
         payload.error = errorMessage
       end
-
       return payload
     end
 
@@ -261,18 +382,33 @@ return function(estorageName, options)
     end
 
     local function transferItems()
-      while not transferDone and itemsRemaining > 0 do
+      local itemsRemaining = opts.quantity or math.huge
+      local function shouldStopItemTransfer()
+        if sendTransferDone then
+          return true
+        end
+        if not transfer then
+          return false
+        end
+        return transfer.status == "completed" or transfer.status == "failed" or transfer.status == "cancelled"
+      end
+
+      while itemsRemaining > 0 do
+        if shouldStopItemTransfer() then
+          break
+        end
+
         local chests = klog.getInputChests()
         local movedThisPass = 0
 
         for _, chest in ipairs(chests) do
-          if transferDone or itemsRemaining <= 0 then
+          if shouldStopItemTransfer() or itemsRemaining <= 0 then
             break
           end
 
           local items = chest.list()
           for slot, item in pairs(items) do
-            if transferDone or itemsRemaining <= 0 then
+            if shouldStopItemTransfer() or itemsRemaining <= 0 then
               break
             end
 
@@ -294,7 +430,7 @@ return function(estorageName, options)
         end
 
         if movedThisPass == 0 then
-          sleep(pollInterval)
+          sleep(0.25)
         else
           sleep(0)
         end
@@ -302,7 +438,7 @@ return function(estorageName, options)
     end
 
     local function sendTransfer()
-      local response, postErr = post("transfers", {
+      local ok, payload = wsRequest("create_transfer", {
         to = opts.to,
         quantity = opts.quantity,
         itemName = opts.itemName,
@@ -310,60 +446,68 @@ return function(estorageName, options)
         timeout = opts.timeout,
       })
 
-      transfer = response and response.data
-      transferId = transfer and transfer.id
-
-      if not response or not response.success or not transferId then
-        errMsg = (response and response.error and response.error.message) or postErr or "Failed to create transfer."
-        transferDone = true
-        queueTerminalEvent("transfer_failed", buildTransferPayload(errMsg))
-        return
+      if not ok then
+        queueTerminalEvent("transfer_failed", buildTransferPayload(payload))
+        markSendTransferDone(payload)
+        return false, payload
       end
 
+      transfer = payload
       os.queueEvent("transfer_started", buildTransferPayload())
 
-      while not transferDone do
-        sleep(pollInterval)
+      while transfer and (transfer.status == "pending" or transfer.status == "in_progress") do
+        local statusOk, statusPayload = waitForTransferUpdate(transfer.id, 35)
 
-        local statusResponse, getErr = get("transfers/" .. transferId)
-        if statusResponse and statusResponse.data then
-          transfer = statusResponse.data
-          local status = transfer.status
-          local quantityTransferred = transfer.quantityTransferred
+        if not statusOk then
+          queueTerminalEvent("transfer_failed", buildTransferPayload(statusPayload))
+          markSendTransferDone(statusPayload)
+          return false, statusPayload
+        end
 
-          if status ~= lastStatus or quantityTransferred ~= lastQuantityTransferred then
-            os.queueEvent("transfer_update", buildTransferPayload())
-            lastStatus = status
-            lastQuantityTransferred = quantityTransferred
-          end
-
-          if status == "completed" then
-            queueTerminalEvent("transfer_completed", buildTransferPayload())
-            transferDone = true
-            return
-          elseif status == "failed" or status == "cancelled" then
-            if status == "failed" then
-              queueTerminalEvent("transfer_failed", buildTransferPayload(transfer.error))
-            else
-              queueTerminalEvent("transfer_cancelled", buildTransferPayload(transfer.error))
-            end
-            errMsg = transfer.error or ("Transfer " .. status .. ".")
-            transferDone = true
-            return
-          end
-        else
-          errMsg = (statusResponse and statusResponse.error and statusResponse.error.message) or getErr or "Failed to get transfer status."
-          transferDone = true
+        if type(statusPayload) ~= "table" then
+          local errMsg = "Invalid transfer update payload"
           queueTerminalEvent("transfer_failed", buildTransferPayload(errMsg))
-          return
+          markSendTransferDone(errMsg)
+          return false, errMsg
+        end
+
+        transfer = statusPayload
+        local status = transfer.status
+        local quantityTransferred = transfer.quantityTransferred
+
+        if status ~= lastStatus or quantityTransferred ~= lastQuantityTransferred then
+          os.queueEvent("transfer_update", buildTransferPayload())
+          lastStatus = status
+          lastQuantityTransferred = quantityTransferred
+        end
+
+        if status == "completed" then
+          queueTerminalEvent("transfer_completed", buildTransferPayload())
+          markSendTransferDone()
+          return true
+        elseif status == "failed" then
+          queueTerminalEvent("transfer_failed", buildTransferPayload(transfer.error))
+          markSendTransferDone(transfer.error or "Transfer failed")
+          return false, transfer.error or "Transfer failed"
+        elseif status == "cancelled" then
+          queueTerminalEvent("transfer_cancelled", buildTransferPayload(transfer.error))
+          markSendTransferDone(transfer.error or "Transfer cancelled")
+          return false, transfer.error or "Transfer cancelled"
         end
       end
+
+      markSendTransferDone()
+      return true
     end
 
     parallel.waitForAll(transferItems, sendTransfer)
 
-    if errMsg then
-      return false, errMsg, transfer -- because I hate myself
+    if sendTransferError then
+      return false, sendTransferError
+    end
+
+    if not transfer then
+      return false, "Transfer failed"
     end
 
     return transfer, nil
@@ -391,9 +535,12 @@ return function(estorageName, options)
       return false, "Invalid transfer ID"
     end
 
-    local response, errMsg = post("transfers/" .. transferId .. "/cancel")
-    if not response or not response.success then
-      return false, (response and response.error and response.error.message) or errMsg or "Failed to cancel transfer."
+    local ok, payload = wsRequest("cancel_transfer", {
+      transferId = transferId,
+    })
+
+    if not ok then
+      return false, payload
     end
     return true
   end
@@ -403,29 +550,34 @@ return function(estorageName, options)
       return false, "Invalid transfer ID"
     end
 
-    local response, errMsg = get("transfers/" .. transferId)
-    if not response or not response.success then
-      return false, errMsg or "Failed to get transfer."
+    local ok, payload = wsRequest("get_transfer", {
+      transferId = transferId,
+    })
+
+    if not ok then
+      return false, payload
     end
-    return response.data
+    return payload
   end
 
   function klog.getTransfers()
-    local response, errMsg = get("transfers")
-    if not response or not response.success then
-      return false, errMsg or "Failed to fetch transfers."
+    local ok, payload = wsRequest("list_transfers", {})
+
+    if not ok then
+      return false, payload
     end
-    return response.data
+    return payload.transfers or {}
   end
 
   function klog.getTransferTargets()
-    local response, errMsg = get("transfers/targets")
-    if not response or not response.success then
-      return false, errMsg or "Failed to fetch transfer targets."
+    local ok, payload = wsRequest("list_targets", {})
+
+    if not ok then
+      return false, payload
     end
 
     local values = {}
-    for _, target in pairs(response.data) do
+    for _, target in pairs(payload.targets or {}) do
       if target.name and target.name ~= "" then
         table.insert(values, target.name)
       end
@@ -434,6 +586,9 @@ return function(estorageName, options)
 
     return values
   end
+
+  local ok, err = connectWebSocket()
+  assert(ok, "Failed to start WebSocket: " .. (err or "unknown error"))
 
   return klog
 end

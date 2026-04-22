@@ -5,6 +5,7 @@ import { authState } from './state';
 import { AuthState, ClientAuthMessage, MessageHandler } from './types';
 import { workerMessageHandlers } from './workerHandlers';
 import { clientMessageHandlers } from './clientHandlers';
+import { resolveClientEntityId } from './clientEntity';
 
 function getSocketAuthState(ws: WebSocket, messageId?: string | number): AuthState | null {
   const state = authState.get(ws);
@@ -57,6 +58,7 @@ async function handleAuthMessage(ws: WebSocket, parsed: ClientAuthMessage): Prom
     currentState.role = 'worker';
     currentState.apiKeyId = apiKey.id;
     currentState.workerId = parsed.workerId;
+    currentState.clientEntityId = undefined;
     authState.set(ws, currentState);
 
     console.log(
@@ -91,6 +93,7 @@ async function handleAuthMessage(ws: WebSocket, parsed: ClientAuthMessage): Prom
     currentState.authenticated = true;
     currentState.role = 'client';
     currentState.apiKeyId = apiKey.id;
+    currentState.clientEntityId = (await resolveClientEntityId(apiKey.id)) ?? undefined;
     authState.set(ws, currentState);
 
     console.log(
