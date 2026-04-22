@@ -124,10 +124,11 @@ local function getEnderStorageColors()
   end
 end
 
-if not chatbox or not chatbox.hasCapability("command") or not chatbox.hasCapability("tell") then
-  printError("Receive your license with '/chatbox license register', set on this computer with 'chatbox register <key>'")
-  return
-end
+-- This appears to be bugged
+-- if not chatbox or not chatbox.hasCapability("command") or not chatbox.hasCapability("tell") then
+--   printError("Receive your license with '/chatbox license register', set on this computer with 'chatbox register <key>'")
+--   return
+-- end
 
 local function run()
   local e, user, command, args, pkt = os.pullEvent("command")
