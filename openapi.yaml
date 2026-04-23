@@ -1468,6 +1468,8 @@ paths:
                   requestCount: 1234
                   lastUsedAt: 2026-01-25T10:30:00.000Z
                   createdAt: 2026-01-12T10:00:00.000Z
+                  mcUuid: 123e4567-e89b-12d3-a456-426614174000
+                  mcName: PlayerName
                   estorageEntityId: null
                   usage:
                     totalRequests: 1234
@@ -1798,6 +1800,8 @@ paths:
                   name: PlayerName's API Key
                   tier: free
                   rateLimit: 1000
+                  mcUuid: 123e4567-e89b-12d3-a456-426614174000
+                  mcName: PlayerName
                   warning: Save this API key securely - it will not be shown again!
                 meta:
                   timestamp: 2026-01-27T12:05:00.000Z
@@ -2658,6 +2662,15 @@ components:
           type: string
           format: date-time
           description: When the key was created
+        mcUuid:
+          type: string
+          format: uuid
+          nullable: true
+          description: Linked Minecraft player UUID, when available
+        mcName:
+          type: string
+          nullable: true
+          description: Linked Minecraft player name, when available
         estorageEntityId:
           type: string
           format: uuid
@@ -2958,6 +2971,15 @@ components:
         rateLimit:
           type: integer
           description: Requests per hour limit
+        mcUuid:
+          type: string
+          format: uuid
+          nullable: true
+          description: Linked Minecraft player UUID, when available
+        mcName:
+          type: string
+          nullable: true
+          description: Linked Minecraft player name, when available
         warning:
           type: string
           description: Warning to save the key securely

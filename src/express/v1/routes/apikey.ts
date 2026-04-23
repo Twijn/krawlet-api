@@ -91,6 +91,8 @@ router.get('/', async (req: Request, res: Response) => {
       requestCount: number;
       lastUsedAt: Date | null;
       createdAt: Date;
+      mcUuid: string | null;
+      mcName: string | null;
       estorageEntityId: string | null;
       usage?: UsageStats;
     } = {
@@ -103,6 +105,8 @@ router.get('/', async (req: Request, res: Response) => {
       requestCount: request.apiKey.requestCount,
       lastUsedAt: request.apiKey.lastUsedAt,
       createdAt: request.apiKey.createdAt,
+      mcUuid: request.apiKey.mcUuid,
+      mcName: request.apiKey.mcName,
       estorageEntityId: request.apiKey.estorageEntityId,
     };
 
@@ -218,6 +222,8 @@ router.post('/quickcode/redeem', async (req: Request, res: Response) => {
       name: apiKey.name,
       tier: apiKey.tier,
       rateLimit: apiKey.rateLimit,
+      mcUuid: apiKey.mcUuid,
+      mcName: apiKey.mcName,
       warning: 'Save this API key securely - it will not be shown again!',
     });
   } catch (error) {
