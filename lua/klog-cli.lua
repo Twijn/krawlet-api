@@ -15,6 +15,13 @@ sha256         = loadstring(g(
 
 local updateDomain = "https://krawlet.cc/"
 
+local motd = {
+  {"Welcome to Klog CLI!", colors.blue},
+  {"Type 'help' for a list of commands.", colors.lightGray},
+  {"Use 'transfer <target> <item> <quantity>' to transfer items to another ender storage target.", colors.lightGray},
+  {"Use '\\klog optIn' in-game to opt in to in-game notifications for transfers", colors.white},
+}
+
 local function downloadFile(url, filename)
   term.setTextColor(colors.yellow)
   print("Downloading " .. filename .. " from " .. url .. "...")
@@ -126,17 +133,21 @@ elseif enderStorages.n > 1 then
       end
     end
   end
-  return
 else
   printError("No ender storages attached")
   return
 end
 
 local klog = createKlog(peripheral.getName(enderStorage), {
-  apiKey = settings.get("klog.apiKey")
+  apiKey = settings.get("klog.apiKey"),
+  apiUrl = settings.get("klog.apiUrl") or nil,
 })
 
-local transferTargets = klog.getTransferTargets()
+local transferTargets, transferTargetsErr = klog.getTransferTargets()
+if transferTargets == false then
+  printError("Failed to load transfer targets: " .. (transferTargetsErr or "Unknown error"))
+  transferTargets = {}
+end
 
 local items = {}
 
@@ -179,6 +190,8 @@ local function runTransferWithEvents(opts, ctx)
     quantityTransferred = 0,
     error = nil,
     to = opts.to,
+    toEntityId = nil,
+    toUsername = nil,
     itemName = opts.itemName,
   }
 
@@ -196,6 +209,9 @@ local function runTransferWithEvents(opts, ctx)
       progress.id = payload.id or progress.id
       progress.quantity = payload.quantity or progress.quantity
       progress.quantityTransferred = payload.quantityTransferred or progress.quantityTransferred
+      progress.to = payload.to or progress.to
+      progress.toUsername = payload.toUsername or progress.toUsername
+      progress.toEntityId = payload.toEntityId or progress.toEntityId
       progress.status = payload.status or status or progress.status
       progress.error = payload.error or errorMessage or progress.error
     else
@@ -269,7 +285,8 @@ local function runTransferWithEvents(opts, ctx)
     end
     local itemValue = progress.itemName or "any"
     local qtyValue = quantity > 0 and tostring(quantity) or "any"
-    local idLine = string.format("id=%s to=%s", idValue, tostring(progress.to or "?"))
+    local targetValue = progress.toUsername or progress.to or progress.toEntityId or "?"
+    local idLine = string.format("id=%s to=%s", idValue, tostring(targetValue))
     local itemLine = string.format("item=%s qty=%s", itemValue, qtyValue)
 
     local lines = { headerText }
@@ -319,6 +336,35 @@ local function runTransferWithEvents(opts, ctx)
     term.setCursorPos(1, nextLine)
   end
 
+  local unsubscribers = {}
+
+  local function addSubscription(eventType, handler)
+    local unsubscribe = klog.on(eventType, handler)
+    table.insert(unsubscribers, unsubscribe)
+  end
+
+  local function clearSubscriptions()
+    for _, unsubscribe in ipairs(unsubscribers) do
+      unsubscribe()
+    end
+    unsubscribers = {}
+  end
+
+  local activeTransferId = nil
+
+  local function matchesActiveTransfer(payload)
+    if type(payload) ~= "table" or type(payload.id) ~= "string" then
+      return false
+    end
+
+    if not activeTransferId then
+      activeTransferId = payload.id
+      return true
+    end
+
+    return payload.id == activeTransferId
+  end
+
   local function transferRunner()
     transferResult, transferErr = klog.transfer(opts)
     runnerDone = true
@@ -329,37 +375,64 @@ local function runTransferWithEvents(opts, ctx)
     updateProgress(nil, "queued", nil)
     renderProgressLine()
 
-    while true do
-      local event, payload = os.pullEvent()
+    addSubscription("transfer_started", function(payload)
+      if not matchesActiveTransfer(payload) then
+        return
+      end
+      updateProgress(payload, "started", nil)
+      renderProgressLine()
+    end)
 
-      if event == "transfer_started" then
-        updateProgress(payload, "started", nil)
-        renderProgressLine()
-      elseif event == "transfer_update" then
-        updateProgress(payload, payload and payload.status or "updating", nil)
-        renderProgressLine()
-      elseif event == "transfer_completed" then
-        updateProgress(payload, "completed", nil)
-        renderProgressLine()
-        sawTerminalEvent = true
-      elseif event == "transfer_failed" then
-        updateProgress(payload, "failed", (payload and payload.error) or "unknown error")
-        renderProgressLine()
-        sawTerminalEvent = true
-      elseif event == "transfer_cancelled" then
-        updateProgress(payload, "cancelled", payload and payload.error or nil)
-        renderProgressLine()
-        sawTerminalEvent = true
-      elseif event == "klog_cli_transfer_runner_done" then
+    addSubscription("transfer_update", function(payload)
+      if not matchesActiveTransfer(payload) then
+        return
+      end
+      updateProgress(payload, payload and payload.status or "updating", nil)
+      renderProgressLine()
+    end)
+
+    addSubscription("transfer_completed", function(payload)
+      if not matchesActiveTransfer(payload) then
+        return
+      end
+      updateProgress(payload, "completed", nil)
+      renderProgressLine()
+      sawTerminalEvent = true
+    end)
+
+    addSubscription("transfer_failed", function(payload)
+      if not matchesActiveTransfer(payload) then
+        return
+      end
+      updateProgress(payload, "failed", (payload and payload.error) or "unknown error")
+      renderProgressLine()
+      sawTerminalEvent = true
+    end)
+
+    addSubscription("transfer_cancelled", function(payload)
+      if not matchesActiveTransfer(payload) then
+        return
+      end
+      updateProgress(payload, "cancelled", payload and payload.error or nil)
+      renderProgressLine()
+      sawTerminalEvent = true
+    end)
+
+    while true do
+      local event = os.pullEvent()
+
+      if event == "klog_cli_transfer_runner_done" then
         runnerDone = true
       end
 
       if runnerDone and sawTerminalEvent then
+        clearSubscriptions()
         finishProgressLine()
         return
       end
 
       if runnerDone and transferResult == false and not sawTerminalEvent then
+        clearSubscriptions()
         updateProgress(nil, "failed", transferErr or "Unknown error")
         renderProgressLine()
         finishProgressLine()
@@ -387,7 +460,7 @@ local commands = {
   transfer = {
     description = "Transfer items to another ender storage target",
     category = "general",
-    usage = "transfer <target> <item> <quantity> [timeoutSeconds]",
+    usage = "transfer <target> <item> <quantity> [memo]",
     complete = function(args)
       if #args == 1 then
         return transferTargets
@@ -400,9 +473,13 @@ local commands = {
       local target = args[1]
       local item = args[2]
       local quantity = tonumber(args[3])
-      local timeout = args[4] and tonumber(args[4]) or nil
+      local memo = args[4] or nil
+      for i = 5, #args do
+        if not memo then memo = "" end
+        memo = memo .. " " .. args[i]
+      end
       if not target or not item then
-        ctx.err("Usage: transfer <target> <item> [quantity] [timeoutSeconds]")
+        ctx.err("transfer <target> <item> <quantity> [memo]")
         return
       end
 
@@ -411,16 +488,11 @@ local commands = {
         return
       end
 
-      if args[4] and not timeout then
-        ctx.err("timeoutSeconds must be a number")
-        return
-      end
-
       runTransferWithEvents({
         to = target,
         itemName = item,
         quantity = quantity,
-        timeout = timeout,
+        memo = memo,
       }, ctx)
     end,
   },
@@ -457,6 +529,17 @@ local commands = {
   }
 }
 
+local disableMotdValue = settings.get("klog.disableMotd")
+if not disableMotdValue and disableMotdValue ~= "false" then
+  for _, motdLine in pairs(motd) do
+    local text = motdLine[1]
+    local color = motdLine[2] or colors.white
+    term.setTextColor(color)
+    print(text)
+  end
+  term.setTextColor(colors.white)
+end
+
 parallel.waitForAny(
   function()
     while true do
@@ -465,6 +548,6 @@ parallel.waitForAny(
     end
   end,
   function()
-    cmd("klog-cli", "1.1.0", commands)
+    cmd("klog-cli", "1.2.0", commands)
   end
 )

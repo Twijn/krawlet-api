@@ -12,8 +12,34 @@
 ---@field quantity? number Max quantity to transfer.
 ---@field itemName? string Optional item name filter.
 ---@field itemNbt? string Optional exact NBT filter.
+---@field memo? string Optional note attached to the transfer.
 ---@field timeout? number Seconds worker should wait for new source items or destination space (default worker behavior if omitted).
 ---@field disableExternalStaging? boolean If true, do not move items from external inventories into the Klog ender storage.
+
+---@alias KlogTransferStatus
+---| "pending"
+---| "in_progress"
+---| "completed"
+---| "failed"
+---| "cancelled"
+
+---@class KlogTransfer
+---@field id string Transfer id.
+---@field status KlogTransferStatus Current transfer status.
+---@field fromEntityId? string Sender entity id.
+---@field fromUsername? string Sender username when available.
+---@field toEntityId? string Recipient entity id.
+---@field toUsername? string Recipient username when available.
+---@field to? string Destination target.
+---@field quantity? number Requested quantity.
+---@field quantityTransferred? number Quantity moved so far.
+---@field itemName? string Item id filter.
+---@field itemNbt? string Item NBT filter.
+---@field memo? string Transfer note.
+---@field timeout? number Worker timeout in seconds.
+---@field error? string Failure or cancellation reason.
+---@field createdAt? string Creation timestamp.
+---@field updatedAt? string Last update timestamp.
 
 ---Create a Klog client bound to an ender storage peripheral.
 ---
@@ -242,8 +268,44 @@ return function(estorageName, options)
   end
 
   local klog = {
-    _VERSION = "1.0.0",
+    _handlers = {},
+    _VERSION = "1.2.0",
   }
+
+  local function emitEvent(eventType, payload)
+    os.queueEvent(eventType, payload)
+
+    local handlers = klog._handlers[eventType]
+    if not handlers then
+      return
+    end
+
+    for _, handler in pairs(handlers) do
+      local ok, err = pcall(handler, payload)
+      if not ok then
+        printError("Error in handler for event '" .. eventType .. "': " .. tostring(err))
+      end
+    end
+  end
+
+  local function removeHandler(eventType, handler)
+    local handlers = klog._handlers[eventType]
+    if not handlers then
+      return false
+    end
+
+    for index, registeredHandler in ipairs(handlers) do
+      if registeredHandler == handler then
+        table.remove(handlers, index)
+        if #handlers == 0 then
+          klog._handlers[eventType] = nil
+        end
+        return true
+      end
+    end
+
+    return false
+  end
 
   local function matchesExclude(name, pattern)
     -- Escape Lua pattern special chars, then replace * with .*
@@ -263,6 +325,9 @@ return function(estorageName, options)
     return false
   end
 
+  ---Get input inventories used for staging into ender storage.
+  ---The staging ender storage itself and any configured exclude patterns are omitted.
+  ---@return table[] chests Inventory peripheral objects.
   function klog.getInputChests()
     local chests = {}
     for _, chest in ipairs(table.pack(peripheral.find("inventory"))) do
@@ -273,6 +338,10 @@ return function(estorageName, options)
     return chests
   end
 
+  ---Count matching items across all input inventories.
+  ---@param itemName string Item id to match (for example minecraft:diamond).
+  ---@param itemNbt? string Optional exact NBT to match.
+  ---@return number total Total matching item count.
   function klog.countItem(itemName, itemNbt)
     local total = 0
     local chests = klog.getInputChests()
@@ -307,6 +376,9 @@ return function(estorageName, options)
     if opts.quantity and (type(opts.quantity) ~= "number" or opts.quantity <= 0) then
       return "Quantity must be a positive number if specified"
     end
+    if opts.memo ~= nil and type(opts.memo) ~= "string" then
+      return "Memo must be a string if specified"
+    end
     if opts.timeout and (type(opts.timeout) ~= "number" or opts.timeout <= 0 or opts.timeout > 30) then
       return "Timeout must be a positive number between 0.1 and 30 seconds if specified"
     end
@@ -329,16 +401,17 @@ return function(estorageName, options)
   ---Exactly one terminal event (completed/cancelled/failed) is emitted per attempt.
   ---
   ---@param opts KlogTransferOptions
-  ---@return table|false transfer Transfer data on success, false on failure.
+  ---@return KlogTransfer|false transfer Transfer data on success, false on failure.
   ---@return string|nil err Error message when transfer is false.
   function klog.transfer(opts)
     local err = checkTransferOpts(opts)
     if err then
-      os.queueEvent("transfer_failed", {
+      emitEvent("transfer_failed", {
         to = opts and opts.to,
         quantity = opts and opts.quantity,
         itemName = opts and opts.itemName,
         itemNbt = opts and opts.itemNbt,
+        memo = opts and opts.memo,
         error = err,
       })
       return false, err
@@ -350,17 +423,19 @@ return function(estorageName, options)
       opts.quantity = math.min(opts.quantity or math.huge, stagedCount + externalCount)
       if opts.quantity <= 0 then
         local errMsg = "No items available to transfer"
-        os.queueEvent("transfer_failed", {
+        emitEvent("transfer_failed", {
           to = opts.to,
           quantity = opts.quantity,
           itemName = opts.itemName,
           itemNbt = opts.itemNbt,
+          memo = opts.memo,
           error = errMsg,
         })
         return false, errMsg
       end
     end
 
+    ---@type KlogTransfer|nil
     local transfer = nil
     local lastStatus = nil
     local lastQuantityTransferred = nil
@@ -393,7 +468,7 @@ return function(estorageName, options)
         return
       end
       terminalEventQueued = true
-      os.queueEvent(eventName, payload)
+      emitEvent(eventName, payload)
     end
 
     local function transferItems()
@@ -467,6 +542,7 @@ return function(estorageName, options)
         quantity = opts.quantity,
         itemName = opts.itemName,
         itemNbt = opts.itemNbt,
+        memo = opts.memo,
         timeout = opts.timeout,
       })
 
@@ -476,8 +552,22 @@ return function(estorageName, options)
         return false, payload
       end
 
+      if type(payload) ~= "table" then
+        local errMsg = "Unexpected create_transfer response"
+        queueTerminalEvent("transfer_failed", buildTransferPayload(errMsg))
+        markSendTransferDone(errMsg)
+        return false, errMsg
+      end
+
+      if type(payload.id) ~= "string" or type(payload.status) ~= "string" then
+        local errMsg = "Malformed create_transfer response"
+        queueTerminalEvent("transfer_failed", buildTransferPayload(errMsg))
+        markSendTransferDone(errMsg)
+        return false, errMsg
+      end
+
       transfer = payload
-      os.queueEvent("transfer_started", buildTransferPayload())
+      emitEvent("transfer_started", buildTransferPayload())
 
       while transfer and (transfer.status == "pending" or transfer.status == "in_progress") do
         local statusOk, statusPayload = waitForTransferUpdate(transfer.id, 35)
@@ -500,7 +590,7 @@ return function(estorageName, options)
         local quantityTransferred = transfer.quantityTransferred
 
         if status ~= lastStatus or quantityTransferred ~= lastQuantityTransferred then
-          os.queueEvent("transfer_update", buildTransferPayload())
+          emitEvent("transfer_update", buildTransferPayload())
           lastStatus = status
           lastQuantityTransferred = quantityTransferred
         end
@@ -537,17 +627,18 @@ return function(estorageName, options)
     return transfer, nil
   end
 
-  ---Start a transfer in a coroutine and return the thread.
-  ---Caller is responsible for resuming/monitoring the coroutine result.
+  ---Compatibility wrapper around klog.transfer.
+  ---This needs to be reworked.
   ---@param opts KlogTransferOptions Same options as klog.transfer.
-  ---@return thread
-  function klog.transferAsync(opts)
-
-    local thread = coroutine.create(function()
-      return klog.transfer(opts)
-    end)
-    coroutine.resume(thread)
-    return thread
+  ---@param callback? function Callback invoked as callback(transfer, err) when finished.
+  ---@return KlogTransfer|false transfer Transfer data on success, false on failure.
+  ---@return string|nil err Error message when transfer is false.
+  function klog.transferAsync(opts, callback)
+    local transfer, err = klog.transfer(opts)
+    if type(callback) == "function" then
+      callback(transfer, err)
+    end
+    return transfer, err
   end
 
   ---Cancel a transfer by id.
@@ -569,6 +660,10 @@ return function(estorageName, options)
     return true
   end
 
+  ---Get a transfer by id.
+  ---@param transferId string
+  ---@return KlogTransfer|false transfer Transfer payload on success, false on failure.
+  ---@return string|nil err Error message when transfer is false.
   function klog.getTransfer(transferId)
     if not transferId or type(transferId) ~= "string" then
       return false, "Invalid transfer ID"
@@ -581,23 +676,51 @@ return function(estorageName, options)
     if not ok then
       return false, payload
     end
+
+    if type(payload) ~= "table" then
+      return false, "Unexpected get_transfer response"
+    end
+
+    if type(payload.id) ~= "string" or type(payload.status) ~= "string" then
+      return false, "Malformed get_transfer response"
+    end
+
     return payload
   end
 
+  ---List all transfers visible to the current API key.
+  ---@return KlogTransfer[]|false transfers Transfer list on success, false on failure.
+  ---@return string|nil err Error message when transfers is false.
   function klog.getTransfers()
     local ok, payload = wsRequest("list_transfers", {})
 
     if not ok then
       return false, payload
     end
+
+    if type(payload) ~= "table" then
+      return false, "Unexpected list_transfers response"
+    end
+
+    if payload.transfers ~= nil and type(payload.transfers) ~= "table" then
+      return false, "Malformed list_transfers response"
+    end
+
     return payload.transfers or {}
   end
 
+  ---List available transfer target names.
+  ---@return string[]|false targets Sorted target names on success, false on failure.
+  ---@return string|nil err Error message when targets is false.
   function klog.getTransferTargets()
     local ok, payload = wsRequest("list_targets", {})
 
     if not ok then
       return false, payload
+    end
+
+    if type(payload) ~= "table" then
+      return false, "Unexpected list_targets response"
     end
 
     local values = {}
@@ -613,6 +736,51 @@ return function(estorageName, options)
 
   local ok, err = connectWebSocket()
   assert(ok, "Failed to start WebSocket: " .. (err or "unknown error"))
+
+  ---Register an event handler for Klog lifecycle events.
+  ---
+  ---Handlers are invoked synchronously when Klog emits an event.
+  ---Events are also queued with os.queueEvent for compatibility with pullEvent-based consumers.
+  ---
+  ---Klog emits these transfer lifecycle events during klog.transfer(...):
+  --- - transfer_started(payload)
+  --- - transfer_update(payload)
+  --- - transfer_completed(payload)
+  --- - transfer_cancelled(payload)
+  --- - transfer_failed(payload)
+  ---@param eventType string Event name to subscribe to.
+  ---@param handler function Callback invoked with the event payload.
+  ---@return function unsubscribe Call to remove this handler.
+  function klog.on(eventType, handler)
+    if type(handler) ~= "function" then
+      error("Handler must be a function")
+    end
+    klog._handlers[eventType] = klog._handlers[eventType] or {}
+    table.insert(klog._handlers[eventType], handler)
+    return function()
+      return removeHandler(eventType, handler)
+    end
+  end
+
+  ---Remove a previously registered event handler.
+  ---@param eventType string Event name.
+  ---@param handler function Registered handler function.
+  ---@return boolean removed True when a handler was removed.
+  function klog.off(eventType, handler)
+    if type(handler) ~= "function" then
+      error("Handler must be a function")
+    end
+    return removeHandler(eventType, handler)
+  end
+
+  ---Close the websocket connection.
+  ---No automatic reconnect is attempted after close.
+  function klog.close()
+    if ws then
+      ws.close()
+      ws = nil
+    end
+  end
 
   return klog
 end
