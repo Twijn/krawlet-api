@@ -23,6 +23,106 @@ export type RequestWithTransfer = RequestWithRateLimit & {
   requesterEntityId: string;
 };
 
+type PlayerLink = {
+  mcUuid?: string;
+  mcName?: string;
+};
+
+type TransferTarget = {
+  id: string;
+  name: string;
+  type: string;
+  links: { type: string; value: string }[];
+  mcUuid?: string;
+  mcName?: string;
+};
+
+type TransferWithMinecraftShorthand = RawTransfer & {
+  fromMcUuid?: string;
+  fromMcName?: string;
+  toMcUuid?: string;
+  toMcName?: string;
+};
+
+function mapPlayerLinks(links: EstorageEntityLink[]): Map<string, PlayerLink> {
+  const byEntity = new Map<string, PlayerLink>();
+
+  for (const link of links) {
+    if (link.linkType !== 'player_uuid') {
+      continue;
+    }
+
+    if (!byEntity.has(link.entityId)) {
+      byEntity.set(link.entityId, {
+        mcUuid: link.linkValue,
+        mcName: link.linkName ?? undefined,
+      });
+    }
+  }
+
+  return byEntity;
+}
+
+async function attachMinecraftShorthand(
+  transfers: RawTransfer[],
+): Promise<TransferWithMinecraftShorthand[]> {
+  if (transfers.length === 0) {
+    return [];
+  }
+
+  const entityIds = Array.from(
+    new Set(transfers.flatMap((transfer) => [transfer.fromEntityId, transfer.toEntityId])),
+  );
+
+  const links = await EstorageEntityLink.findAll({
+    where: {
+      entityId: {
+        [Op.in]: entityIds,
+      },
+      linkType: 'player_uuid',
+    },
+    attributes: ['entityId', 'linkType', 'linkValue', 'linkName'],
+    order: [
+      ['isPrimary', 'DESC'],
+      ['createdAt', 'ASC'],
+    ],
+  });
+
+  const playerLinks = mapPlayerLinks(links);
+
+  return transfers.map((transfer) => {
+    const fromLink = playerLinks.get(transfer.fromEntityId);
+    const toLink = playerLinks.get(transfer.toEntityId);
+
+    return {
+      ...transfer,
+      fromMcUuid: fromLink?.mcUuid,
+      fromMcName: fromLink?.mcName,
+      toMcUuid: toLink?.mcUuid,
+      toMcName: toLink?.mcName,
+    };
+  });
+}
+
+function serializeTransferTargets(entities: EstorageEntity[]): TransferTarget[] {
+  return entities.map((entity) => {
+    const links = ((entity as any).links ?? []) as EstorageEntityLink[];
+    const playerLink = links.find((link) => link.linkType === 'player_uuid');
+
+    return {
+      id: entity.id,
+      name: entity.name,
+      type: entity.entityType,
+      links: links.map((link) => ({
+        type: link.linkType,
+        value: link.linkValue,
+      })),
+      mcUuid: playerLink?.linkValue,
+      mcName: playerLink?.linkName ?? undefined,
+    };
+  });
+}
+
 async function resolveRequesterEntity(request: RequestWithRateLimit) {
   if (!request.apiKey) {
     return { entity: null, error: 'API key required to access this endpoint' };
@@ -70,7 +170,8 @@ router.get('/', authenticateApiKeyTier('free', 'premium'), async (req, res) => {
       order: [['createdAt', 'DESC']],
     });
 
-    return res.success(transfers.map((t) => t.raw()));
+    const rawTransfers = transfers.map((t) => t.raw());
+    return res.success(await attachMinecraftShorthand(rawTransfers));
   } catch (error) {
     console.error('Error fetching transfers:', error);
     return res.error('INTERNAL_SERVER_ERROR', 'Failed to fetch transfers', 500);
@@ -97,17 +198,7 @@ router.get('/targets', authenticateApiKeyTier('free', 'premium'), async (req, re
       ],
     });
 
-    return res.success(
-      entities.map((entity) => ({
-        id: entity.id,
-        name: entity.name,
-        type: entity.entityType,
-        links: ((entity as any).links ?? []).map((link: EstorageEntityLink) => ({
-          type: link.linkType,
-          value: link.linkValue,
-        })),
-      })),
-    );
+    return res.success(serializeTransferTargets(entities));
   } catch (error) {
     console.error('Error fetching transfer targets:', error);
     return res.error('INTERNAL_SERVER_ERROR', 'Failed to fetch transfer targets', 500);
@@ -151,7 +242,8 @@ router.post('/', authenticateApiKeyTier('free', 'premium'), json(), async (req, 
       requesterTier: request.apiKey.tier,
     });
 
-    return res.success(transfer);
+    const [serializedTransfer] = await attachMinecraftShorthand([transfer]);
+    return res.success(serializedTransfer);
   } catch (error) {
     console.error('Error storing transfer data:', error);
 
@@ -259,8 +351,9 @@ router.use(
 
 router.get('/:transferId', authenticateApiKeyTier('free', 'premium'), async (req, res) => {
   const request = req as RequestWithTransfer;
+  const [serializedTransfer] = await attachMinecraftShorthand([request.transfer]);
 
-  return res.success(request.transfer);
+  return res.success(serializedTransfer);
 });
 
 router.post('/:transferId/cancel', authenticateApiKeyTier('free', 'premium'), async (req, res) => {
@@ -274,7 +367,8 @@ router.post('/:transferId/cancel', authenticateApiKeyTier('free', 'premium'), as
       return res.error('NOT_FOUND', 'Transfer not found or cannot be cancelled', 404);
     }
 
-    return res.success(transfer);
+    const [serializedTransfer] = await attachMinecraftShorthand([transfer]);
+    return res.success(serializedTransfer);
   } catch (error) {
     console.error('Error cancelling transfer:', error);
 

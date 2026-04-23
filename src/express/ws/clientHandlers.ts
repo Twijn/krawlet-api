@@ -87,10 +87,12 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
         `${logPrefix(state)} create_transfer transferId=${transfer.id} from=${requesterEntity.name} to=${toEntity.name}`,
       );
 
+      const [serializedTransfer] = await attachMinecraftShorthand([transfer]);
+
       sendJson(ws, {
         id: message.id,
         type: 'create_transfer_ok',
-        payload: transfer,
+        payload: serializedTransfer,
       });
     } catch (err) {
       if (err instanceof WorkerLimitExceededError) {
@@ -143,10 +145,12 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
       return;
     }
 
+    const [serializedTransfer] = await attachMinecraftShorthand([raw]);
+
     sendJson(ws, {
       id: message.id,
       type: 'get_transfer_ok',
-      payload: raw,
+      payload: serializedTransfer,
     });
   },
 
@@ -187,10 +191,12 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
 
       console.log(`${logPrefix(state)} cancel_transfer transferId=${transfer.id}`);
 
+      const [serializedTransfer] = await attachMinecraftShorthand([transfer]);
+
       sendJson(ws, {
         id: message.id,
         type: 'cancel_transfer_ok',
-        payload: transfer,
+        payload: serializedTransfer,
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to cancel transfer';
@@ -225,11 +231,13 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
 
       console.log(`${logPrefix(state)} list_transfers count=${transfers.length}`);
 
+      const rawTransfers = transfers.map((t) => t.raw());
+
       sendJson(ws, {
         id: message.id,
         type: 'list_transfers_ok',
         payload: {
-          transfers: transfers.map((t) => t.raw()),
+          transfers: await attachMinecraftShorthand(rawTransfers),
         },
       });
     } catch (err) {
@@ -263,15 +271,7 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
         ],
       });
 
-      const targets = entities.map((entity) => ({
-        id: entity.id,
-        name: entity.name,
-        type: entity.entityType,
-        links: ((entity as any).links ?? []).map((link: EstorageEntityLink) => ({
-          type: link.linkType,
-          value: link.linkValue,
-        })),
-      }));
+      const targets = serializeTransferTargets(entities);
 
       console.log(`${logPrefix(state)} list_targets count=${targets.length}`);
 
@@ -288,3 +288,94 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
     }
   },
 };
+
+type PlayerLink = {
+  mcUuid?: string;
+  mcName?: string;
+};
+
+type RawTransferWithMinecraftShorthand = ReturnType<Transfer['raw']> & {
+  fromMcUuid?: string;
+  fromMcName?: string;
+  toMcUuid?: string;
+  toMcName?: string;
+};
+
+function mapPlayerLinks(links: EstorageEntityLink[]): Map<string, PlayerLink> {
+  const byEntity = new Map<string, PlayerLink>();
+
+  for (const link of links) {
+    if (link.linkType !== 'player_uuid') {
+      continue;
+    }
+
+    if (!byEntity.has(link.entityId)) {
+      byEntity.set(link.entityId, {
+        mcUuid: link.linkValue,
+        mcName: link.linkName ?? undefined,
+      });
+    }
+  }
+
+  return byEntity;
+}
+
+async function attachMinecraftShorthand(
+  transfers: ReturnType<Transfer['raw']>[],
+): Promise<RawTransferWithMinecraftShorthand[]> {
+  if (transfers.length === 0) {
+    return [];
+  }
+
+  const entityIds = Array.from(
+    new Set(transfers.flatMap((transfer) => [transfer.fromEntityId, transfer.toEntityId])),
+  );
+
+  const links = await EstorageEntityLink.findAll({
+    where: {
+      entityId: {
+        [Op.in]: entityIds,
+      },
+      linkType: 'player_uuid',
+    },
+    attributes: ['entityId', 'linkType', 'linkValue', 'linkName'],
+    order: [
+      ['isPrimary', 'DESC'],
+      ['createdAt', 'ASC'],
+    ],
+  });
+
+  const playerLinks = mapPlayerLinks(links);
+
+  return transfers.map((transfer) => {
+    const fromLink = playerLinks.get(transfer.fromEntityId);
+    const toLink = playerLinks.get(transfer.toEntityId);
+
+    return {
+      ...transfer,
+      fromMcUuid: fromLink?.mcUuid,
+      fromMcName: fromLink?.mcName,
+      toMcUuid: toLink?.mcUuid,
+      toMcName: toLink?.mcName,
+    };
+  });
+}
+
+function serializeTransferTargets(entities: EstorageEntity[]) {
+  return entities.map((entity) => {
+    const links = ((entity as any).links ?? []) as EstorageEntityLink[];
+    const playerLink = links.find((link) => link.linkType === 'player_uuid');
+
+    return {
+      id: entity.id,
+      name: entity.name,
+      type: entity.entityType,
+      links: links.map((link) => ({
+        type: link.linkType,
+        value: link.linkValue,
+      })),
+      mcUuid: playerLink?.linkValue,
+      mcName: playerLink?.linkName ?? undefined,
+    };
+  });
+}

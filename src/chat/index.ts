@@ -52,8 +52,8 @@ export function completeTransfer(transfer: RawTransfer, error: string | null = n
     quantityDisplay += `/${transfer.quantity.toLocaleString()}`;
   }
 
-  let fromMessage = `<gold>Your transfer to ${transfer.toName} has been completed</gold>`;
-  let toMessage = `<gold>You have received a transfer from ${transfer.fromName}</gold>`;
+  let fromMessage = `<blue>Your transfer to ${transfer.toName} has been completed</blue>`;
+  let toMessage = `<blue>You have received a transfer from ${transfer.fromName}</blue>`;
 
   if (transfer.status === 'cancelled') {
     fromMessage = `<yellow>Your transfer to ${transfer.toName} was cancelled</yellow>`;
@@ -65,24 +65,24 @@ export function completeTransfer(transfer: RawTransfer, error: string | null = n
 
   if (transfer.itemName) {
     const nbtSuffix = transfer.itemNbt ? ` (NBT: ${transfer.itemNbt})` : '';
-    fromMessage += `<yellow>: ${transfer.itemName}${nbtSuffix} x${quantityDisplay}</yellow>`;
-    toMessage += `<yellow>: ${transfer.itemName}${nbtSuffix} x${quantityDisplay}</yellow>`;
+    fromMessage += `<gray>: ${transfer.itemName}${nbtSuffix} x${quantityDisplay}</gray>`;
+    toMessage += `<gray>: ${transfer.itemName}${nbtSuffix} x${quantityDisplay}</gray>`;
   } else if (transfer.itemNbt) {
-    fromMessage += `<yellow>: items (NBT: ${transfer.itemNbt}) x${quantityDisplay}</yellow>`;
-    toMessage += `<yellow>: items (NBT: ${transfer.itemNbt}) x${quantityDisplay}</yellow>`;
+    fromMessage += `<gray>: items (NBT: ${transfer.itemNbt}) x${quantityDisplay}</gray>`;
+    toMessage += `<gray>: items (NBT: ${transfer.itemNbt}) x${quantityDisplay}</gray>`;
   } else {
-    fromMessage += `<yellow>: ${quantityDisplay} items</yellow>`;
-    toMessage += `<yellow>: ${quantityDisplay} items</yellow>`;
+    fromMessage += `<gray>: ${quantityDisplay} items</gray>`;
+    toMessage += `<gray>: ${quantityDisplay} items</gray>`;
   }
 
   if (transfer.memo) {
-    fromMessage += `<gray> (Memo: ${transfer.memo})</gray>`;
-    toMessage += `<gray> (Memo: ${transfer.memo})</gray>`;
+    fromMessage += `<br><gray>(Memo: ${transfer.memo})</gray>`;
+    toMessage += `<br><gray>(Memo: ${transfer.memo})</gray>`;
   }
 
   if (error) {
-    fromMessage += `<gray> (${error})</gray>`;
-    toMessage += `<gray> (${error})</gray>`;
+    fromMessage += `<br><red>(${error})</red>`;
+    toMessage += `<br><red>(${error})</red>`;
   }
 
   if (from && fromPlayer?.transferNotificationsEnabled) {
