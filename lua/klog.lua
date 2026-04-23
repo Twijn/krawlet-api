@@ -34,6 +34,7 @@
 ---@field quantity? number Requested quantity.
 ---@field quantityTransferred? number Quantity moved so far.
 ---@field itemName? string Item id filter.
+---@field itemDisplayName? string Human-readable item name when available.
 ---@field itemNbt? string Item NBT filter.
 ---@field memo? string Transfer note.
 ---@field timeout? number Worker timeout in seconds.

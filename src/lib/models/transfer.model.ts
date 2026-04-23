@@ -13,6 +13,7 @@ export type RawTransfer = {
   toEntityId: string;
   toName: string;
   itemName?: string;
+  itemDisplayName?: string;
   itemNbt?: string;
   memo?: string;
   quantity?: number;
@@ -31,6 +32,7 @@ export class Transfer extends Model {
   public toEntityId!: string;
   public toName!: string;
   public itemName?: string;
+  public itemDisplayName?: string;
   public itemNbt?: string;
   public memo?: string;
   public quantity?: number;
@@ -52,6 +54,7 @@ export class Transfer extends Model {
       toEntityId: this.toEntityId,
       toName: this.toName,
       itemName: this.itemName ?? undefined,
+      itemDisplayName: this.itemDisplayName ?? undefined,
       itemNbt: this.itemNbt ?? undefined,
       memo: this.memo ?? undefined,
       quantity: this.quantity ?? undefined,
@@ -100,6 +103,10 @@ Transfer.init(
       allowNull: false,
     },
     itemName: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    itemDisplayName: {
       type: DataTypes.STRING,
       allowNull: true,
     },

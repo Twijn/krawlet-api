@@ -99,7 +99,10 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
       return;
     }
 
-    await updateTransferStatus(transfer.id, 'in_progress', moved);
+    await updateTransferStatus(transfer.id, 'in_progress', moved, undefined, {
+      itemName: parsed.itemName,
+      itemDisplayName: parsed.itemDisplayName,
+    });
 
     console.log(
       `${logPrefix(state)} transfer progress transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} nbt=${parsed.itemNbt ?? 'any'}`,
@@ -138,12 +141,17 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
     }
 
     if (state.currentTaskCancelRequested) {
-      await updateTransferStatus(transfer.id, 'cancelled', moved);
+      await updateTransferStatus(transfer.id, 'cancelled', moved, undefined, {
+        itemName: parsed.itemName,
+        itemDisplayName: parsed.itemDisplayName,
+      });
       completeTransfer(
         {
           ...transfer,
           status: 'cancelled',
           quantityTransferred: moved,
+          itemName: transfer.itemName ?? parsed.itemName,
+          itemDisplayName: transfer.itemDisplayName ?? parsed.itemDisplayName,
         },
         'Transfer was cancelled',
       );
@@ -167,11 +175,16 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
       return;
     }
 
-    await updateTransferStatus(transfer.id, 'completed', moved);
+    await updateTransferStatus(transfer.id, 'completed', moved, undefined, {
+      itemName: parsed.itemName,
+      itemDisplayName: parsed.itemDisplayName,
+    });
     completeTransfer({
       ...transfer,
       status: 'completed',
       quantityTransferred: moved,
+      itemName: transfer.itemName ?? parsed.itemName,
+      itemDisplayName: transfer.itemDisplayName ?? parsed.itemDisplayName,
     });
 
     console.log(
@@ -217,12 +230,17 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
       return;
     }
 
-    await updateTransferStatus(transfer.id, 'cancelled', moved);
+    await updateTransferStatus(transfer.id, 'cancelled', moved, undefined, {
+      itemName: parsed.itemName,
+      itemDisplayName: parsed.itemDisplayName,
+    });
     completeTransfer(
       {
         ...transfer,
         status: 'cancelled',
         quantityTransferred: moved,
+        itemName: transfer.itemName ?? parsed.itemName,
+        itemDisplayName: transfer.itemDisplayName ?? parsed.itemDisplayName,
       },
       'Transfer was cancelled',
     );
@@ -290,12 +308,17 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
         return;
       }
 
-      await updateTransferStatus(transfer.id, 'cancelled', movedAfterCancel);
+      await updateTransferStatus(transfer.id, 'cancelled', movedAfterCancel, undefined, {
+        itemName: parsed.itemName,
+        itemDisplayName: parsed.itemDisplayName,
+      });
       completeTransfer(
         {
           ...transfer,
           status: 'cancelled',
           quantityTransferred: movedAfterCancel,
+          itemName: transfer.itemName ?? parsed.itemName,
+          itemDisplayName: transfer.itemDisplayName ?? parsed.itemDisplayName,
         },
         'Transfer was cancelled',
       );
@@ -339,12 +362,18 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
       'failed',
       moved,
       parsed.reason || 'Transfer failed with unknown error',
+      {
+        itemName: parsed.itemName,
+        itemDisplayName: parsed.itemDisplayName,
+      },
     );
     completeTransfer(
       {
         ...transfer,
         status: 'failed',
         quantityTransferred: moved,
+        itemName: transfer.itemName ?? parsed.itemName,
+        itemDisplayName: transfer.itemDisplayName ?? parsed.itemDisplayName,
       },
       parsed.reason || 'Transfer failed with unknown error',
     );
@@ -357,6 +386,7 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
           workerId: parsed.workerId,
           requestedQuantity: parsed.requestedQuantity,
           itemName: parsed.itemName,
+          itemDisplayName: parsed.itemDisplayName,
           itemNbt: parsed.itemNbt,
           elapsedMs: parsed.elapsedMs,
         },

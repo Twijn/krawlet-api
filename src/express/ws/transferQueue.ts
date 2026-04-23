@@ -23,6 +23,7 @@ export type QueueTransferParams = {
   from: { uuid: string; name: string };
   to: string;
   itemName?: string;
+  itemDisplayName?: string;
   itemNbt?: string;
   memo?: string;
   quantity?: number;
@@ -34,6 +35,7 @@ export type QueueTransferByEntityParams = {
   fromEntityId: string;
   toEntityId: string;
   itemName?: string;
+  itemDisplayName?: string;
   itemNbt?: string;
   memo?: string;
   quantity?: number;
@@ -45,6 +47,7 @@ async function queueTransferWithEntities({
   fromEntityId,
   toEntityId,
   itemName,
+  itemDisplayName,
   itemNbt,
   memo,
   quantity,
@@ -84,6 +87,7 @@ async function queueTransferWithEntities({
         toEntityId: toEntity.id,
         toName: toEntity.name,
         itemName,
+        itemDisplayName,
         itemNbt,
         memo,
         quantity,
@@ -106,7 +110,8 @@ async function queueTransferWithEntities({
 }
 
 export async function queueTransfer(params: QueueTransferParams): Promise<RawTransfer> {
-  const { from, to, itemName, itemNbt, memo, quantity, timeout, requesterTier } = params;
+  const { from, to, itemName, itemDisplayName, itemNbt, memo, quantity, timeout, requesterTier } =
+    params;
   const fromEntity = await findEntityByPlayerUuid(from.uuid);
   const toEntity = await findEntityByLookup(to);
 
@@ -124,6 +129,7 @@ export async function queueTransfer(params: QueueTransferParams): Promise<RawTra
     fromEntityId: fromEntity.id,
     toEntityId: toEntity.id,
     itemName,
+    itemDisplayName,
     itemNbt,
     memo,
     quantity,
@@ -273,6 +279,7 @@ export async function updateTransferStatus(
   status: TransferStatus,
   quantityTransferred?: number,
   errorReason?: string,
+  itemMetadata?: { itemName?: string; itemDisplayName?: string },
 ): Promise<void> {
   const transfer = await Transfer.findOne({ where: { id: transferId } });
   if (!transfer) {
@@ -295,7 +302,23 @@ export async function updateTransferStatus(
     return;
   }
 
-  await transfer.update({ status, quantityTransferred, error: errorReason });
+  const updates: {
+    status: TransferStatus;
+    quantityTransferred?: number;
+    error?: string;
+    itemName?: string;
+    itemDisplayName?: string;
+  } = { status, quantityTransferred, error: errorReason };
+
+  if (!transfer.itemName && itemMetadata?.itemName) {
+    updates.itemName = itemMetadata.itemName;
+  }
+
+  if (!transfer.itemDisplayName && itemMetadata?.itemDisplayName) {
+    updates.itemDisplayName = itemMetadata.itemDisplayName;
+  }
+
+  await transfer.update(updates);
   const updatedTransfer = transfer.raw();
 
   const localTransfer = activeTransfers.find((transfer) => transfer.id === transferId);
@@ -306,6 +329,12 @@ export async function updateTransferStatus(
     }
     if (quantityTransferred !== undefined) {
       localTransfer.quantityTransferred = quantityTransferred;
+    }
+    if (!localTransfer.itemName && updates.itemName) {
+      localTransfer.itemName = updates.itemName;
+    }
+    if (!localTransfer.itemDisplayName && updates.itemDisplayName) {
+      localTransfer.itemDisplayName = updates.itemDisplayName;
     }
   }
 
@@ -364,6 +393,7 @@ async function assignTransferToWorker(
       fromType: fromEntity.entityType,
       toType: toEntity.entityType,
       itemName: transfer.itemName,
+      itemDisplayName: transfer.itemDisplayName,
       itemNbt: transfer.itemNbt,
       memo: transfer.memo,
       quantity: transfer.quantity,

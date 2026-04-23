@@ -63,10 +63,11 @@ export function completeTransfer(transfer: RawTransfer, error: string | null = n
     toMessage = `<red>A transfer from ${transfer.fromName} has failed</red>`;
   }
 
-  if (transfer.itemName) {
+  if (transfer.itemName || transfer.itemDisplayName) {
+    const itemLabel = transfer.itemDisplayName ?? transfer.itemName;
     const nbtSuffix = transfer.itemNbt ? ` (NBT: ${transfer.itemNbt})` : '';
-    fromMessage += `<gray>: ${transfer.itemName}${nbtSuffix} x${quantityDisplay}</gray>`;
-    toMessage += `<gray>: ${transfer.itemName}${nbtSuffix} x${quantityDisplay}</gray>`;
+    fromMessage += `<gray>: ${itemLabel}${nbtSuffix} x${quantityDisplay}</gray>`;
+    toMessage += `<gray>: ${itemLabel}${nbtSuffix} x${quantityDisplay}</gray>`;
   } else if (transfer.itemNbt) {
     fromMessage += `<gray>: items (NBT: ${transfer.itemNbt}) x${quantityDisplay}</gray>`;
     toMessage += `<gray>: items (NBT: ${transfer.itemNbt}) x${quantityDisplay}</gray>`;

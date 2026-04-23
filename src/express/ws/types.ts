@@ -23,6 +23,7 @@ export type TransferUpdateMessage = ClientMessage & {
   workerId?: number;
   requestedQuantity?: number;
   itemName?: string;
+  itemDisplayName?: string;
   itemNbt?: string;
   elapsedMs?: number;
 };

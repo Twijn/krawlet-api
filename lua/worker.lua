@@ -82,6 +82,7 @@ local function processTransfer(transfer)
       reason = reason,
       requestedQuantity = transfer.quantity,
       itemName = transfer.itemName,
+      itemDisplayName = transfer.itemDisplayName,
       itemNbt = transfer.itemNbt,
       workerId = workerComputerId,
       elapsedMs = os.epoch("utc") - startedAt,
@@ -99,6 +100,7 @@ local function processTransfer(transfer)
         reason = reason,
         requestedQuantity = transfer.quantity,
         itemName = transfer.itemName,
+        itemDisplayName = transfer.itemDisplayName,
         itemNbt = transfer.itemNbt,
         workerId = workerComputerId,
         elapsedMs = os.epoch("utc") - startedAt,
@@ -115,6 +117,7 @@ local function processTransfer(transfer)
         reason = reason,
         requestedQuantity = transfer.quantity,
         itemName = transfer.itemName,
+        itemDisplayName = transfer.itemDisplayName,
         itemNbt = transfer.itemNbt,
         workerId = workerComputerId,
         elapsedMs = os.epoch("utc") - startedAt,
@@ -146,6 +149,76 @@ local function processTransfer(transfer)
 
   local leftToSchedule = targetQuantity
   local totalMoved = 0
+  local inferredItemKey = nil
+  local inferredItemName = nil
+  local inferredItemDisplayName = nil
+
+  local function observeMovedItem(item, detail)
+    local observedName = (detail and detail.name) or (item and item.name)
+    if not observedName then
+      return
+    end
+
+    local observedNbt = (detail and detail.nbt) or (item and item.nbt)
+    local observedDisplayName = detail and detail.displayName or nil
+    local observedKey = observedName .. "|" .. tostring(observedNbt or "")
+
+    if not inferredItemKey then
+      inferredItemKey = observedKey
+      inferredItemName = observedName
+      inferredItemDisplayName = observedDisplayName
+      return
+    end
+
+    if inferredItemKey ~= observedKey then
+      inferredItemKey = false
+      inferredItemName = nil
+      inferredItemDisplayName = nil
+      return
+    end
+
+    if not inferredItemDisplayName and observedDisplayName then
+      inferredItemDisplayName = observedDisplayName
+    end
+  end
+
+  local function resolveItemMetadata(includeInferred)
+    local resolvedItemName = transfer.itemName
+    local resolvedItemDisplayName = transfer.itemDisplayName
+
+    if includeInferred and totalMoved > 0 and inferredItemKey and inferredItemName then
+      if not resolvedItemName then
+        resolvedItemName = inferredItemName
+      end
+      if not resolvedItemDisplayName then
+        resolvedItemDisplayName = inferredItemDisplayName
+      end
+    end
+
+    return resolvedItemName, resolvedItemDisplayName
+  end
+
+  local function sendTransferStatus(type, extra, includeInferred)
+    local resolvedItemName, resolvedItemDisplayName = resolveItemMetadata(includeInferred)
+    local payload = {
+      id = transfer.id,
+      totalMoved = totalMoved,
+      requestedQuantity = transfer.quantity,
+      itemName = resolvedItemName,
+      itemDisplayName = resolvedItemDisplayName,
+      itemNbt = transfer.itemNbt,
+      workerId = workerComputerId,
+      elapsedMs = os.epoch("utc") - startedAt,
+    }
+
+    if extra then
+      for key, value in pairs(extra) do
+        payload[key] = value
+      end
+    end
+
+    send(type, payload)
+  end
 
   local function matchesItemFilter(item)
     if hasItemNameFilter and item.name ~= transfer.itemName then
@@ -170,8 +243,10 @@ local function processTransfer(transfer)
         end
 
         local maxMovable = math.min(item.count, remainingToSchedule)
+        local sourceDetail = sourceStorage.getItemDetail(slot)
         local moved = sourceStorage.pushItems(destinationStorageName, slot, maxMovable)
         if moved > 0 then
+          observeMovedItem(item, sourceDetail)
           totalMoved = totalMoved + moved
           remainingToSchedule = remainingToSchedule - moved
         end
@@ -258,29 +333,13 @@ local function processTransfer(transfer)
 
       if not hasQuantityLimit then
         print(string.format("Moved %d items, transfer complete!", totalMoved))
-        send("transfer_complete", {
-          id = transfer.id,
-          totalMoved = totalMoved,
-          requestedQuantity = transfer.quantity,
-          itemName = transfer.itemName,
-          itemNbt = transfer.itemNbt,
-          workerId = workerComputerId,
-          elapsedMs = os.epoch("utc") - startedAt,
-        })
+        sendTransferStatus("transfer_complete", nil, true)
         return
       end
 
       if leftToSchedule > 0 then
         print(string.format("Moved %d/%d items, waiting for more to move...", totalMoved, transfer.quantity))
-        send("transfer_progress", {
-          id = transfer.id,
-          totalMoved = totalMoved,
-          requestedQuantity = transfer.quantity,
-          itemName = transfer.itemName,
-          itemNbt = transfer.itemNbt,
-          workerId = workerComputerId,
-          elapsedMs = os.epoch("utc") - startedAt,
-        })
+        sendTransferStatus("transfer_progress")
 
         local deadlineMs = os.epoch("utc") + math.floor(timeout * 1000)
         local timedOut = not waitForSpaceAndItems(deadlineMs)
@@ -294,31 +353,16 @@ local function processTransfer(transfer)
           elseif not destinationHasCapacityForMatchingItems() then
             reason = "Destination storage was full for too long."
           end
-          send("transfer_failed", {
-            id = transfer.id,
-            totalMoved = totalMoved,
+          sendTransferStatus("transfer_failed", {
             reason = reason,
-            requestedQuantity = transfer.quantity,
-            itemName = transfer.itemName,
-            itemNbt = transfer.itemNbt,
-            workerId = workerComputerId,
-            elapsedMs = os.epoch("utc") - startedAt,
-          })
+          }, true)
           return
         end
       end
     end
     
     print(string.format("Moved %d/%d items, transfer complete!", totalMoved, transfer.quantity))
-    send("transfer_complete", {
-      id = transfer.id,
-      totalMoved = totalMoved,
-      requestedQuantity = transfer.quantity,
-      itemName = transfer.itemName,
-      itemNbt = transfer.itemNbt,
-      workerId = workerComputerId,
-      elapsedMs = os.epoch("utc") - startedAt,
-    })
+    sendTransferStatus("transfer_complete", nil, true)
   end
 
   local function cancelCheckLoop()
@@ -335,15 +379,7 @@ local function processTransfer(transfer)
 
           if data and data.type == "transfer_cancel" and cancelId == transfer.id then
             print("Transfer cancelled by server")
-            send("transfer_cancelled", {
-              id = transfer.id,
-              totalMoved = totalMoved,
-              requestedQuantity = transfer.quantity,
-              itemName = transfer.itemName,
-              itemNbt = transfer.itemNbt,
-              workerId = workerComputerId,
-              elapsedMs = os.epoch("utc") - startedAt,
-            })
+            sendTransferStatus("transfer_cancelled", nil, true)
             return
           end
         elseif e == "websocket_closed" or e == "websocket_failure" then
