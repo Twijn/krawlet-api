@@ -221,6 +221,7 @@ export async function updatePrices(
 }
 
 export async function updateListings(data: ShopSyncData): Promise<void> {
+  console.time('updateListings');
   const shopId = getShopId(data);
   console.log(`Starting update for shop ${shopId} with ${data.items.length} items`);
 
