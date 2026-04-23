@@ -434,14 +434,43 @@ local function connect()
               print("Listing storage contents for colors: " .. table.concat(colors, ","))
               enderStorageA.setFrequency(table.unpack(colors))
               local rawItems = enderStorageA.list()
-              local items = {}
-              for _, item in pairs(rawItems) do
-                table.insert(items, {
-                  name = item.name,
-                  count = item.count,
-                  nbt = item.nbt,
-                })
+              local groupedItems = {}
+
+              for slot, item in pairs(rawItems) do
+                local key = item.name .. "|" .. tostring(item.nbt or "")
+                local grouped = groupedItems[key]
+
+                if not grouped then
+                  local detail = enderStorageA.getItemDetail(slot)
+                  grouped = {
+                    name = item.name,
+                    count = 0,
+                    nbt = item.nbt,
+                    displayName = detail and detail.displayName or nil,
+                  }
+                  groupedItems[key] = grouped
+                elseif not grouped.displayName then
+                  local detail = enderStorageA.getItemDetail(slot)
+                  if detail and detail.displayName then
+                    grouped.displayName = detail.displayName
+                  end
+                end
+
+                grouped.count = grouped.count + item.count
               end
+
+              local items = {}
+              for _, item in pairs(groupedItems) do
+                table.insert(items, item)
+              end
+
+              table.sort(items, function(a, b)
+                if a.name == b.name then
+                  return tostring(a.nbt or "") < tostring(b.nbt or "")
+                end
+                return a.name < b.name
+              end)
+
               send("storage_list_result", {
                 id = requestId,
                 payload = { items = items },

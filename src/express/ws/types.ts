@@ -55,7 +55,7 @@ export type StorageListResultMessage = ClientMessage & {
   id: string;
   type: 'storage_list_result';
   payload: {
-    items: { name: string; count: number; nbt?: string }[];
+    items: { name: string; count: number; nbt?: string; displayName?: string }[];
   };
 };
 

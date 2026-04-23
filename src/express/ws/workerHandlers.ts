@@ -274,7 +274,12 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
 
     clearPendingStorageQuery(requestId);
 
-    const items = (parsed.payload?.items ?? []) as { name: string; count: number; nbt?: string }[];
+    const items = (parsed.payload?.items ?? []) as {
+      name: string;
+      count: number;
+      nbt?: string;
+      displayName?: string;
+    }[];
     console.log(
       `${logPrefix(state)} storage_list_result requestId=${requestId} itemSlots=${items.length}`,
     );

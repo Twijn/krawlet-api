@@ -15,6 +15,7 @@ export type StorageItem = {
   name: string;
   count: number;
   nbt?: string;
+  displayName?: string;
 };
 
 type PendingStorageQuery = {
