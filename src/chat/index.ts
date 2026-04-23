@@ -63,22 +63,25 @@ export function completeTransfer(transfer: RawTransfer, error: string | null = n
     toMessage = `<red>A transfer from ${transfer.fromName} has failed</red>`;
   }
 
+  let wrapItem = transfer.itemDisplayName ?? transfer.itemName;
+  if (transfer.itemNbt) {
+    wrapItem = `<hover:show_text:'<blue>${wrapItem} (NBT: ${transfer.itemNbt})</blue>'>${wrapItem}</hover>`;
+  }
+
   if (transfer.itemName || transfer.itemDisplayName) {
-    const itemLabel = transfer.itemDisplayName ?? transfer.itemName;
-    const nbtSuffix = transfer.itemNbt ? ` (NBT: ${transfer.itemNbt})` : '';
-    fromMessage += `<gray>: ${itemLabel}${nbtSuffix} x${quantityDisplay}</gray>`;
-    toMessage += `<gray>: ${itemLabel}${nbtSuffix} x${quantityDisplay}</gray>`;
+    fromMessage += `<gray>: ${wrapItem} x${quantityDisplay}</gray>`;
+    toMessage += `<gray>: ${wrapItem} x${quantityDisplay}</gray>`;
   } else if (transfer.itemNbt) {
-    fromMessage += `<gray>: items (NBT: ${transfer.itemNbt}) x${quantityDisplay}</gray>`;
-    toMessage += `<gray>: items (NBT: ${transfer.itemNbt}) x${quantityDisplay}</gray>`;
+    fromMessage += `<gray>: ${wrapItem} x${quantityDisplay}</gray>`;
+    toMessage += `<gray>: ${wrapItem} x${quantityDisplay}</gray>`;
   } else {
     fromMessage += `<gray>: ${quantityDisplay} items</gray>`;
     toMessage += `<gray>: ${quantityDisplay} items</gray>`;
   }
 
   if (transfer.memo) {
-    fromMessage += `<br><gray>(Memo: ${transfer.memo})</gray>`;
-    toMessage += `<br><gray>(Memo: ${transfer.memo})</gray>`;
+    fromMessage += `<br><gray><italic><bold>Memo:</bold> ${transfer.memo}</italic></gray>`;
+    toMessage += `<br><gray><italic><bold>Memo:</bold> ${transfer.memo}</italic></gray>`;
   }
 
   if (error) {

@@ -192,6 +192,7 @@ local function runTransferWithEvents(opts, ctx)
     to = opts.to,
     toEntityId = nil,
     toUsername = nil,
+    itemDisplayName = nil,
     itemName = opts.itemName,
   }
 
@@ -212,6 +213,8 @@ local function runTransferWithEvents(opts, ctx)
       progress.to = payload.to or progress.to
       progress.toUsername = payload.toUsername or progress.toUsername
       progress.toEntityId = payload.toEntityId or progress.toEntityId
+      progress.itemDisplayName = payload.itemDisplayName or progress.itemDisplayName
+      progress.itemName = payload.itemName or progress.itemName
       progress.status = payload.status or status or progress.status
       progress.error = payload.error or errorMessage or progress.error
     else
@@ -283,7 +286,7 @@ local function runTransferWithEvents(opts, ctx)
     if not idValue then
       idValue = (progress.status == "failed" or progress.status == "cancelled") and "not-assigned" or "pending"
     end
-    local itemValue = progress.itemName or "any"
+    local itemValue = progress.itemDisplayName or progress.itemName or "any"
     local qtyValue = quantity > 0 and tostring(quantity) or "any"
     local targetValue = progress.toUsername or progress.to or progress.toEntityId or "?"
     local idLine = string.format("id=%s to=%s", idValue, tostring(targetValue))
