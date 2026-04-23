@@ -10,9 +10,57 @@ import {
 } from '../../../lib/models';
 import { RequestWithRateLimit } from '../types/request';
 import { queueTransferByEntities } from '../../ws';
+import { RawTransfer } from '../../../lib/models/transfer.model';
 import { WorkerLimitExceededError } from '../../ws/workerActivity';
+import { Op } from 'sequelize';
 
 const router = Router();
+
+type TransferWithMinecraftShorthand = RawTransfer & {
+  fromMcUuid?: string;
+  fromMcName?: string;
+  toMcUuid?: string;
+  toMcName?: string;
+};
+
+async function attachMinecraftShorthand(
+  transfer: RawTransfer,
+): Promise<TransferWithMinecraftShorthand> {
+  const links = await EstorageEntityLink.findAll({
+    where: {
+      entityId: {
+        [Op.in]: [transfer.fromEntityId, transfer.toEntityId],
+      },
+      linkType: 'player_uuid',
+    },
+    attributes: ['entityId', 'linkValue', 'linkName'],
+    order: [
+      ['isPrimary', 'DESC'],
+      ['createdAt', 'ASC'],
+    ],
+  });
+
+  const linkByEntityId = new Map<string, { mcUuid: string; mcName?: string }>();
+  for (const link of links) {
+    if (!linkByEntityId.has(link.entityId)) {
+      linkByEntityId.set(link.entityId, {
+        mcUuid: link.linkValue,
+        mcName: link.linkName ?? undefined,
+      });
+    }
+  }
+
+  const from = linkByEntityId.get(transfer.fromEntityId);
+  const to = linkByEntityId.get(transfer.toEntityId);
+
+  return {
+    ...transfer,
+    fromMcUuid: from?.mcUuid,
+    fromMcName: from?.mcName,
+    toMcUuid: to?.mcUuid,
+    toMcName: to?.mcName,
+  };
+}
 
 async function resolveRequesterEntity(request: RequestWithRateLimit) {
   if (!request.apiKey) {
@@ -142,8 +190,10 @@ router.post(
         requesterTier: request.apiKey.tier,
       });
 
+      const serializedTransfer = await attachMinecraftShorthand(transfer);
+
       return res.success({
-        transfer,
+        transfer: serializedTransfer,
         sourceEntity: {
           id: publicEntity.id,
           name: publicEntity.name,
