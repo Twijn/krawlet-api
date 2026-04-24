@@ -36,9 +36,9 @@ if turtle.getItemDetail(16) then
   error("Please clear slot 16 before running this program")
 end
 
-local color1 = args[1] and colors[args[1]:lower()] or nil
-local color2 = args[2] and colors[args[2]:lower()] or nil
-local color3 = args[3] and colors[args[3]:lower()] or nil
+local color1 = args[1] and colors[args[1]] or nil
+local color2 = args[2] and colors[args[2]] or nil
+local color3 = args[3] and colors[args[3]] or nil
 
 if args[1]:lower() == "emerald" then
   while true do
@@ -84,12 +84,33 @@ local function configureColor(color3)
   end
 end
 
+local function skipColorListener()
+  while true do
+    local e, key = os.pullEvent("key")
+    if key == keys.s then
+      print("Skip this color? Y = skip. Anything else = don't.")
+      sleep()
+      local input = read()
+      if input:lower() == "y" then
+        print("Color skipped")
+        break
+      end
+      print("Continuing with same color")
+    end
+  end
+end
+
 local function run()
   if color3 then
     configureColor(color3)
   else
     for _, color in ipairs(clrs) do
-      configureColor(color)
+      parallel.waitForAny(
+        function()
+          configureColor(color)
+        end,
+        skipColorListener
+      )
     end
   end
 end

@@ -61,6 +61,9 @@ return function(estorageName, options)
   local authenticated = false
   local nextMessageId = 1
   local pendingWsMessages = {}
+  local localTransferIds = {}
+  local incomingTransferState = {}
+  local emitIncomingTransferEvents
 
   local function getNextMessageId()
     local id = tostring(nextMessageId)
@@ -100,6 +103,9 @@ return function(estorageName, options)
       elseif event == "websocket_message" then
         if url == wsUrl then
           local data = textutils.unserializeJSON(message)
+          if data and data.type == "transfer_update" and data.payload then
+            emitIncomingTransferEvents(data.payload)
+          end
           if data and data.id == authId then
             if data.type == "auth_ok" then
               authenticated = true
@@ -206,6 +212,9 @@ return function(estorageName, options)
       elseif event == "websocket_message" then
         if url == wsUrl then
           local data = textutils.unserializeJSON(message)
+          if data and data.type == "transfer_update" and data.payload then
+            emitIncomingTransferEvents(data.payload)
+          end
           if data and data.id == msgId then
             os.cancelTimer(timeout)
             if data.type == "error" then
@@ -250,6 +259,9 @@ return function(estorageName, options)
       elseif event == "websocket_message" then
         if url == wsUrl then
           local data = textutils.unserializeJSON(message)
+          if data and data.type == "transfer_update" and data.payload then
+            emitIncomingTransferEvents(data.payload)
+          end
           if data and data.type == "transfer_update" and data.payload and data.payload.id == transferId then
             os.cancelTimer(timeout)
             return true, data.payload
@@ -286,6 +298,57 @@ return function(estorageName, options)
       if not ok then
         printError("Error in handler for event '" .. eventType .. "': " .. tostring(err))
       end
+    end
+  end
+
+  local function copyTransferPayload(payload)
+    local copied = {}
+    for key, value in pairs(payload) do
+      copied[key] = value
+    end
+    return copied
+  end
+
+  emitIncomingTransferEvents = function(payload)
+    if type(payload) ~= "table" then
+      return
+    end
+
+    if type(payload.id) ~= "string" or payload.id == "" then
+      return
+    end
+
+    if localTransferIds[payload.id] then
+      return
+    end
+
+    local previous = incomingTransferState[payload.id]
+    local status = payload.status
+    local quantityTransferred = payload.quantityTransferred
+
+    if not previous then
+      incomingTransferState[payload.id] = {
+        status = status,
+        quantityTransferred = quantityTransferred,
+      }
+      emitEvent("transfer_incoming_started", copyTransferPayload(payload))
+    elseif previous.status ~= status or previous.quantityTransferred ~= quantityTransferred then
+      incomingTransferState[payload.id] = {
+        status = status,
+        quantityTransferred = quantityTransferred,
+      }
+      emitEvent("transfer_incoming_updated", copyTransferPayload(payload))
+    end
+
+    if status == "completed" then
+      incomingTransferState[payload.id] = nil
+      emitEvent("transfer_incoming_completed", copyTransferPayload(payload))
+    elseif status == "failed" then
+      incomingTransferState[payload.id] = nil
+      emitEvent("transfer_incoming_failed", copyTransferPayload(payload))
+    elseif status == "cancelled" then
+      incomingTransferState[payload.id] = nil
+      emitEvent("transfer_incoming_cancelled", copyTransferPayload(payload))
     end
   end
 
@@ -568,12 +631,16 @@ return function(estorageName, options)
       end
 
       transfer = payload
+      localTransferIds[transfer.id] = true
       emitEvent("transfer_started", buildTransferPayload())
 
       while transfer and (transfer.status == "pending" or transfer.status == "in_progress") do
         local statusOk, statusPayload = waitForTransferUpdate(transfer.id, 35)
 
         if not statusOk then
+          if transfer and transfer.id then
+            localTransferIds[transfer.id] = nil
+          end
           queueTerminalEvent("transfer_failed", buildTransferPayload(statusPayload))
           markSendTransferDone(statusPayload)
           return false, statusPayload
@@ -581,6 +648,9 @@ return function(estorageName, options)
 
         if type(statusPayload) ~= "table" then
           local errMsg = "Invalid transfer update payload"
+          if transfer and transfer.id then
+            localTransferIds[transfer.id] = nil
+          end
           queueTerminalEvent("transfer_failed", buildTransferPayload(errMsg))
           markSendTransferDone(errMsg)
           return false, errMsg
@@ -597,20 +667,26 @@ return function(estorageName, options)
         end
 
         if status == "completed" then
+          localTransferIds[transfer.id] = nil
           queueTerminalEvent("transfer_completed", buildTransferPayload())
           markSendTransferDone()
           return true
         elseif status == "failed" then
+          localTransferIds[transfer.id] = nil
           queueTerminalEvent("transfer_failed", buildTransferPayload(transfer.error))
           markSendTransferDone(transfer.error or "Transfer failed")
           return false, transfer.error or "Transfer failed"
         elseif status == "cancelled" then
+          localTransferIds[transfer.id] = nil
           queueTerminalEvent("transfer_cancelled", buildTransferPayload(transfer.error))
           markSendTransferDone(transfer.error or "Transfer cancelled")
           return false, transfer.error or "Transfer cancelled"
         end
       end
 
+      if transfer and transfer.id then
+        localTransferIds[transfer.id] = nil
+      end
       markSendTransferDone()
       return true
     end
@@ -749,6 +825,13 @@ return function(estorageName, options)
   --- - transfer_completed(payload)
   --- - transfer_cancelled(payload)
   --- - transfer_failed(payload)
+  ---
+  ---Incoming transfer updates received over WebSocket are emitted as:
+  --- - transfer_incoming_started(payload)
+  --- - transfer_incoming_updated(payload)
+  --- - transfer_incoming_completed(payload)
+  --- - transfer_incoming_cancelled(payload)
+  --- - transfer_incoming_failed(payload)
   ---@param eventType string Event name to subscribe to.
   ---@param handler function Callback invoked with the event payload.
   ---@return function unsubscribe Call to remove this handler.
