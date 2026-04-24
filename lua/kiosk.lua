@@ -122,7 +122,12 @@ local function getEnderStorageColors()
     sleep(0.25)
     local estorage = peripheral.wrap("front")
     local color1, color2, color3 = estorage.getFrequency()
-    turtle.dig()
+    succ, err = turtle.dig()
+    if not succ then
+      err = "Failed to dig ender storage: " .. (err or "Unknown error")
+      printError(err)
+      return false, err
+    end
     return { color1, color2, color3 }
   else
     return false
