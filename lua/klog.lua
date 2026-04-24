@@ -71,9 +71,36 @@ return function(estorageName, options)
     return id
   end
 
+  local function closeWebSocket()
+    if ws then
+      pcall(function()
+        ws.close()
+      end)
+      ws = nil
+    end
+    authenticated = false
+  end
+
+  local function sendWebSocketMessage(message)
+    if not ws then
+      return false, "WebSocket not connected"
+    end
+
+    local ok, err = pcall(function()
+      ws.send(message)
+    end)
+
+    if not ok then
+      closeWebSocket()
+      return false, tostring(err)
+    end
+
+    return true
+  end
+
   local function connectWebSocket()
     if ws then
-      ws.close()
+      closeWebSocket()
     end
 
     ws = http.websocket(wsUrl)
@@ -84,11 +111,14 @@ return function(estorageName, options)
     authenticated = false
 
     local authId = getNextMessageId()
-    ws.send(textutils.serializeJSON({
+    local authSent, authErr = sendWebSocketMessage(textutils.serializeJSON({
       type = "auth",
       token = apiKey,
       id = authId,
     }))
+    if not authSent then
+      return false, authErr or "Failed to send WebSocket auth"
+    end
 
     local timeout = os.startTimer(5)
     while true do
@@ -96,8 +126,7 @@ return function(estorageName, options)
 
       if event == "timer" then
         if url == timeout then
-          ws.close()
-          ws = nil
+          closeWebSocket()
           return false, "WebSocket auth timeout"
         end
       elseif event == "websocket_message" then
@@ -112,8 +141,7 @@ return function(estorageName, options)
               os.cancelTimer(timeout)
               return true
             elseif data.type == "error" then
-              ws.close()
-              ws = nil
+              closeWebSocket()
               os.cancelTimer(timeout)
               return false, data.payload and data.payload.message or "Auth failed"
             end
@@ -121,7 +149,7 @@ return function(estorageName, options)
         end
       elseif event == "websocket_closed" then
         if url == wsUrl then
-          ws = nil
+          closeWebSocket()
           return false, "WebSocket closed during auth"
         end
       end
@@ -176,14 +204,34 @@ return function(estorageName, options)
   end
 
   local function wsRequest(messageType, payload)
+    if not ws or not authenticated then
+      local connected, connectErr = connectWebSocket()
+      if not connected then
+        return false, connectErr
+      end
+    end
+
     local msgId = getNextMessageId()
     local timeout
 
-    ws.send(textutils.serializeJSON({
+    local requestBody = textutils.serializeJSON({
       type = messageType,
       id = msgId,
       payload = payload,
-    }))
+    })
+
+    local sent, sendErr = sendWebSocketMessage(requestBody)
+    if not sent then
+      local connected, connectErr = connectWebSocket()
+      if not connected then
+        return false, connectErr or sendErr
+      end
+
+      sent, sendErr = sendWebSocketMessage(requestBody)
+      if not sent then
+        return false, sendErr
+      end
+    end
 
     local resultType = messageType .. "_ok"
 
@@ -228,8 +276,7 @@ return function(estorageName, options)
         end
       elseif event == "websocket_closed" then
         if url == wsUrl then
-          ws = nil
-          authenticated = false
+          closeWebSocket()
           os.cancelTimer(timeout)
           return false, "WebSocket disconnected"
         end
@@ -271,8 +318,7 @@ return function(estorageName, options)
         end
       elseif event == "websocket_closed" then
         if url == wsUrl then
-          ws = nil
-          authenticated = false
+          closeWebSocket()
           os.cancelTimer(timeout)
           return false, "WebSocket disconnected"
         end
@@ -860,10 +906,7 @@ return function(estorageName, options)
   ---Close the websocket connection.
   ---No automatic reconnect is attempted after close.
   function klog.close()
-    if ws then
-      ws.close()
-      ws = nil
-    end
+    closeWebSocket()
   end
 
   return klog
