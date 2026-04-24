@@ -6,6 +6,8 @@ import { ApiKey } from './apikey.model';
 import { RequestLog } from './requestlog.model';
 import { EstorageEntity } from './estorageentity.model';
 import { EstorageEntityLink } from './estoragelink.model';
+import { Transfer } from './transfer.model';
+import { TransferNotification } from './transfernotification.model';
 
 // Initialize model relationships
 Shop.hasMany(Listing, {
@@ -47,6 +49,15 @@ EstorageEntityLink.belongsTo(EstorageEntity, {
   as: 'entity',
 });
 
+Transfer.hasMany(TransferNotification, {
+  foreignKey: 'transferId',
+  as: 'notifications',
+});
+TransferNotification.belongsTo(Transfer, {
+  foreignKey: 'transferId',
+  as: 'transfer',
+});
+
 export * from './database';
 export * from './player.model';
 export * from './listing.model';
@@ -59,5 +70,6 @@ export * from './apikey.model';
 export * from './requestlog.model';
 export * from './blockedip.model';
 export * from './transfer.model';
+export * from './transfernotification.model';
 export * from './estorageentity.model';
 export * from './estoragelink.model';

@@ -1,5 +1,6 @@
 import { DataTypes, Model } from 'sequelize';
 import { sequelize } from './database';
+import type { RawTransferNotification } from './transfernotification.model';
 
 export type TransferStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'cancelled';
 
@@ -20,6 +21,7 @@ export type RawTransfer = {
   timeout?: number;
   quantityTransferred: number;
   timestamp: string;
+  notifications?: RawTransferNotification[];
 };
 
 export class Transfer extends Model {

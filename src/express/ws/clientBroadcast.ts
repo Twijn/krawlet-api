@@ -1,4 +1,4 @@
-import { RawTransfer } from '../../lib/models';
+import { RawTransfer, RawTransferNotification } from '../../lib/models';
 import { sendJson } from './protocol';
 import { authState } from './state';
 import { resolveClientEntityId } from './clientEntity';
@@ -32,6 +32,38 @@ export async function broadcastTransferUpdate(transfer: RawTransfer): Promise<vo
     sendJson(ws, {
       type: 'transfer_update',
       payload: transfer,
+    });
+  }
+}
+
+export async function broadcastTransferNotification(
+  transfer: RawTransfer,
+  notification: RawTransferNotification,
+): Promise<void> {
+  for (const [ws, state] of authState.entries()) {
+    if (!state.authenticated || state.role !== 'client' || !state.apiKeyId) {
+      continue;
+    }
+
+    let entityId = state.clientEntityId;
+    if (!entityId) {
+      const resolvedEntityId = await resolveClientEntityId(state.apiKeyId);
+      if (!resolvedEntityId) {
+        continue;
+      }
+
+      entityId = resolvedEntityId;
+      state.clientEntityId = resolvedEntityId;
+      authState.set(ws, state);
+    }
+
+    if (!transferMatchesEntity(transfer, entityId)) {
+      continue;
+    }
+
+    sendJson(ws, {
+      type: 'transfer_notification',
+      payload: notification,
     });
   }
 }

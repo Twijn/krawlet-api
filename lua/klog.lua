@@ -23,6 +23,11 @@
 ---| "failed"
 ---| "cancelled"
 
+---@alias KlogTransferNotificationType
+---| "error"
+---| "info"
+---| "success"
+
 ---@class KlogTransfer
 ---@field id string Transfer id.
 ---@field status KlogTransferStatus Current transfer status.
@@ -39,8 +44,17 @@
 ---@field memo? string Transfer note.
 ---@field timeout? number Worker timeout in seconds.
 ---@field error? string Failure or cancellation reason.
+---@field notifications? KlogTransferNotification[] Transfer notification history when requested.
 ---@field createdAt? string Creation timestamp.
 ---@field updatedAt? string Last update timestamp.
+
+---@class KlogTransferNotification
+---@field id string Notification id.
+---@field transferId string Transfer id.
+---@field senderEntityId? string Sender entity id when available.
+---@field type KlogTransferNotificationType Notification type.
+---@field message string Notification message.
+---@field timestamp string Notification timestamp.
 
 ---Create a Klog client bound to an ender storage peripheral.
 ---
@@ -64,6 +78,7 @@ return function(estorageName, options)
   local localTransferIds = {}
   local incomingTransferState = {}
   local emitIncomingTransferEvents
+  local emitIncomingTransferNotificationEvents
 
   local function getNextMessageId()
     local id = tostring(nextMessageId)
@@ -134,6 +149,8 @@ return function(estorageName, options)
           local data = textutils.unserializeJSON(message)
           if data and data.type == "transfer_update" and data.payload then
             emitIncomingTransferEvents(data.payload)
+          elseif data and data.type == "transfer_notification" and data.payload then
+            emitIncomingTransferNotificationEvents(data.payload)
           end
           if data and data.id == authId then
             if data.type == "auth_ok" then
@@ -158,6 +175,9 @@ return function(estorageName, options)
 
   local function queuePendingWsMessage(data)
     if data then
+      if data.type == "transfer_notification" then
+        return
+      end
       table.insert(pendingWsMessages, data)
     end
   end
@@ -262,6 +282,8 @@ return function(estorageName, options)
           local data = textutils.unserializeJSON(message)
           if data and data.type == "transfer_update" and data.payload then
             emitIncomingTransferEvents(data.payload)
+          elseif data and data.type == "transfer_notification" and data.payload then
+            emitIncomingTransferNotificationEvents(data.payload)
           end
           if data and data.id == msgId then
             os.cancelTimer(timeout)
@@ -308,6 +330,8 @@ return function(estorageName, options)
           local data = textutils.unserializeJSON(message)
           if data and data.type == "transfer_update" and data.payload then
             emitIncomingTransferEvents(data.payload)
+          elseif data and data.type == "transfer_notification" and data.payload then
+            emitIncomingTransferNotificationEvents(data.payload)
           end
           if data and data.type == "transfer_update" and data.payload and data.payload.id == transferId then
             os.cancelTimer(timeout)
@@ -328,7 +352,7 @@ return function(estorageName, options)
 
   local klog = {
     _handlers = {},
-    _VERSION = "1.2.0",
+    _VERSION = "1.3.0",
   }
 
   local function emitEvent(eventType, payload)
@@ -348,6 +372,14 @@ return function(estorageName, options)
   end
 
   local function copyTransferPayload(payload)
+    local copied = {}
+    for key, value in pairs(payload) do
+      copied[key] = value
+    end
+    return copied
+  end
+
+  local function copyTransferNotificationPayload(payload)
     local copied = {}
     for key, value in pairs(payload) do
       copied[key] = value
@@ -395,6 +427,26 @@ return function(estorageName, options)
     elseif status == "cancelled" then
       incomingTransferState[payload.id] = nil
       emitEvent("transfer_incoming_cancelled", copyTransferPayload(payload))
+    end
+  end
+
+  emitIncomingTransferNotificationEvents = function(payload)
+    if type(payload) ~= "table" then
+      return
+    end
+
+    if type(payload.transferId) ~= "string" or payload.transferId == "" then
+      return
+    end
+
+    emitEvent("transfer_notification", copyTransferNotificationPayload(payload))
+
+    if payload.type == "error" then
+      emitEvent("transfer_notification_error", copyTransferNotificationPayload(payload))
+    elseif payload.type == "success" then
+      emitEvent("transfer_notification_success", copyTransferNotificationPayload(payload))
+    else
+      emitEvent("transfer_notification_info", copyTransferNotificationPayload(payload))
     end
   end
 
@@ -783,17 +835,154 @@ return function(estorageName, options)
     return true
   end
 
-  ---Get a transfer by id.
+  local function checkNotifyType(notifyType)
+    if notifyType == nil then
+      return nil
+    end
+
+    if notifyType ~= "error" and notifyType ~= "info" and notifyType ~= "success" then
+      return "Notification type must be one of: error, info, success"
+    end
+
+    return nil
+  end
+
+  ---Send a transfer notification over WebSocket.
   ---@param transferId string
-  ---@return KlogTransfer|false transfer Transfer payload on success, false on failure.
-  ---@return string|nil err Error message when transfer is false.
-  function klog.getTransfer(transferId)
+  ---@param message string
+  ---@param notifyType? KlogTransferNotificationType
+  ---@return KlogTransferNotification|false notification Notification payload on success, false on failure.
+  ---@return string|nil err Error message when notification is false.
+  function klog.notifyTransfer(transferId, message, notifyType)
     if not transferId or type(transferId) ~= "string" then
       return false, "Invalid transfer ID"
     end
 
+    if type(message) ~= "string" or message:gsub("%s+", "") == "" then
+      return false, "Notification message is required"
+    end
+
+    local typeErr = checkNotifyType(notifyType)
+    if typeErr then
+      return false, typeErr
+    end
+
+    local ok, payload = wsRequest("notify_transfer", {
+      transferId = transferId,
+      type = notifyType,
+      message = message,
+    })
+
+    if not ok then
+      return false, payload
+    end
+
+    if type(payload) ~= "table" or type(payload.id) ~= "string" then
+      return false, "Unexpected notify_transfer response"
+    end
+
+    return payload
+  end
+
+  ---Send an info transfer notification over HTTP.
+  ---@param transferId string
+  ---@param message string
+  ---@param notifyType? KlogTransferNotificationType
+  ---@return KlogTransferNotification|false notification Notification payload on success, false on failure.
+  ---@return string|nil err Error message when notification is false.
+  function klog.notifyTransferHttp(transferId, message, notifyType)
+    if not transferId or type(transferId) ~= "string" then
+      return false, "Invalid transfer ID"
+    end
+
+    if type(message) ~= "string" or message:gsub("%s+", "") == "" then
+      return false, "Notification message is required"
+    end
+
+    local typeErr = checkNotifyType(notifyType)
+    if typeErr then
+      return false, typeErr
+    end
+
+    local response, _, errorResponse = http.post(
+      apiUrl .. "transfers/" .. transferId .. "/notify",
+      textutils.serializeJSON({
+        type = notifyType,
+        message = message,
+      }),
+      {
+        ["Content-Type"] = "application/json",
+        ["Authorization"] = "Bearer " .. apiKey,
+      }
+    )
+
+    if not response then
+      if errorResponse then
+        local ok, parsed = pcall(textutils.unserializeJSON, errorResponse.readAll())
+        errorResponse:close()
+        if ok and parsed and parsed.error and parsed.error.message then
+          return false, parsed.error.message
+        end
+      end
+      return false, "Failed to send transfer notification"
+    end
+
+    local data = textutils.unserializeJSON(response.readAll())
+    response:close()
+
+    if data and data.ok and data.data and type(data.data.id) == "string" then
+      return data.data
+    end
+
+    if data and data.error and data.error.message then
+      return false, data.error.message
+    end
+
+    return false, "Unexpected notify endpoint response"
+  end
+
+  ---Send a typed transfer notification over WebSocket.
+  ---@param transferId string
+  ---@param message string
+  ---@return KlogTransferNotification|false notification
+  ---@return string|nil err
+  function klog.notifyTransferInfo(transferId, message)
+    return klog.notifyTransfer(transferId, message, "info")
+  end
+
+  ---Send a success transfer notification over WebSocket.
+  ---@param transferId string
+  ---@param message string
+  ---@return KlogTransferNotification|false notification
+  ---@return string|nil err
+  function klog.notifyTransferSuccess(transferId, message)
+    return klog.notifyTransfer(transferId, message, "success")
+  end
+
+  ---Send an error transfer notification over WebSocket.
+  ---@param transferId string
+  ---@param message string
+  ---@return KlogTransferNotification|false notification
+  ---@return string|nil err
+  function klog.notifyTransferError(transferId, message)
+    return klog.notifyTransfer(transferId, message, "error")
+  end
+
+  ---Get a transfer by id.
+  ---@param transferId string
+  ---@param opts? { inclNotifs?: boolean }
+  ---@return KlogTransfer|false transfer Transfer payload on success, false on failure.
+  ---@return string|nil err Error message when transfer is false.
+  function klog.getTransfer(transferId, opts)
+    if not transferId or type(transferId) ~= "string" then
+      return false, "Invalid transfer ID"
+    end
+
+    local inclNotifs = opts and opts.inclNotifs
+
     local ok, payload = wsRequest("get_transfer", {
       transferId = transferId,
+      inclNotifs = inclNotifs or nil,
     })
 
     if not ok then
@@ -812,10 +1001,15 @@ return function(estorageName, options)
   end
 
   ---List all transfers visible to the current API key.
+  ---@param opts? { inclNotifs?: boolean }
   ---@return KlogTransfer[]|false transfers Transfer list on success, false on failure.
   ---@return string|nil err Error message when transfers is false.
-  function klog.getTransfers()
-    local ok, payload = wsRequest("list_transfers", {})
+  function klog.getTransfers(opts)
+    local inclNotifs = opts and opts.inclNotifs
+
+    local ok, payload = wsRequest("list_transfers", {
+      inclNotifs = inclNotifs or nil,
+    })
 
     if not ok then
       return false, payload
@@ -878,6 +1072,12 @@ return function(estorageName, options)
   --- - transfer_incoming_completed(payload)
   --- - transfer_incoming_cancelled(payload)
   --- - transfer_incoming_failed(payload)
+  ---
+  ---Incoming transfer notifications received over WebSocket are emitted as:
+  --- - transfer_notification(payload) for any notification
+  --- - transfer_notification_info(payload) for info-type notifications
+  --- - transfer_notification_success(payload) for success-type notifications
+  --- - transfer_notification_error(payload) for error-type notifications
   ---@param eventType string Event name to subscribe to.
   ---@param handler function Callback invoked with the event payload.
   ---@return function unsubscribe Call to remove this handler.

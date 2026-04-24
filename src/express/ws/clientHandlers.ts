@@ -6,13 +6,18 @@ import {
   findEntityByLookup,
   Transfer,
 } from '../../lib/models';
-import { isTransferPayload } from '../../lib/types/Transfer';
+import { isTransferPayload, isWsTransferNotificationPayload } from '../../lib/types/Transfer';
 import { Op } from 'sequelize';
 import { sendError, sendJson, logPrefix } from './protocol';
 import { queueTransferByEntities, cancelTransfer } from './transferQueue';
 import { WorkerLimitExceededError } from './workerActivity';
 import { MessageHandler } from './types';
 import { resolveClientEntityId } from './clientEntity';
+import {
+  attachTransferNotifications,
+  createTransferNotification,
+} from '../../lib/transferNotifications';
+import { broadcastTransferNotification } from './clientBroadcast';
 
 async function resolveClientEntity(apiKeyId: string): Promise<EstorageEntity | null> {
   const entityId = await resolveClientEntityId(apiKeyId);
@@ -21,6 +26,39 @@ async function resolveClientEntity(apiKeyId: string): Promise<EstorageEntity | n
   }
 
   return findEntityById(entityId);
+}
+
+function shouldIncludeNotifications(payload: unknown): boolean {
+  if (!payload || typeof payload !== 'object') {
+    return false;
+  }
+
+  const parseFlag = (value: unknown): boolean => {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    if (typeof value === 'number') {
+      return value === 1;
+    }
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      return normalized === '1' || normalized === 'true' || normalized === 'yes';
+    }
+
+    return false;
+  };
+
+  const typedPayload = payload as {
+    inclNotifs?: unknown;
+    inclNotifications?: unknown;
+    includeNotifications?: unknown;
+  };
+
+  return (
+    parseFlag(typedPayload.inclNotifs) ||
+    parseFlag(typedPayload.inclNotifications) ||
+    parseFlag(typedPayload.includeNotifications)
+  );
 }
 
 export const clientMessageHandlers: Record<string, MessageHandler> = {
@@ -145,7 +183,12 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
       return;
     }
 
-    const [serializedTransfer] = await attachMinecraftShorthand([raw]);
+    const includeNotifications = shouldIncludeNotifications(payload);
+    const [transferWithNotifications] = await attachTransferNotifications(
+      [raw],
+      includeNotifications,
+    );
+    const [serializedTransfer] = await attachMinecraftShorthand([transferWithNotifications]);
 
     sendJson(ws, {
       id: message.id,
@@ -231,18 +274,87 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
 
       console.log(`${logPrefix(state)} list_transfers count=${transfers.length}`);
 
+      const includeNotifications = shouldIncludeNotifications((message as any).payload);
       const rawTransfers = transfers.map((t) => t.raw());
+      const transfersWithNotifications = await attachTransferNotifications(
+        rawTransfers,
+        includeNotifications,
+      );
 
       sendJson(ws, {
         id: message.id,
         type: 'list_transfers_ok',
         payload: {
-          transfers: await attachMinecraftShorthand(rawTransfers),
+          transfers: await attachMinecraftShorthand(transfersWithNotifications),
         },
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to list transfers';
       sendError(ws, 'INTERNAL_ERROR', errorMessage, message.id);
+    }
+  },
+
+  notify_transfer: async (ws, message, state) => {
+    if (!state.apiKeyId) {
+      sendError(ws, 'INTERNAL_ERROR', 'API key ID missing from auth state', message.id);
+      return;
+    }
+
+    const payload = (message as any).payload;
+    if (!isWsTransferNotificationPayload(payload)) {
+      sendError(
+        ws,
+        'INVALID_PAYLOAD',
+        'notify_transfer requires payload { transferId: string, type?: "error"|"info"|"success", message: string }',
+        message.id,
+      );
+      return;
+    }
+
+    const requesterEntity = await resolveClientEntity(state.apiKeyId);
+    if (!requesterEntity) {
+      sendError(
+        ws,
+        'NO_ENTITY_LINK',
+        'API key is not linked to an ender storage entity',
+        message.id,
+      );
+      return;
+    }
+
+    const transfer = await Transfer.findOne({ where: { id: payload.transferId } });
+    if (!transfer) {
+      sendError(ws, 'NOT_FOUND', 'Transfer not found', message.id);
+      return;
+    }
+
+    const rawTransfer = transfer.raw();
+    if (
+      rawTransfer.fromEntityId !== requesterEntity.id &&
+      rawTransfer.toEntityId !== requesterEntity.id
+    ) {
+      sendError(ws, 'FORBIDDEN', 'You do not have permission to access this transfer', message.id);
+      return;
+    }
+
+    try {
+      const notification = await createTransferNotification({
+        transferId: rawTransfer.id,
+        senderEntityId: requesterEntity.id,
+        type: payload.type,
+        message: payload.message,
+      });
+
+      await broadcastTransferNotification(rawTransfer, notification);
+
+      sendJson(ws, {
+        id: message.id,
+        type: 'notify_transfer_ok',
+        payload: notification,
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to create notification';
+      sendError(ws, 'BAD_REQUEST', errorMessage, message.id);
     }
   },
 

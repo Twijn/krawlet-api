@@ -1,9 +1,10 @@
 import { Router, json } from 'express';
 import authenticateApiKeyTier from '../../../lib/authenticateApiKeyTier';
-import { isTransferPayload } from '../../../lib/types';
+import { isTransferNotificationPayload, isTransferPayload } from '../../../lib/types';
 import { RequestWithRateLimit } from '../types/request';
 import { queueTransferByEntities, queryWorkerStorage } from '../../ws';
 import { cancelTransfer } from '../../ws/transferQueue';
+import { broadcastTransferNotification } from '../../ws/clientBroadcast';
 import {
   EstorageEntity,
   EstorageEntityLink,
@@ -15,6 +16,10 @@ import {
 } from '../../../lib/models';
 import { Op } from 'sequelize';
 import { WorkerLimitExceededError } from '../../ws/workerActivity';
+import {
+  attachTransferNotifications,
+  createTransferNotification,
+} from '../../../lib/transferNotifications';
 
 const router = Router();
 
@@ -104,6 +109,23 @@ async function attachMinecraftShorthand(
   });
 }
 
+function shouldIncludeNotifications(query: RequestWithRateLimit['query']): boolean {
+  const parseFlag = (value: unknown): boolean => {
+    if (Array.isArray(value)) {
+      return value.some((entry) => parseFlag(entry));
+    }
+
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      return normalized === '1' || normalized === 'true' || normalized === 'yes';
+    }
+
+    return false;
+  };
+
+  return parseFlag(query.inclNotifs) || parseFlag(query.inclNotifications);
+}
+
 function serializeTransferTargets(entities: EstorageEntity[]): TransferTarget[] {
   return entities.map((entity) => {
     const links = ((entity as any).links ?? []) as EstorageEntityLink[];
@@ -151,6 +173,7 @@ async function resolveRequesterEntity(request: RequestWithRateLimit) {
 
 router.get('/', authenticateApiKeyTier('free', 'premium'), async (req, res) => {
   const request = req as RequestWithRateLimit;
+  const includeNotifications = shouldIncludeNotifications(request.query);
 
   if (!request.apiKey) {
     return res.error('UNAUTHORIZED', 'API key required to access this endpoint', 401);
@@ -171,7 +194,11 @@ router.get('/', authenticateApiKeyTier('free', 'premium'), async (req, res) => {
     });
 
     const rawTransfers = transfers.map((t) => t.raw());
-    return res.success(await attachMinecraftShorthand(rawTransfers));
+    const transfersWithNotifications = await attachTransferNotifications(
+      rawTransfers,
+      includeNotifications,
+    );
+    return res.success(await attachMinecraftShorthand(transfersWithNotifications));
   } catch (error) {
     console.error('Error fetching transfers:', error);
     return res.error('INTERNAL_SERVER_ERROR', 'Failed to fetch transfers', 500);
@@ -352,9 +379,43 @@ router.use(
 
 router.get('/:transferId', authenticateApiKeyTier('free', 'premium'), async (req, res) => {
   const request = req as RequestWithTransfer;
-  const [serializedTransfer] = await attachMinecraftShorthand([request.transfer]);
+  const includeNotifications = shouldIncludeNotifications(request.query);
+  const [transferWithNotifications] = await attachTransferNotifications(
+    [request.transfer],
+    includeNotifications,
+  );
+  const [serializedTransfer] = await attachMinecraftShorthand([transferWithNotifications]);
 
   return res.success(serializedTransfer);
+});
+
+router.post('/:transferId/notify', authenticateApiKeyTier('free', 'premium'), async (req, res) => {
+  const request = req as RequestWithTransfer;
+
+  if (!isTransferNotificationPayload(req.body)) {
+    return res.error(
+      'BAD_REQUEST',
+      'Invalid notify payload. Expected { type?: "error"|"info"|"success", message: string }',
+      400,
+    );
+  }
+
+  try {
+    const notification = await createTransferNotification({
+      transferId: request.transfer.id,
+      senderEntityId: request.requesterEntityId,
+      type: req.body.type,
+      message: req.body.message,
+    });
+
+    await broadcastTransferNotification(request.transfer, notification);
+
+    return res.success(notification);
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : 'Failed to create transfer notification';
+    return res.error('BAD_REQUEST', errorMessage, 400);
+  }
 });
 
 router.post('/:transferId/cancel', authenticateApiKeyTier('free', 'premium'), async (req, res) => {
