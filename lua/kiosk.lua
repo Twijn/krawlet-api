@@ -113,7 +113,12 @@ end
 
 local function getEnderStorageColors()
   if retrieveAndSelectEnderStorage() then
-    turtle.place()
+    local succ, err = turtle.place()
+    if not succ then
+      err = "Failed to place ender storage: " .. (err or "Unknown error")
+      printError(err)
+      return false, err
+    end
     sleep(0.25)
     local estorage = peripheral.wrap("front")
     local color1, color2, color3 = estorage.getFrequency()
@@ -135,7 +140,7 @@ local function run()
 
   if command == "kk" .. commandNumber then
     if args[1] == "storage" then
-      local colors = getEnderStorageColors()
+      local colors, errMsg = getEnderStorageColors()
       if colors then
         print("Ender storage colors: " .. table.concat(colors, ", "))
         local response, errMsg = post("players/" .. pkt.user.uuid .. "/link", { colors = colors })
@@ -147,7 +152,12 @@ local function run()
           chatbox.tell(user, "<red>" .. errMsg .. "</red>", BOT_NAME, "minimessage")
         end
       else
-        chatbox.tell(user, "<red>We are currently out of ender storages!</red> <gray>Please use a different kiosk or ask Twijn to refill " .. kioskName .. ".</gray>", BOT_NAME, "minimessage")
+        if errMsg then
+          errMsg = "<red>An error occurred!</red>" .. (errMsg and (" <gray>" .. errMsg .. "</gray>") or "")
+        else
+          errMsg = "<red>We are currently out of ender storages!</red> <gray>Please use a different kiosk or ask Twijn to refill " .. kioskName .. ".</gray>"
+        end
+        chatbox.tell(user, errMsg, BOT_NAME, "minimessage")
       end
     else
       chatbox.tell(user, "<red>Unknown kiosk command.</red> <gray>Usage: \\kk" .. commandNumber .. " storage</gray>", BOT_NAME, "minimessage")
