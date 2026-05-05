@@ -48,19 +48,16 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
   // Determine rate limit based on authentication
   let limit: number;
   let identifier: string;
-  let identifierType: 'api-key' | 'ip';
 
   if (request.apiKey) {
     // Authenticated user: use API key limits
     limit = request.apiKey.rateLimit;
     identifier = `key:${request.apiKey.id}`;
-    identifierType = 'api-key';
   } else {
     // Anonymous user: IP-based limiting
     limit = 100; // 100 requests per hour for anonymous
     const ip = getClientIp(request);
     identifier = `ip:${ip}`;
-    identifierType = 'ip';
   }
 
   const now = Date.now();
@@ -111,8 +108,12 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
   // Track request start time
   const startTime = Date.now();
 
-  // Track successful request for abuse detection (burst/UA cycling)
-  trackSuccessfulRequest(ip, userAgent);
+  // Only track IP-level abuse for unauthenticated (anonymous) requests.
+  // Authenticated API key users have their own per-key rate limit, so their
+  // traffic volume should not count against IP-level burst/UA cycling detection.
+  if (!request.apiKey) {
+    trackSuccessfulRequest(ip, userAgent);
+  }
 
   // Log to database after response finishes
   const originalEnd = res.end;
@@ -141,9 +142,12 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
     }).catch((err) => console.error('Failed to log request:', err));
 
     // Check for abuse patterns after request (async, don't wait)
-    checkAbuseAfterRequest(ip).catch((err) =>
-      console.error('Failed to check abuse after request:', err),
-    );
+    // Skip for authenticated API key users — their high rate limits are intentional.
+    if (!request.apiKey) {
+      checkAbuseAfterRequest(ip).catch((err) =>
+        console.error('Failed to check abuse after request:', err),
+      );
+    }
 
     return originalEnd.apply(this, args as any) as Response;
   };
@@ -175,9 +179,12 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
     }).catch((err) => console.error('Failed to log blocked request:', err));
 
     // Track rate limit exceeded for abuse detection (async, don't wait)
-    trackRateLimitExceeded(ip, userAgent).catch((err) =>
-      console.error('Failed to track rate limit exceeded:', err),
-    );
+    // Only track for anonymous users — authenticated keys have intentionally high limits.
+    if (!request.apiKey) {
+      trackRateLimitExceeded(ip, userAgent).catch((err) =>
+        console.error('Failed to track rate limit exceeded:', err),
+      );
+    }
 
     return res.error(
       'RATE_LIMIT_EXCEEDED',
