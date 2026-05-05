@@ -6,6 +6,9 @@ import {
   createAutocompleteHelper,
 } from './commands/helpers/DiscordCommand';
 import { APIError } from 'kromer';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('Discord');
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN!;
 
@@ -50,8 +53,8 @@ export function getDiscordStatus(): DiscordStatus {
 }
 
 client.once(Events.ClientReady, (readyClient) => {
-  console.log(`Ready! Logged in as ${readyClient.user.tag}`);
-  console.log(`Loaded ${commands.length} commands: ${commands.map((x) => x.data.name).join(', ')}`);
+  log.info(`Ready! Logged in as ${readyClient.user.tag}`);
+  log.info(`Loaded ${commands.length} commands: ${commands.map((x) => x.data.name).join(', ')}`);
   discordConnectionStatus = 'connected';
   lastDiscordError = undefined;
 });
@@ -62,24 +65,24 @@ client.on(Events.ShardReady, () => {
 });
 
 client.on(Events.ShardResume, () => {
-  console.log('Discord client resumed');
+  log.info('Discord client resumed');
   discordConnectionStatus = 'connected';
   lastDiscordError = undefined;
 });
 
 client.on(Events.Error, (error) => {
-  console.error('Discord client error:', error);
+  log.error('Discord client error:', error);
   discordConnectionStatus = 'error';
   lastDiscordError = error?.message || 'Discord client error';
 });
 
 client.on(Events.ShardDisconnect, () => {
-  console.log('Discord client disconnected');
+  log.info('Discord client disconnected');
   discordConnectionStatus = 'disconnected';
 });
 
 client.on(Events.ShardReconnecting, () => {
-  console.log('Discord client reconnecting');
+  log.info('Discord client reconnecting');
   discordConnectionStatus = 'connecting';
 });
 
@@ -97,7 +100,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
       const helper = createAutocompleteHelper(interaction);
       await command.autocomplete(interaction, helper);
     } catch (error) {
-      console.error(`Error handling autocomplete for ${interaction.commandName}:`, error);
+      log.error(`Error handling autocomplete for ${interaction.commandName}:`, error);
     }
     return;
   }
@@ -108,12 +111,12 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
   const command = commands.find((cmd) => cmd.data.name === interaction.commandName);
 
   if (!command) {
-    console.error(`No command matching ${interaction.commandName} was found.`);
+    log.error(`No command matching ${interaction.commandName} was found.`);
     return;
   }
 
   try {
-    console.log(`Executing command: ${interaction.commandName} by ${interaction.user.tag}`);
+    log.info(`Executing command: ${interaction.commandName} by ${interaction.user.tag}`);
 
     // Defer the reply if the command specifies it should be deferred
     if (command.defer) {
@@ -128,7 +131,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     // Execute the command
     await command.execute(interaction, helper);
   } catch (error) {
-    console.error(`Error executing command ${interaction.commandName}:`, error);
+    log.error(`Error executing command ${interaction.commandName}:`, error);
 
     let errorMessage = 'There was an error while executing this command!';
 
@@ -155,7 +158,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
         }
       }
     } catch (replyError) {
-      console.error('Error sending error message:', replyError);
+      log.error('Error sending error message:', replyError);
     }
   }
 });
@@ -163,7 +166,7 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
 // Log in to Discord with your client's token
 discordConnectionStatus = 'connecting';
 client.login(DISCORD_TOKEN).catch((err) => {
-  console.error('Failed to login to Discord:', err);
+  log.error('Failed to login to Discord:', err);
   discordConnectionStatus = 'error';
   lastDiscordError = err?.message || 'Failed to login';
 });

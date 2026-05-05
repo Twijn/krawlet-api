@@ -3,6 +3,9 @@ import { ApiKey } from '../../../lib/models/apikey.model';
 import { RequestWithRateLimit } from '../types/request';
 import { RequestLog } from '../../../lib/models/requestlog.model';
 import { getClientIp } from '../utils/getClientIp';
+import { createLogger } from '../../../lib/logger';
+
+const log = createLogger('Auth');
 
 export const optionalApiKeyAuth = async (req: Request, res: Response, next: NextFunction) => {
   const request = req as RequestWithRateLimit;
@@ -40,7 +43,7 @@ export const optionalApiKeyAuth = async (req: Request, res: Response, next: Next
       wasBlocked: true,
       blockReason: 'INVALID_API_KEY_FORMAT',
       responseStatus: 401,
-    }).catch((err) => console.error('Failed to log blocked request:', err));
+    }).catch((err) => log.error('Failed to log blocked request:', err));
 
     return res.error('INVALID_API_KEY', 'API key must start with "kraw_"', 401);
   }
@@ -78,7 +81,7 @@ export const optionalApiKeyAuth = async (req: Request, res: Response, next: Next
         wasBlocked: true,
         blockReason: 'INVALID_API_KEY',
         responseStatus: 401,
-      }).catch((err) => console.error('Failed to log blocked request:', err));
+      }).catch((err) => log.error('Failed to log blocked request:', err));
 
       return res.error('INVALID_API_KEY', 'Invalid or inactive API key', 401);
     }
@@ -100,7 +103,7 @@ export const optionalApiKeyAuth = async (req: Request, res: Response, next: Next
     };
 
     // Update usage (async, don't wait)
-    apiKey.incrementUsage().catch(console.error);
+    apiKey.incrementUsage().catch((err) => log.error(err));
 
     next();
   } catch (error) {

@@ -1,3 +1,7 @@
+import { createLogger } from './logger';
+
+const log = createLogger('DiscordWebhook');
+
 export interface DiscordWebhookResponse {
   id: string;
   type: number;
@@ -93,7 +97,7 @@ export class DiscordWebhook {
             }
             return b;
           });
-          console.error('Error sending batch:', e);
+          log.error('Error sending batch:', e);
         }
       }
     }, 5_000);

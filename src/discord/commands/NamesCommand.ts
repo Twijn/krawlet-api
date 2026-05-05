@@ -2,6 +2,9 @@ import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } from '
 import { DiscordCommand, InteractionHelper } from './helpers/DiscordCommand';
 import { GenericPaginator, PaginationPage } from '../utils/genericPaginator';
 import createTextTable from '../textTable';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('Discord');
 
 export default class NamesCommand implements DiscordCommand {
   data = new SlashCommandBuilder()
@@ -72,7 +75,7 @@ export default class NamesCommand implements DiscordCommand {
 
       await paginator.sendPaginatedMessage(interaction);
     } catch (error) {
-      console.error('Failed to fetch names:', error);
+      log.error('Failed to fetch names:', error);
       await helper.error('Failed to fetch registered names.');
     }
   };

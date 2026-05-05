@@ -5,6 +5,9 @@ import commands from './index';
 import { rcc } from '../index';
 import playerManager from '../../lib/managers/playerManager';
 import { ApiKey } from '../../lib/models/apikey.model';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('Chat');
 
 const PREFIX = '\\' + (process.env.PREFIX ?? '');
 
@@ -56,7 +59,7 @@ async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
       )
       .catch(console.error);
   } catch (err) {
-    console.error('Error generating API key via chatbox:', err);
+    log.error('Error generating API key via chatbox:', err);
     rcc
       .tell(cmd.user, `<red>Error generating API key. Try again later.</red>`)
       .catch(console.error);
@@ -125,7 +128,7 @@ async function handleApiKeyRegeneration(cmd: ChatboxCommand, confirmed: boolean)
       )
       .catch(console.error);
   } catch (err) {
-    console.error('Error regenerating API key via chatbox:', err);
+    log.error('Error regenerating API key via chatbox:', err);
     rcc
       .tell(cmd.user, `<red>Error regenerating API key. Try again later.</red>`)
       .catch(console.error);

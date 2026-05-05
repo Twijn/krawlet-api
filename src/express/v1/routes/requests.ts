@@ -13,7 +13,9 @@ import { queueTransferByEntities } from '../../ws';
 import { RawTransfer } from '../../../lib/models/transfer.model';
 import { WorkerLimitExceededError } from '../../ws/workerActivity';
 import { Op } from 'sequelize';
+import { createLogger } from '../../../lib/logger';
 
+const log = createLogger('API');
 const router = Router();
 
 type TransferWithMinecraftShorthand = RawTransfer & {
@@ -202,7 +204,7 @@ router.post(
         },
       });
     } catch (error) {
-      console.error('Error creating public storage transfer request:', error);
+      log.error('Error creating public storage transfer request:', error);
 
       if (error instanceof WorkerLimitExceededError) {
         return res.error('TOO_MANY_WORKERS', error.message, 429);

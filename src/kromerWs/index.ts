@@ -14,6 +14,9 @@ import formatTransaction, {
 } from '../lib/formatTransaction';
 import walletListeners from './walletListeners';
 import { formatKromerBalance } from '../lib/formatKromer';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('KromerWs');
 
 const STRIPPED_META_ENTRIES = [
   'error',
@@ -116,7 +119,7 @@ function sendInGameMessage(transaction: TransactionWithMeta, data: TransactionDa
   });
 
   if (sentNames.length > 0) {
-    console.log(`Sent transaction (${transaction.id}) notifications to ${sentNames.join(', ')}`);
+    log.info(`Sent transaction (${transaction.id}) notifications to ${sentNames.join(', ')}`);
   }
 }
 
@@ -130,7 +133,7 @@ haTransactions.on((transaction: TransactionWithMeta) => {
     try {
       handler(transaction, data);
     } catch (error) {
-      console.error('Error in transaction handler:', error);
+      log.error('Error in transaction handler:', error);
     }
   });
 });
@@ -138,13 +141,13 @@ haTransactions.on((transaction: TransactionWithMeta) => {
 export const KRAWLET_PRIVATE_KEY = process.env.KRAWLET_PKEY ?? 'test';
 export const krawletAddress = kromer.addresses.decodeAddressFromPrivateKey(KRAWLET_PRIVATE_KEY);
 
-console.log(`Listening for transactions to: ${krawletAddress}`);
+log.info(`Listening for transactions to: ${krawletAddress}`);
 
 haTransactions.on(async (transaction: TransactionWithMeta) => {
   if (transaction.to !== krawletAddress || transaction.type !== 'transfer' || !transaction.from)
     return;
 
-  console.log(
+  log.info(
     `Received transaction from ${transaction.from}: ${transaction.metadata ?? 'no metadata'}`,
   );
   for (const listener of walletListeners) {
@@ -163,7 +166,7 @@ haTransactions.on(async (transaction: TransactionWithMeta) => {
           // Transaction was not detected as an automatic refund from Krawlet's transaction
           // Refund the transaction!
 
-          console.log(`Sending ${type} to ${transaction.from}: ${message}`);
+          log.info(`Sending ${type} to ${transaction.from}: ${message}`);
 
           await kromer.transactions.send({
             privatekey: KRAWLET_PRIVATE_KEY,
@@ -172,7 +175,7 @@ haTransactions.on(async (transaction: TransactionWithMeta) => {
             metadata: `${type}=${message}`,
           });
         } else {
-          console.error(
+          log.error(
             `Failed to refund ${transaction.from} ${formatKromerBalance(transaction.value)}`,
           );
         }
@@ -180,12 +183,12 @@ haTransactions.on(async (transaction: TransactionWithMeta) => {
         return;
       }
     } catch (e) {
-      console.error(e);
+      log.error(e);
       return;
     }
   }
 
-  console.log(`Sending [Unknown Operation] to ${transaction.from}`);
+  log.info(`Sending [Unknown Operation] to ${transaction.from}`);
 
   try {
     await kromer.transactions.send({
@@ -195,7 +198,7 @@ haTransactions.on(async (transaction: TransactionWithMeta) => {
       metadata: 'error=Unknown operation!',
     });
   } catch (e) {
-    console.error(e);
+    log.error(e);
   }
 });
 

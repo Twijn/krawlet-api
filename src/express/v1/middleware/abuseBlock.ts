@@ -7,6 +7,9 @@ import {
 } from '../../../lib/abuseManager';
 import { getClientIp } from '../utils/getClientIp';
 import { isIgnoredIp } from '../utils/ignoredIps';
+import { createLogger } from '../../../lib/logger';
+
+const log = createLogger('AbuseBlock');
 
 /**
  * Middleware to check for blocked IPs and detect abuse patterns
@@ -31,7 +34,7 @@ export const abuseBlockMiddleware = async (
       // Record the blocked attempt
       block
         .recordBlockedRequest()
-        .catch((err: Error) => console.error('Failed to record blocked request:', err));
+        .catch((err: Error) => log.error('Failed to record blocked request:', err));
 
       // Return 403 for blocked IPs (or 444 equivalent - just close connection)
       // Using 403 with a clear message is more user-friendly
@@ -54,7 +57,7 @@ export const abuseBlockMiddleware = async (
     // Continue to next middleware
     next();
   } catch (err) {
-    console.error('Error in abuse block middleware:', err);
+    log.error('Error in abuse block middleware:', err);
     // On error, allow the request through (fail open)
     next();
   }
@@ -79,7 +82,7 @@ export const trackRateLimitExceeded = async (
       await blockIpForAbuse(ip, abuseResult.reason, abuseResult.triggerType, abuseResult.metadata);
     }
   } catch (err) {
-    console.error('Error tracking rate limit exceeded:', err);
+    log.error('Error tracking rate limit exceeded:', err);
   }
 };
 
@@ -100,6 +103,6 @@ export const checkAbuseAfterRequest = async (ip: string): Promise<void> => {
       await blockIpForAbuse(ip, abuseResult.reason, abuseResult.triggerType, abuseResult.metadata);
     }
   } catch (err) {
-    console.error('Error checking abuse after request:', err);
+    log.error('Error checking abuse after request:', err);
   }
 };

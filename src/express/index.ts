@@ -13,6 +13,9 @@ import v1Router from './v1';
 import docsRouter from './docs';
 import adminRouter from './admin';
 import { initWebSockets } from './ws';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('Express');
 
 const PORT = process.env.PORT ?? 3000;
 
@@ -75,13 +78,13 @@ app.use((req, res) => {
 });
 
 const server = app.listen(PORT, () => {
-  console.log(`Express server listening on port ${PORT}`);
-  console.log(`Documentation available at http://localhost:${PORT}/`);
-  console.log(`V1 API available at http://localhost:${PORT}/api/v1`);
-  console.log(`V1 WebSocket available at ws://localhost:${PORT}/api/v1/ws`);
-  console.log(`Legacy WebSocket alias available at ws://localhost:${PORT}/api/ws`);
+  log.info(`Express server listening on port ${PORT}`);
+  log.info(`Documentation available at http://localhost:${PORT}/`);
+  log.info(`V1 API available at http://localhost:${PORT}/api/v1`);
+  log.info(`V1 WebSocket available at ws://localhost:${PORT}/api/v1/ws`);
+  log.info(`Legacy WebSocket alias available at ws://localhost:${PORT}/api/ws`);
   if (process.env.ADMIN_PASSWORD) {
-    console.log(`Admin dashboard available at http://localhost:${PORT}/admin`);
+    log.info(`Admin dashboard available at http://localhost:${PORT}/admin`);
   }
 });
 

@@ -1,6 +1,9 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import { ApiKey, ApiKeyTier } from './models/apikey.model';
 import { RequestWithRateLimit } from '../express/v1/types/request';
+import { createLogger } from './logger';
+
+const log = createLogger('Auth');
 
 /**
  * Middleware to authenticate requests using API keys with specific tier requirements.
@@ -70,7 +73,7 @@ export function authenticateApiKeyTier(...allowedTiers: ApiKeyTier[]): RequestHa
 
       next();
     } catch (error) {
-      console.error('Error authenticating API key:', error);
+      log.error('Error authenticating API key:', error);
       return res.status(500).json({
         ok: false,
         error: 'Internal server error during authentication',

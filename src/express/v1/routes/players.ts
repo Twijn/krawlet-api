@@ -7,7 +7,9 @@ import {
   VALID_COLORS,
 } from '../../../lib/models';
 import authenticateApiKeyTier from '../../../lib/authenticateApiKeyTier';
+import { createLogger } from '../../../lib/logger';
 
+const log = createLogger('API');
 const router = Router();
 
 // GET /v1/players - Get players by query params
@@ -33,7 +35,7 @@ router.get('/', (req: Request, res: Response) => {
 
     return res.success(players);
   } catch (error) {
-    console.error('Error fetching players:', error);
+    log.error('Error fetching players:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch players', 500);
   }
 });
@@ -109,7 +111,7 @@ router.post(
         },
       });
     } catch (error) {
-      console.error('Error linking player to entity:', error);
+      log.error('Error linking player to entity:', error);
       return res.error('INTERNAL_ERROR', 'Failed to link player to entity', 500);
     }
   },

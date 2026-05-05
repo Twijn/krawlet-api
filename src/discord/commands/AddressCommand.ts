@@ -5,6 +5,9 @@ import {
 } from 'discord.js';
 import { DiscordCommand, AutocompleteHelper, InteractionHelper } from './helpers/DiscordCommand';
 import { handleAddressLookup } from '../utils/commandShared';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('Discord');
 
 export default class AddressCommand implements DiscordCommand {
   data = new SlashCommandBuilder()
@@ -50,7 +53,7 @@ export default class AddressCommand implements DiscordCommand {
 
         await interaction.respond(filtered);
       } catch (error) {
-        console.error('Error fetching addresses for autocomplete:', error);
+        log.error('Error fetching addresses for autocomplete:', error);
         await interaction.respond([]);
       }
     }

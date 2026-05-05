@@ -1,6 +1,9 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import { DiscordCommand, InteractionHelper } from './helpers/DiscordCommand';
 import { TransactionPaginator } from '../utils/transactionPaginator';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('Discord');
 
 export default class TransactionsCommand implements DiscordCommand {
   data = new SlashCommandBuilder()
@@ -50,7 +53,7 @@ export default class TransactionsCommand implements DiscordCommand {
 
       await paginator.sendPaginatedMessage(interaction);
     } catch (error) {
-      console.error(error);
+      log.error(error);
       await helper.error('Failed to fetch latest transactions.');
     }
   };

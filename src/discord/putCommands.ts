@@ -1,6 +1,9 @@
 import { REST, Routes } from 'discord.js';
 import { commands } from './commands';
 import dotenv from 'dotenv';
+import { createLogger } from '../lib/logger';
+
+const log = createLogger('Discord');
 
 dotenv.config();
 
@@ -26,7 +29,7 @@ if (!CLIENT_ID) {
 
 async function deployCommands() {
   try {
-    console.log(`Started refreshing ${commands.length} application (/) commands.`);
+    log.info(`Started refreshing ${commands.length} application (/) commands.`);
 
     // Construct and prepare an instance of the REST module
     const rest = new REST().setToken(DISCORD_TOKEN);
@@ -37,21 +40,21 @@ async function deployCommands() {
     let data: any;
 
     // Deploy commands globally (takes up to 1 hour to propagate)
-    console.log('Deploying commands globally...');
+    log.info('Deploying commands globally...');
     data = await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commandData });
 
-    console.log(`Successfully refreshed ${(data as any[]).length} application (/) commands.`);
+    log.info(`Successfully refreshed ${(data as any[]).length} application (/) commands.`);
 
     // Log the deployed commands
-    console.log('Deployed commands:');
+    log.info('Deployed commands:');
     commands.forEach((command) => {
-      console.log(`  - /${command.data.name}: ${command.data.description}`);
+      log.info(`  - /${command.data.name}: ${command.data.description}`);
     });
 
     // Exit cleanly after deployment
     process.exit(0);
   } catch (error) {
-    console.error('Error deploying commands:', error);
+    log.error('Error deploying commands:', error);
     process.exit(1);
   }
 }

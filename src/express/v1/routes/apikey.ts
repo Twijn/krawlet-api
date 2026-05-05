@@ -4,7 +4,9 @@ import { RequestLog } from '../../../lib/models/requestlog.model';
 import { ApiKey } from '../../../lib/models/apikey.model';
 import { sequelize } from '../../../lib/models/database';
 import { RequestWithRateLimit } from '../types/request';
+import { createLogger } from '../../../lib/logger';
 
+const log = createLogger('API');
 const router = Router();
 
 interface UsageStats {
@@ -116,7 +118,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     return res.success(keyInfo);
   } catch (error) {
-    console.error('Error fetching API key info:', error);
+    log.error('Error fetching API key info:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch API key info', 500);
   }
 });
@@ -133,7 +135,7 @@ router.get('/usage', async (req: Request, res: Response) => {
     const usage = await getUsageStats(request.apiKey.id);
     return res.success(usage);
   } catch (error) {
-    console.error('Error fetching API key usage:', error);
+    log.error('Error fetching API key usage:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch API key usage', 500);
   }
 });
@@ -179,7 +181,7 @@ router.get('/logs', async (req: Request, res: Response) => {
       })),
     });
   } catch (error) {
-    console.error('Error fetching API key logs:', error);
+    log.error('Error fetching API key logs:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch API key logs', 500);
   }
 });
@@ -227,7 +229,7 @@ router.post('/quickcode/redeem', async (req: Request, res: Response) => {
       warning: 'Save this API key securely - it will not be shown again!',
     });
   } catch (error) {
-    console.error('Error redeeming quick code:', error);
+    log.error('Error redeeming quick code:', error);
     return res.error('INTERNAL_ERROR', 'Failed to redeem quick code', 500);
   }
 });
@@ -257,7 +259,7 @@ router.post('/quickcode/generate', async (req: Request, res: Response) => {
       message: 'Use this code to retrieve your full API key. Redeeming will regenerate your key.',
     });
   } catch (error) {
-    console.error('Error generating quick code:', error);
+    log.error('Error generating quick code:', error);
     return res.error('INTERNAL_ERROR', 'Failed to generate quick code', 500);
   }
 });

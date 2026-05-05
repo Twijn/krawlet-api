@@ -1,5 +1,8 @@
 import { Model, DataTypes, Op } from 'sequelize';
 import { sequelize } from './database';
+import { createLogger } from '../logger';
+
+const log = createLogger('BlockedIp');
 
 export type BlockLevel = 'app' | 'firewall';
 export type TriggerType =
@@ -344,9 +347,7 @@ BlockedIp.init(
 // Cleanup expired blocks every 5 minutes
 setInterval(
   () => {
-    BlockedIp.cleanupExpired().catch((err) =>
-      console.error('Failed to cleanup expired blocks:', err),
-    );
+    BlockedIp.cleanupExpired().catch((err) => log.error('Failed to cleanup expired blocks:', err));
   },
   5 * 60 * 1000,
 );

@@ -3,6 +3,9 @@ import { EstorageEntityLink } from '../models/estoragelink.model';
 import { User } from 'reconnectedchat';
 import { getByUUID } from '../playerAddresses';
 import { rcc } from '../../chat';
+import { createLogger } from '../logger';
+
+const log = createLogger('PlayerManager');
 
 const REFRESH_INTERVAL = 3 * 24 * 60 * 60 * 1000; // 3 days
 const LAST_SEEN_UPDATE_INTERVAL = 5 * 60 * 1000; // 5 minutes
@@ -29,7 +32,7 @@ class PlayerManager {
   constructor() {
     // Skip database operations during command deployment
     if (!process.env.DEPLOYING_COMMANDS) {
-      this.updatePlayers().catch(console.error);
+      this.updatePlayers().catch((err) => log.error(err));
     }
   }
 
@@ -56,7 +59,7 @@ class PlayerManager {
         const address = await getByUUID(user.uuid);
         if (address && address.data.length > 0) {
           if (player) {
-            console.log('Updating player ' + user.name);
+            log.info('Updating player ' + user.name);
             player.minecraftName = user.name;
             player.kromerAddress = address.data[0].address;
             player.lastSeenAt = now;
@@ -64,7 +67,7 @@ class PlayerManager {
             await player.save();
             shouldPersistLastSeen = false;
           } else {
-            console.log('Creating player ' + user.name);
+            log.info('Creating player ' + user.name);
             player = await Player.create({
               minecraftUUID: user.uuid,
               minecraftName: user.name,
@@ -74,10 +77,10 @@ class PlayerManager {
             this.players.push(player);
           }
         } else {
-          console.error('Could not get address for ' + user.name);
+          log.error('Could not get address for ' + user.name);
         }
       } catch (err) {
-        console.error('Could not get address for ' + user.name, err);
+        log.error('Could not get address for ' + user.name, err);
       }
     }
 

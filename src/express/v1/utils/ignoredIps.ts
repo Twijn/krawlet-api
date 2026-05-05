@@ -7,6 +7,10 @@
  * Example: RATE_LIMIT_IGNORE_IPS=192.168.1.100,10.0.0.1
  */
 
+import { createLogger } from '../../../lib/logger';
+
+const log = createLogger('RateLimit');
+
 // Parse the ignore list once on module load
 const ignoredIps: Set<string> = new Set();
 
@@ -28,7 +32,7 @@ if (envValue) {
     });
 
   if (ignoredIps.size > 0) {
-    console.log(`[Rate Limiter] Ignoring IPs: ${Array.from(ignoredIps).join(', ')}`);
+    log.info(`Ignoring IPs: ${Array.from(ignoredIps).join(', ')}`);
   }
 }
 

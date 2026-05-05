@@ -24,6 +24,9 @@ import {
   ItemChangeType,
   Listing,
 } from '../../lib/models';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('ShopSync');
 
 // ============================================================================
 // Types
@@ -191,7 +194,7 @@ function cleanupOldRecords(): void {
   const totalRemoved = removedValidation + removedSuccess + removedShop + removedItem;
 
   if (totalRemoved > 0) {
-    console.log(
+    log.info(
       `[ShopSync Reporter] Cleaned up ${totalRemoved} old records (>48h): ` +
         `${removedValidation} validation failures, ${removedSuccess} successful posts, ` +
         `${removedShop} shop changes, ${removedItem} item changes`,
@@ -500,7 +503,7 @@ export async function detectAndRecordShopChanges(
         });
       }
     } catch (err) {
-      console.error('Failed to persist shop change log:', err);
+      log.error('Failed to persist shop change log:', err);
     }
 
     return record;
@@ -728,7 +731,7 @@ export async function detectAndRecordItemChanges(
         }
       }
     } catch (err) {
-      console.error('Failed to persist item change logs:', err);
+      log.error('Failed to persist item change logs:', err);
     }
 
     return record;
@@ -861,7 +864,7 @@ export async function getReporterStats(): Promise<ReporterStats> {
   try {
     persistentStats = await getChangeLogStats();
   } catch (err) {
-    console.error('Failed to get persistent stats:', err);
+    log.error('Failed to get persistent stats:', err);
   }
 
   return {

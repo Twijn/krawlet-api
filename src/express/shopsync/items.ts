@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { getListings } from '../../lib/models';
+import { createLogger } from '../../lib/logger';
 
+const log = createLogger('ShopSync');
 const router = Router();
 
 router.get('/', async (req, res) => {
@@ -10,7 +12,7 @@ router.get('/', async (req, res) => {
       data: await getListings(),
     });
   } catch (err) {
-    console.error(err);
+    log.error(err);
     res.status(500).json({
       ok: false,
       error: 'Internal server error',

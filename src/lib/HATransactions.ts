@@ -1,4 +1,7 @@
 import { KromerApi, TransactionWithMeta } from 'kromer';
+import { createLogger } from './logger';
+
+const log = createLogger('HATransactions');
 
 export type TransactionHandler = (transaction: TransactionWithMeta) => Promise<void> | void;
 
@@ -45,7 +48,7 @@ export class HATransactions {
         this.lastTransactionId = transactions[0].id;
       }
     } catch (e) {
-      console.error(e);
+      log.error(e);
     }
   }
 
@@ -80,7 +83,7 @@ export class HATransactions {
     private api: KromerApi,
     queryInterval: number = 10_000,
   ) {
-    console.log('Starting HATransactions with query interval of ' + queryInterval + 'ms');
+    log.info('Starting HATransactions with query interval of ' + queryInterval + 'ms');
     this.connectionStatus = 'connecting';
     this.client.on('ready', this.handleReady.bind(this));
     this.client.on('error', this.handleError.bind(this));
@@ -89,17 +92,17 @@ export class HATransactions {
 
     this.attemptConnect();
 
-    this.retrieveLatestTransaction().catch(console.error);
+    this.retrieveLatestTransaction().catch((err) => log.error(err));
 
     setInterval(() => {
-      this.checkForTransactions().catch(console.error);
+      this.checkForTransactions().catch((err) => log.error(err));
     }, queryInterval);
   }
 
   private attemptConnect() {
     this.connectionStatus = 'connecting';
     this.client.connect().catch((err) => {
-      console.error('Failed to connect to Kromer WS:', err);
+      log.error('Failed to connect to Kromer WS:', err);
       this.handleConnectionFailure(err?.message || 'Failed to connect');
     });
   }
@@ -119,13 +122,13 @@ export class HATransactions {
         RECONNECT_CONFIG.downRetryDelay * backoffMultiplier,
         RECONNECT_CONFIG.maxDownRetryDelay,
       );
-      console.log(
+      log.warn(
         `Kromer WS in DOWN state after ${this.failedAttempts} failed attempts. Retrying in ${delay / 1000}s`,
       );
       this.scheduleReconnect(delay);
     } else {
       this.connectionStatus = 'error';
-      console.log(
+      log.warn(
         `Kromer WS connection failed (attempt ${this.failedAttempts}/${RECONNECT_CONFIG.maxFailedAttempts}). Retrying in ${RECONNECT_CONFIG.normalRetryDelay / 1000}s`,
       );
       this.scheduleReconnect(RECONNECT_CONFIG.normalRetryDelay);
@@ -140,13 +143,13 @@ export class HATransactions {
     this.nextReconnectAt = new Date(Date.now() + delay);
 
     this.reconnectTimeout = setTimeout(() => {
-      console.log('Attempting to reconnect to Kromer WS...');
+      log.info('Attempting to reconnect to Kromer WS...');
       this.attemptConnect();
     }, delay);
   }
 
   private handleReady() {
-    console.log('Connected to Kromer WS!');
+    log.info('Connected to Kromer WS!');
     this.connectionStatus = 'connected';
     this.lastConnectedAt = new Date();
     this.lastError = undefined;
@@ -155,13 +158,13 @@ export class HATransactions {
   }
 
   private handleError(e: Event | Error) {
-    console.error('Kromer WS error:', e);
+    log.error('Kromer WS error:', e);
     const errorMessage = e instanceof Error ? e.message : 'WebSocket error';
     this.handleConnectionFailure(errorMessage);
   }
 
   private handleClose() {
-    console.log('Kromer WS connection closed');
+    log.info('Kromer WS connection closed');
     // Only schedule reconnect if we're not already in a reconnecting state
     if (this.connectionStatus === 'connected') {
       this.handleConnectionFailure('Connection closed');

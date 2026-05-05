@@ -6,6 +6,9 @@ import {
   Model,
 } from 'sequelize';
 import { sequelize } from './database.js';
+import { createLogger } from '../logger';
+
+const log = createLogger('KnownAddress');
 
 export type KnownAddressType = 'official' | 'shop' | 'gamble' | 'service' | 'company';
 
@@ -109,7 +112,7 @@ export const deleteShopAddress = async (address: string): Promise<void> => {
 const refreshAddresses = async () => {
   const knownAddresses = await KnownAddress.findAll();
   addresses = knownAddresses.map((x) => x.raw());
-  console.log('Known addresses refreshed');
+  log.info('Known addresses refreshed');
 };
 
 // Skip database operations during command deployment

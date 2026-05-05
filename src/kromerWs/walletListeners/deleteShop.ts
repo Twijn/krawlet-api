@@ -1,5 +1,8 @@
 import { Listener, ListenerResult } from './index';
 import { deleteShopAddress } from '../../lib/models';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('KromerWs');
 
 const listener: Listener = async (transaction): Promise<ListenerResult> => {
   const metadata = (transaction.metadata ?? '').toLowerCase();
@@ -11,7 +14,7 @@ const listener: Listener = async (transaction): Promise<ListenerResult> => {
         message: `Shop listing deleted successfully;address=${transaction.from}`,
       };
     } catch (e) {
-      console.error(e);
+      log.error(e);
       return { success: false, message: (e as Error)?.message ?? 'Error updating shop address' };
     }
   }

@@ -15,7 +15,9 @@ import {
   detectAndRecordShopChanges,
   detectAndRecordItemChanges,
 } from './reporter';
+import { createLogger } from '../../lib/logger';
 
+const log = createLogger('ShopSync');
 const router = Router();
 
 router.get('/', async (req, res) => {
@@ -26,7 +28,7 @@ router.get('/', async (req, res) => {
       data: shop.map((s) => s.raw()),
     });
   } catch (err) {
-    console.error(err);
+    log.error(err);
     res.status(500).json({
       ok: false,
       error: 'Internal server error',
@@ -49,7 +51,7 @@ router.get('/:id', async (req, res) => {
       });
     }
   } catch (err) {
-    console.error(err);
+    log.error(err);
     res.status(500).json({
       ok: false,
       error: 'Internal server error',
@@ -64,7 +66,7 @@ router.get('/:id/items', async (req, res) => {
       data: await getListingsByShopId(req.params.id),
     });
   } catch (err) {
-    console.error(err);
+    log.error(err);
     res.status(500).json({
       ok: false,
       error: 'Internal server error',
@@ -77,8 +79,8 @@ router.post('/', authenticateApiKeyTier('shopsync', 'internal'), json(), async (
     const validation = validateShopSyncData(req.body);
 
     if (!validation.isValid) {
-      console.error(`Received invalid response (shop ${req.body?.info?.name})`);
-      console.error(validation.errors);
+      log.error(`Received invalid response (shop ${req.body?.info?.name})`);
+      log.error(validation.errors);
 
       // Record validation failure
       recordValidationFailure(req.body, validation.errors);
@@ -102,7 +104,7 @@ router.post('/', authenticateApiKeyTier('shopsync', 'internal'), json(), async (
 
     if (shouldIgnoreModemUpdate) {
       recordSuccessfulPost(shopSyncData);
-      console.log(
+      log.info(
         'Ignored modem ShopSync update for ' +
           shopSyncData.info.name +
           ' due to recent radio tower update',
@@ -124,20 +126,20 @@ router.post('/', authenticateApiKeyTier('shopsync', 'internal'), json(), async (
     // Record successful POST
     recordSuccessfulPost(shopSyncData);
 
-    console.log('Updated shop ' + shopSyncData.info.name);
+    log.info('Updated shop ' + shopSyncData.info.name);
 
     res.json({
       ok: true,
     });
   } catch (err) {
-    console.error(err);
+    log.error(err);
     let data = req.body;
     try {
       data = JSON.parse(data);
     } catch (e) {
-      console.error(e);
+      log.error(e);
     }
-    console.error(data);
+    log.error(data);
     res.status(500).json({
       ok: false,
       error: 'Internal server error',

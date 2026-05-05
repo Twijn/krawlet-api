@@ -6,6 +6,9 @@ import {
 import { DiscordCommand, InteractionHelper, AutocompleteHelper } from './helpers/DiscordCommand';
 import { handlePlayerLookup, handleAddressLookup } from '../utils/commandShared';
 import playerManager from '../../lib/managers/playerManager';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('Discord');
 
 export default class BalanceCommand implements DiscordCommand {
   data = new SlashCommandBuilder()
@@ -106,7 +109,7 @@ export default class BalanceCommand implements DiscordCommand {
 
         await interaction.respond(filtered);
       } catch (error) {
-        console.error('Error fetching addresses for autocomplete:', error);
+        log.error('Error fetching addresses for autocomplete:', error);
         await interaction.respond([]);
       }
     }

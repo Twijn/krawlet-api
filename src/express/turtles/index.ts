@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import express from 'express';
 import { Turtle, TurtleStat } from '../../lib/models/index.js';
+import { createLogger } from '../../lib/logger';
 
+const log = createLogger('Turtles');
 const router = Router();
 
 router.use(express.json());
@@ -17,7 +19,7 @@ router.get('/', async (req, res) => {
       data: turtles.map((t) => t.toApiResponse()),
     });
   } catch (error) {
-    console.error('Error fetching turtles:', error);
+    log.error('Error fetching turtles:', error);
     res.status(500).json({
       ok: false,
       error: 'Failed to fetch turtles',
@@ -42,7 +44,7 @@ router.get('/:id', async (req, res) => {
       data: turtle.toApiResponse(),
     });
   } catch (error) {
-    console.error('Error fetching turtle:', error);
+    log.error('Error fetching turtle:', error);
     res.status(500).json({
       ok: false,
       error: 'Failed to fetch turtle',
@@ -109,7 +111,7 @@ router.post('/:id', async (req, res) => {
       data: updatedTurtle!.toApiResponse(),
     });
   } catch (error) {
-    console.error('Error creating/updating turtle:', error);
+    log.error('Error creating/updating turtle:', error);
     res.status(500).json({
       ok: false,
       error: 'Failed to create/update turtle',
@@ -154,7 +156,7 @@ router.patch('/:id/stats', async (req, res) => {
       data: updatedTurtle!.toApiResponse(),
     });
   } catch (error) {
-    console.error('Error updating turtle stats:', error);
+    log.error('Error updating turtle stats:', error);
     res.status(500).json({
       ok: false,
       error: 'Failed to update turtle stats',
@@ -196,7 +198,7 @@ router.patch('/:id/position', async (req, res) => {
       data: updatedTurtle!.toApiResponse(),
     });
   } catch (error) {
-    console.error('Error updating turtle position:', error);
+    log.error('Error updating turtle position:', error);
     res.status(500).json({
       ok: false,
       error: 'Failed to update turtle position',
@@ -225,7 +227,7 @@ router.delete('/:id', async (req, res) => {
       message: 'Turtle deleted',
     });
   } catch (error) {
-    console.error('Error deleting turtle:', error);
+    log.error('Error deleting turtle:', error);
     res.status(500).json({
       ok: false,
       error: 'Failed to delete turtle',

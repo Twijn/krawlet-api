@@ -13,6 +13,9 @@ import { parseTransactionData } from '../../lib/formatTransaction';
 import { Transaction } from 'kromer';
 import { getStandardFooter } from './embedFooter';
 import { InteractionHelper } from '../commands/helpers/DiscordCommand';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('Discord');
 
 export interface PaginatedTransactionsOptions {
   title: string;
@@ -76,7 +79,7 @@ export class TransactionPaginator {
         // Append new transactions
         this.transactions.push(...response.transactions);
       } catch (error) {
-        console.error('Failed to fetch more transactions:', error);
+        log.error('Failed to fetch more transactions:', error);
       }
     }
   }
@@ -266,7 +269,7 @@ export class TransactionPaginator {
         });
       } catch (error) {
         // Message might have been deleted, ignore the error
-        console.log('Could not disable pagination buttons:', error);
+        log.info('Could not disable pagination buttons:', error);
       }
     });
   }

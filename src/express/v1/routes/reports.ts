@@ -10,7 +10,9 @@ import {
   getRecordById,
 } from '../../shopsync/reporter';
 import { getShopChangeLogs, getItemChangeLogs, getPriceChangeLogs } from '../../../lib/models';
+import { createLogger } from '../../../lib/logger';
 
+const log = createLogger('API');
 const router = Router();
 
 // GET /v1/reports/stats - Get overall statistics
@@ -19,7 +21,7 @@ router.get('/stats', async (req, res) => {
     const stats = await getReporterStats();
     return res.success(stats);
   } catch (error) {
-    console.error('Error fetching stats:', error);
+    log.error('Error fetching stats:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch statistics', 500);
   }
 });
@@ -36,7 +38,7 @@ router.get('/validation-failures', (req, res) => {
       records,
     });
   } catch (error) {
-    console.error('Error fetching validation failures:', error);
+    log.error('Error fetching validation failures:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch validation failures', 500);
   }
 });
@@ -53,7 +55,7 @@ router.get('/successful-posts', (req, res) => {
       records,
     });
   } catch (error) {
-    console.error('Error fetching successful posts:', error);
+    log.error('Error fetching successful posts:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch successful posts', 500);
   }
 });
@@ -70,7 +72,7 @@ router.get('/shop-changes', async (req, res) => {
       records,
     });
   } catch (error) {
-    console.error('Error fetching shop changes:', error);
+    log.error('Error fetching shop changes:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch shop changes', 500);
   }
 });
@@ -87,7 +89,7 @@ router.get('/item-changes', async (req, res) => {
       records,
     });
   } catch (error) {
-    console.error('Error fetching item changes:', error);
+    log.error('Error fetching item changes:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch item changes', 500);
   }
 });
@@ -108,7 +110,7 @@ router.get('/shop-change-logs', async (req, res) => {
       logs,
     });
   } catch (error) {
-    console.error('Error fetching shop change logs:', error);
+    log.error('Error fetching shop change logs:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch shop change logs', 500);
   }
 });
@@ -129,7 +131,7 @@ router.get('/item-change-logs', async (req, res) => {
       logs,
     });
   } catch (error) {
-    console.error('Error fetching item change logs:', error);
+    log.error('Error fetching item change logs:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch item change logs', 500);
   }
 });
@@ -150,7 +152,7 @@ router.get('/price-change-logs', async (req, res) => {
       logs,
     });
   } catch (error) {
-    console.error('Error fetching price change logs:', error);
+    log.error('Error fetching price change logs:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch price change logs', 500);
   }
 });
@@ -165,7 +167,7 @@ router.get('/:id', async (req, res) => {
       return res.error('NOT_FOUND', `Report record with ID ${req.params.id} not found`, 404);
     }
   } catch (error) {
-    console.error('Error fetching record:', error);
+    log.error('Error fetching record:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch record', 500);
   }
 });

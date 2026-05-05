@@ -6,6 +6,9 @@ import { AUTH_TIMEOUT_MS, authState, getNextConnectionId } from './state';
 import { RoutedWebSocket } from './types';
 import { requeueTransferForRetry } from './transferQueue';
 import { rejectStorageQueriesForWorker } from './storageQuery';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('WS');
 
 function createWebSocketServer(server: HttpServer, path: string): WebSocketServer {
   const wss = new WebSocketServer({ noServer: true, perMessageDeflate: false });
@@ -39,7 +42,7 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
         return;
       }
 
-      console.warn(`${logPrefix(state)} authentication timeout after ${AUTH_TIMEOUT_MS}ms`);
+      log.warn(`${logPrefix(state)} authentication timeout after ${AUTH_TIMEOUT_MS}ms`);
 
       sendJson(ws, {
         type: 'error',
@@ -60,7 +63,7 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
       remoteAddress,
     });
 
-    console.log(`[ws:${connectionId} ip=${remoteAddress}] connected path=${resolvedPath}`);
+    log.info(`[ws:${connectionId} ip=${remoteAddress}] connected path=${resolvedPath}`);
 
     sendJson(ws, {
       type: 'hello',
@@ -93,7 +96,7 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
 
     ws.on('message', (message: RawData) => {
       handleMessage(ws, message).catch((err) => {
-        console.error(`WebSocket message handling error (${resolvedPath}):`, err);
+        log.error(`WebSocket message handling error (${resolvedPath}):`, err);
         sendJson(ws, {
           type: 'error',
           payload: {
@@ -113,7 +116,7 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
       rejectStorageQueriesForWorker(ws);
 
       if (state.currentTask) {
-        console.warn(
+        log.warn(
           `${logPrefix(state)} disconnected with active transfer ${state.currentTask.id}; transfer will be retried`,
         );
 
@@ -121,25 +124,25 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
           state.currentTask.id,
           `Worker disconnected (connection ${state.connectionId}) before completion`,
         ).catch((err) => {
-          console.error(
+          log.error(
             `${logPrefix(state)} failed to requeue transfer ${state.currentTask?.id} after disconnect:`,
             err,
           );
         });
       }
 
-      console.log(`${logPrefix(state)} disconnected`);
+      log.info(`${logPrefix(state)} disconnected`);
       clearTimeout(state.timeoutHandle);
       authState.delete(ws);
     });
 
     ws.on('error', (err: Error) => {
-      console.error(`WebSocket error (${resolvedPath}) from ${req.socket.remoteAddress}:`, err);
+      log.error(`WebSocket error (${resolvedPath}) from ${req.socket.remoteAddress}:`, err);
     });
   });
 
   wss.on('error', (err) => {
-    console.error(`WebSocket server error (${path}):`, err);
+    log.error(`WebSocket server error (${path}):`, err);
   });
 
   return wss;

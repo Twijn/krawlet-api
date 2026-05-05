@@ -12,6 +12,9 @@ import {
 } from './types';
 import { updateTransferStatus } from './transferQueue';
 import { clearPendingStorageQuery, pendingStorageQueries } from './storageQuery';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('WS');
 
 function parseTransferUpdateMessage(
   ws: WebSocket,
@@ -104,7 +107,7 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
       itemDisplayName: parsed.itemDisplayName,
     });
 
-    console.log(
+    log.info(
       `${logPrefix(state)} transfer progress transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} nbt=${parsed.itemNbt ?? 'any'}`,
     );
 
@@ -156,7 +159,7 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
         'Transfer was cancelled',
       );
 
-      console.warn(
+      log.warn(
         `${logPrefix(state)} transfer completion received after cancel request transferId=${transfer.id} moved=${moved}; finalized as cancelled`,
       );
 
@@ -187,7 +190,7 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
       itemDisplayName: transfer.itemDisplayName ?? parsed.itemDisplayName,
     });
 
-    console.log(
+    log.info(
       `${logPrefix(state)} transfer complete transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} nbt=${parsed.itemNbt ?? 'any'} elapsedMs=${parsed.elapsedMs ?? 'n/a'}`,
     );
 
@@ -245,7 +248,7 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
       'Transfer was cancelled',
     );
 
-    console.log(
+    log.info(
       `${logPrefix(state)} transfer cancelled transferId=${transfer.id} moved=${moved} requested=${parsed.requestedQuantity ?? 'any'} item=${parsed.itemName ?? 'any'} nbt=${parsed.itemNbt ?? 'any'} elapsedMs=${parsed.elapsedMs ?? 'n/a'}`,
     );
 
@@ -268,7 +271,7 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
     const pending = pendingStorageQueries.get(requestId);
 
     if (!pending) {
-      console.warn(`${logPrefix(state)} storage_list_result for unknown requestId=${requestId}`);
+      log.warn(`${logPrefix(state)} storage_list_result for unknown requestId=${requestId}`);
       return;
     }
 
@@ -280,7 +283,7 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
       nbt?: string;
       displayName?: string;
     }[];
-    console.log(
+    log.info(
       `${logPrefix(state)} storage_list_result requestId=${requestId} itemSlots=${items.length}`,
     );
     pending.resolve(items);
@@ -328,7 +331,7 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
         'Transfer was cancelled',
       );
 
-      console.warn(
+      log.warn(
         `${logPrefix(state)} transfer failed after cancel request transferId=${transfer.id}; finalized as cancelled`,
       );
 
@@ -383,7 +386,7 @@ export const workerMessageHandlers: Record<string, MessageHandler> = {
       parsed.reason || 'Transfer failed with unknown error',
     );
 
-    console.warn(
+    log.warn(
       `${logPrefix(state)} transfer failed transferId=${transfer.id} reason=${parsed.reason || 'no reason provided'}`,
       {
         workerMessage: {

@@ -6,6 +6,9 @@ import { AuthState, ClientAuthMessage, MessageHandler } from './types';
 import { workerMessageHandlers } from './workerHandlers';
 import { clientMessageHandlers } from './clientHandlers';
 import { resolveClientEntityId } from './clientEntity';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('WS');
 
 function getSocketAuthState(ws: WebSocket, messageId?: string | number): AuthState | null {
   const state = authState.get(ws);
@@ -61,13 +64,13 @@ async function handleAuthMessage(ws: WebSocket, parsed: ClientAuthMessage): Prom
     currentState.clientEntityId = undefined;
     authState.set(ws, currentState);
 
-    console.log(
+    log.info(
       `${logPrefix(currentState)} authenticated as worker key=${apiKey.name} tier=${apiKey.tier} requestId=${parsed.id}`,
     );
 
     apiKey
       .incrementUsage()
-      .catch((err) => console.error('Failed to increment API key usage:', err));
+      .catch((err) => log.error('Failed to increment API key usage:', err));
 
     sendJson(ws, {
       id: parsed.id,
@@ -96,13 +99,13 @@ async function handleAuthMessage(ws: WebSocket, parsed: ClientAuthMessage): Prom
     currentState.clientEntityId = (await resolveClientEntityId(apiKey.id)) ?? undefined;
     authState.set(ws, currentState);
 
-    console.log(
+    log.info(
       `${logPrefix(currentState)} authenticated as client key=${apiKey.name} tier=${apiKey.tier} requestId=${parsed.id}`,
     );
 
     apiKey
       .incrementUsage()
-      .catch((err) => console.error('Failed to increment API key usage:', err));
+      .catch((err) => log.error('Failed to increment API key usage:', err));
 
     sendJson(ws, {
       id: parsed.id,
@@ -179,7 +182,7 @@ export async function handleMessage(ws: WebSocket, raw: RawData): Promise<void> 
     return;
   }
 
-  console.log(
+  log.info(
     `${logPrefix(state)} message type=${parsed.type} id=${parsed.id} authenticated=${state.authenticated}`,
   );
 

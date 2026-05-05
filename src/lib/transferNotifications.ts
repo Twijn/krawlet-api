@@ -8,6 +8,9 @@ import {
   EstorageEntityLink,
 } from './models';
 import { Op } from 'sequelize';
+import { createLogger } from './logger';
+
+const log = createLogger('Transfers');
 
 export type CreateTransferNotificationParams = {
   transferId: string;
@@ -69,11 +72,11 @@ async function sendTransferNotificationChat(
     const chatMessage = `${colorTag}Transfer notification: ${message}${closeTag}`;
 
     rcc.tell(playerUuid, chatMessage).catch((err: unknown) => {
-      console.warn(`Failed to send transfer notification chat message to ${playerUuid}:`, err);
+      log.warn(`Failed to send transfer notification chat message to ${playerUuid}:`, err);
     });
   } catch (err) {
     // Silently fail - chat notification is not critical
-    console.warn('Failed to send transfer notification chat:', err);
+    log.warn('Failed to send transfer notification chat:', err);
   }
 }
 

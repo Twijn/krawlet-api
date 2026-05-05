@@ -18,6 +18,9 @@ import {
   createTransferNotification,
 } from '../../lib/transferNotifications';
 import { broadcastTransferNotification } from './clientBroadcast';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('WS');
 
 async function resolveClientEntity(apiKeyId: string): Promise<EstorageEntity | null> {
   const entityId = await resolveClientEntityId(apiKeyId);
@@ -121,7 +124,7 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
         requesterTier,
       });
 
-      console.log(
+      log.info(
         `${logPrefix(state)} create_transfer transferId=${transfer.id} from=${requesterEntity.name} to=${toEntity.name}`,
       );
 
@@ -232,7 +235,7 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
         return;
       }
 
-      console.log(`${logPrefix(state)} cancel_transfer transferId=${transfer.id}`);
+      log.info(`${logPrefix(state)} cancel_transfer transferId=${transfer.id}`);
 
       const [serializedTransfer] = await attachMinecraftShorthand([transfer]);
 
@@ -272,7 +275,7 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
         order: [['createdAt', 'DESC']],
       });
 
-      console.log(`${logPrefix(state)} list_transfers count=${transfers.length}`);
+      log.info(`${logPrefix(state)} list_transfers count=${transfers.length}`);
 
       const includeNotifications = shouldIncludeNotifications((message as any).payload);
       const rawTransfers = transfers.map((t) => t.raw());
@@ -385,7 +388,7 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
 
       const targets = serializeTransferTargets(entities);
 
-      console.log(`${logPrefix(state)} list_targets count=${targets.length}`);
+      log.info(`${logPrefix(state)} list_targets count=${targets.length}`);
 
       sendJson(ws, {
         id: message.id,

@@ -2,6 +2,9 @@ import { Listener, ListenerResult } from './index';
 import { TransactionWithMeta } from 'kromer';
 import { updateShopAddress } from '../../lib/models';
 import playerManager from '../../lib/managers/playerManager';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('KromerWs');
 
 export const extractMetaname = (transaction: TransactionWithMeta, name: string): string | null => {
   return (
@@ -32,7 +35,7 @@ const listener: Listener = async (transaction): Promise<ListenerResult> => {
         message: `Shop address updated successfully;address=${newAddress.address};name=${shopName};description=${shopDescription}`,
       };
     } catch (e) {
-      console.error(e);
+      log.error(e);
       return { success: false, message: (e as Error)?.message ?? 'Error updating shop address' };
     }
   }

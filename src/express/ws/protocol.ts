@@ -1,5 +1,8 @@
 import { RawData, WebSocket } from 'ws';
 import { AuthState, ClientMessage, ServerMessage } from './types';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('WS');
 
 export function logPrefix(
   state: Pick<AuthState, 'connectionId' | 'workerId' | 'remoteAddress'>,
@@ -35,7 +38,7 @@ export function parseClientMessage(raw: RawData): ClientMessage | null {
   try {
     return JSON.parse(messageString) as ClientMessage;
   } catch {
-    console.warn(`Failed to parse websocket message as JSON: ${messageString.slice(0, 200)}`);
+    log.warn(`Failed to parse websocket message as JSON: ${messageString.slice(0, 200)}`);
     return null;
   }
 }

@@ -11,6 +11,9 @@ import { sequelize } from './database.js';
 import { ShopSyncData, ShopSyncListing } from '../shopSyncValidate';
 import objectHash from 'object-hash';
 import { getShopId, Shop } from './shop.model';
+import { createLogger } from '../logger';
+
+const log = createLogger('Listings');
 
 export async function getListings(): Promise<Listing[]> {
   console.time('getListings');
@@ -223,7 +226,7 @@ export async function updatePrices(
 export async function updateListings(data: ShopSyncData): Promise<void> {
   console.time('updateListings');
   const shopId = getShopId(data);
-  console.log(`Starting update for shop ${shopId} with ${data.items.length} items`);
+  log.info(`Starting update for shop ${shopId} with ${data.items.length} items`);
 
   const t = await sequelize.transaction();
   try {
@@ -269,9 +272,9 @@ export async function updateListings(data: ShopSyncData): Promise<void> {
         },
       },
     });
-    console.log(`Cleaned up ${deleted} obsolete listings`);
+    log.info(`Cleaned up ${deleted} obsolete listings`);
   } catch (err) {
-    console.log('Error occurred, rolling back transaction:', err);
+    log.error('Error occurred, rolling back transaction:', err);
     await t.rollback();
     throw err;
   } finally {

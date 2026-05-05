@@ -8,6 +8,9 @@ import {
   ComponentType,
 } from 'discord.js';
 import { getStandardFooter } from './embedFooter';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('Discord');
 
 export interface PaginationOptions {
   title: string;
@@ -214,7 +217,7 @@ export class GenericPaginator {
         });
       } catch (error) {
         // Message might have been deleted, ignore the error
-        console.log('Could not disable pagination buttons:', error);
+        log.info('Could not disable pagination buttons:', error);
       }
     });
   }

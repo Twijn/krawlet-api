@@ -19,7 +19,9 @@ import {
   getItemChangeLogs,
   getPriceChangeLogs,
 } from './reporter';
+import { createLogger } from '../../lib/logger';
 
+const log = createLogger('ShopSync');
 const router = Router();
 
 /**
@@ -34,7 +36,7 @@ router.get('/stats', async (req, res) => {
       data: stats,
     });
   } catch (err) {
-    console.error(err);
+    log.error(err);
     res.status(500).json({
       ok: false,
       error: 'Internal server error',
@@ -60,7 +62,7 @@ router.get('/validation-failures', (req, res) => {
       data: records,
     });
   } catch (err) {
-    console.error(err);
+    log.error(err);
     res.status(500).json({
       ok: false,
       error: 'Internal server error',
@@ -86,7 +88,7 @@ router.get('/successful-posts', (req, res) => {
       data: records,
     });
   } catch (err) {
-    console.error(err);
+    log.error(err);
     res.status(500).json({
       ok: false,
       error: 'Internal server error',
@@ -133,7 +135,7 @@ router.get('/shop-changes', async (req, res) => {
 
     res.json(result);
   } catch (err) {
-    console.error(err);
+    log.error(err);
     res.status(500).json({
       ok: false,
       error: 'Internal server error',
@@ -182,7 +184,7 @@ router.get('/item-changes', async (req, res) => {
 
     res.json(result);
   } catch (err) {
-    console.error(err);
+    log.error(err);
     res.status(500).json({
       ok: false,
       error: 'Internal server error',
@@ -219,7 +221,7 @@ router.get('/price-changes', async (req, res) => {
       data: rows,
     });
   } catch (err) {
-    console.error(err);
+    log.error(err);
     res.status(500).json({
       ok: false,
       error: 'Internal server error',
@@ -246,7 +248,7 @@ router.get('/record/:id', (req, res) => {
       });
     }
   } catch (err) {
-    console.error(err);
+    log.error(err);
     res.status(500).json({
       ok: false,
       error: 'Internal server error',
@@ -274,7 +276,7 @@ router.get('/all', async (req, res) => {
       },
     });
   } catch (err) {
-    console.error(err);
+    log.error(err);
     res.status(500).json({
       ok: false,
       error: 'Internal server error',

@@ -2,7 +2,9 @@ import { Router, Request, Response, json } from 'express';
 import { writeFileSync, readFileSync, existsSync } from 'fs';
 import { authenticateApiKeyTier } from '../../../lib/authenticateApiKeyTier';
 import { EnderStoragePayload, isEnderStoragePayload } from '../../../lib/types';
+import { createLogger } from '../../../lib/logger';
 
+const log = createLogger('API');
 const router = Router();
 
 const saveJsonToFile = (data: EnderStoragePayload) => {
@@ -41,7 +43,7 @@ router.post(
         timestamp: new Date().toISOString(),
       });
     } catch (error) {
-      console.error('Error storing ender storage data:', error);
+      log.error('Error storing ender storage data:', error);
       return res.error('BAD_REQUEST', 'Invalid JSON data', 400);
     }
   },

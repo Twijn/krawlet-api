@@ -6,9 +6,12 @@ import {
   queueTransferByEntities,
 } from './transferQueue';
 import { queryWorkerStorage } from './storageQuery';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('WS');
 
 void initializeTransferQueue().catch((err) => {
-  console.error('Failed to hydrate transfer queue on startup:', err);
+  log.error('Failed to hydrate transfer queue on startup:', err);
 });
 
 setInterval(processTransfers, 1000);

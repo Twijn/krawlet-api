@@ -20,7 +20,9 @@ import {
   attachTransferNotifications,
   createTransferNotification,
 } from '../../../lib/transferNotifications';
+import { createLogger } from '../../../lib/logger';
 
+const log = createLogger('API');
 const router = Router();
 
 export type RequestWithTransfer = RequestWithRateLimit & {
@@ -200,7 +202,7 @@ router.get('/', authenticateApiKeyTier('free', 'premium'), async (req, res) => {
     );
     return res.success(await attachMinecraftShorthand(transfersWithNotifications));
   } catch (error) {
-    console.error('Error fetching transfers:', error);
+    log.error('Error fetching transfers:', error);
     return res.error('INTERNAL_SERVER_ERROR', 'Failed to fetch transfers', 500);
   }
 });
@@ -227,7 +229,7 @@ router.get('/targets', authenticateApiKeyTier('free', 'premium'), async (req, re
 
     return res.success(serializeTransferTargets(entities));
   } catch (error) {
-    console.error('Error fetching transfer targets:', error);
+    log.error('Error fetching transfer targets:', error);
     return res.error('INTERNAL_SERVER_ERROR', 'Failed to fetch transfer targets', 500);
   }
 });
@@ -273,7 +275,7 @@ router.post('/', authenticateApiKeyTier('free', 'premium'), json(), async (req, 
     const [serializedTransfer] = await attachMinecraftShorthand([transfer]);
     return res.success(serializedTransfer);
   } catch (error) {
-    console.error('Error storing transfer data:', error);
+    log.error('Error storing transfer data:', error);
 
     if (error instanceof WorkerLimitExceededError) {
       return res.error('TOO_MANY_WORKERS', error.message, 429);
@@ -334,7 +336,7 @@ router.get('/contents', authenticateApiKeyTier('free', 'premium'), async (req, r
       );
     }
 
-    console.error('Unexpected storage query error:', err);
+    log.error('Unexpected storage query error:', err);
     return res.error('INTERNAL_ERROR', 'Failed to retrieve storage contents', 500);
   }
 });
@@ -432,7 +434,7 @@ router.post('/:transferId/cancel', authenticateApiKeyTier('free', 'premium'), as
     const [serializedTransfer] = await attachMinecraftShorthand([transfer]);
     return res.success(serializedTransfer);
   } catch (error) {
-    console.error('Error cancelling transfer:', error);
+    log.error('Error cancelling transfer:', error);
 
     const errorMessage = error instanceof Error ? error.message : 'Failed to cancel transfer';
     return res.error('BAD_REQUEST', errorMessage, 400);

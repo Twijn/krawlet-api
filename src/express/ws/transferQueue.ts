@@ -13,6 +13,9 @@ import { AuthState } from './types';
 import { reserveWorkerSlot, trackTransferFinished, trackTransferStarted } from './workerActivity';
 import { ApiKeyTier } from '../../lib/models/apikey.model';
 import { broadcastTransferUpdate } from './clientBroadcast';
+import { createLogger } from '../../lib/logger';
+
+const log = createLogger('WS');
 
 let activeTransfers: RawTransfer[] = [];
 
@@ -190,7 +193,7 @@ export async function initializeTransferQueue(): Promise<void> {
     queueHydrated = true;
 
     if (staleInProgress.length > 0 || pendingTransfers.length > 0) {
-      console.log(
+      log.info(
         `Transfer queue hydrated: pending=${pendingTransfers.length} requeuedInProgress=${staleInProgress.length}`,
       );
     }
@@ -229,7 +232,7 @@ export async function requeueTransferForRetry(
   const rawTransfer = transfer.raw();
   ensureActiveTransfer(rawTransfer);
 
-  console.warn(`Requeued transfer ${transferId} for retry: ${reason}`);
+  log.warn(`Requeued transfer ${transferId} for retry: ${reason}`);
 
   return rawTransfer;
 }
@@ -255,7 +258,7 @@ export async function cancelTransfer(
     if (state.currentTask?.id === transferId) {
       state.currentTaskCancelRequested = true;
       authState.set(ws, state);
-      console.log(
+      log.info(
         `${logPrefix(state)} sending transfer_cancel transferId=${transferId} to workerConnection=${state.connectionId} workerId=${state.workerId ?? 'unknown'}`,
       );
       sendJson(ws, {
@@ -365,7 +368,7 @@ async function assignTransferToWorker(
     try {
       await Transfer.update({ workerId: state.workerId }, { where: { id: transfer.id } });
     } catch (err) {
-      console.error(`Failed to record worker ${state.workerId} for transfer ${transfer.id}:`, err);
+      log.error(`Failed to record worker ${state.workerId} for transfer ${transfer.id}:`, err);
     }
   }
 
@@ -378,7 +381,7 @@ async function assignTransferToWorker(
     );
   }
 
-  console.log(
+  log.info(
     `${logPrefix(state)} assigning transfer=${transfer.id} from=${transfer.fromEntityId} to=${transfer.toEntityId} workerId=${state.workerId ?? 'unknown'}`,
   );
 
@@ -404,7 +407,7 @@ async function assignTransferToWorker(
   try {
     await updateTransferStatus(transfer.id, 'in_progress', transfer.quantityTransferred);
   } catch (err) {
-    console.error(`Failed to process transfer ${transfer.id}:`, err);
+    log.error(`Failed to process transfer ${transfer.id}:`, err);
   }
 }
 
@@ -424,7 +427,7 @@ export async function processTransfers(): Promise<void> {
       return;
     }
 
-    console.log(`Processing ${transfersToProcess.length} pending transfers`);
+    log.info(`Processing ${transfersToProcess.length} pending transfers`);
 
     for (const transfer of transfersToProcess) {
       let assigned = false;
@@ -439,7 +442,7 @@ export async function processTransfers(): Promise<void> {
         }
 
         if (state.currentTask?.id === transfer.id) {
-          console.warn(`${logPrefix(state)} transfer already active transferId=${transfer.id}`);
+          log.warn(`${logPrefix(state)} transfer already active transferId=${transfer.id}`);
           continue;
         }
 
@@ -452,12 +455,12 @@ export async function processTransfers(): Promise<void> {
           assigned = true;
           break;
         } catch (error) {
-          console.error(`Failed to assign transfer ${transfer.id}:`, error);
+          log.error(`Failed to assign transfer ${transfer.id}:`, error);
         }
       }
 
       if (!assigned) {
-        console.warn(
+        log.warn(
           `No available authenticated worker for transfer ${transfer.id}; will retry. connected=${authState.size} transfers=${transfersToProcess.length}`,
         );
       }

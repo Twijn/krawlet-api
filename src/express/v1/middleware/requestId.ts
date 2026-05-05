@@ -1,5 +1,8 @@
 import { randomUUID } from 'crypto';
 import { Request, Response, NextFunction } from 'express';
+import { createLogger } from '../../../lib/logger';
+
+const log = createLogger('HTTP');
 
 export interface RequestWithId extends Request {
   id: string;
@@ -16,7 +19,7 @@ export const requestIdMiddleware = (req: Request, res: Response, next: NextFunct
 
   res.setHeader('X-Request-ID', requestId);
 
-  console.log(`[${requestId}] ${req.method} ${req.path}`);
+  log.info(`[${requestId}] ${req.method} ${req.path}`);
 
   next();
 };

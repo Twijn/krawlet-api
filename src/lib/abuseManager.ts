@@ -1,4 +1,7 @@
 import { BlockedIp } from './models/blockedip.model';
+import { createLogger } from './logger';
+
+const log = createLogger('AbuseManager');
 
 /**
  * Configuration for abuse detection thresholds
@@ -218,7 +221,7 @@ export async function blockIpForAbuse(
       `Repeat offender (escalated): ${reason}`,
       'repeat_offender',
     );
-    console.log(`[AbuseManager] Escalated IP to firewall level: ${ip}`);
+    log.warn(`Escalated IP to firewall level: ${ip}`);
   } else {
     // App-level block with duration based on previous blocks
     const previousCount = await BlockedIp.getPreviousBlockCount(ip);
@@ -226,7 +229,7 @@ export async function blockIpForAbuse(
       previousCount > 0 ? ABUSE_CONFIG.REPEAT_BLOCK_DURATION : ABUSE_CONFIG.INITIAL_BLOCK_DURATION;
 
     block = await BlockedIp.blockAtAppLevel(ip, reason, triggerType, duration, metadata);
-    console.log(`[AbuseManager] Blocked IP at app level for ${duration}min: ${ip} - ${reason}`);
+    log.warn(`Blocked IP at app level for ${duration}min: ${ip} - ${reason}`);
   }
 
   // Update cache

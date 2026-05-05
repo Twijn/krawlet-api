@@ -1,5 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { ApiResponse } from '../types/responses';
+import { createLogger } from '../../../lib/logger';
+
+const log = createLogger('HTTP');
 
 declare global {
   namespace Express {
@@ -49,7 +52,7 @@ export const responseFormatterMiddleware = (req: Request, res: Response, next: N
       },
     };
 
-    console.error(`[${requestId}] Error ${code}: ${message}`);
+    log.error(`[${requestId}] Error ${code}: ${message}`);
 
     return this.status(statusCode).json(response);
   };

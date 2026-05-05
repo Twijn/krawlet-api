@@ -3,11 +3,14 @@ import { RequestWithRateLimit } from '../types/request';
 import { RequestLog } from '../../../lib/models/requestlog.model';
 import { getClientIp } from '../utils/getClientIp';
 import { isIgnoredIp } from '../utils/ignoredIps';
+import { createLogger } from '../../../lib/logger';
 import {
   trackRateLimitExceeded,
   trackSuccessfulRequest,
   checkAbuseAfterRequest,
 } from './abuseBlock';
+
+const log = createLogger('RateLimit');
 
 interface RateLimitStore {
   [key: string]: {
@@ -139,13 +142,13 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
       wasBlocked: false,
       responseStatus: res.statusCode,
       responseTimeMs,
-    }).catch((err) => console.error('Failed to log request:', err));
+    }).catch((err) => log.error('Failed to log request:', err));
 
     // Check for abuse patterns after request (async, don't wait)
     // Skip for authenticated API key users — their high rate limits are intentional.
     if (!request.apiKey) {
       checkAbuseAfterRequest(ip).catch((err) =>
-        console.error('Failed to check abuse after request:', err),
+        log.error('Failed to check abuse after request:', err),
       );
     }
 
@@ -176,13 +179,13 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
       wasBlocked: true,
       blockReason: 'RATE_LIMIT_EXCEEDED',
       responseStatus: 429,
-    }).catch((err) => console.error('Failed to log blocked request:', err));
+    }).catch((err) => log.error('Failed to log blocked request:', err));
 
     // Track rate limit exceeded for abuse detection (async, don't wait)
     // Only track for anonymous users — authenticated keys have intentionally high limits.
     if (!request.apiKey) {
       trackRateLimitExceeded(ip, userAgent).catch((err) =>
-        console.error('Failed to track rate limit exceeded:', err),
+        log.error('Failed to track rate limit exceeded:', err),
       );
     }
 

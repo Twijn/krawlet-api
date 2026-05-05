@@ -15,7 +15,9 @@ import {
   detectAndRecordShopChanges,
   detectAndRecordItemChanges,
 } from '../../shopsync/reporter';
+import { createLogger } from '../../../lib/logger';
 
+const log = createLogger('API');
 const router = Router();
 
 // GET /v1/shops - Get all shops
@@ -24,7 +26,7 @@ router.get('/', async (req, res) => {
     const shops = await getShops();
     return res.success(shops.map((s) => s.raw()));
   } catch (error) {
-    console.error('Error fetching shops:', error);
+    log.error('Error fetching shops:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch shops', 500);
   }
 });
@@ -39,7 +41,7 @@ router.get('/:id', async (req, res) => {
       return res.error('SHOP_NOT_FOUND', `Shop with ID ${req.params.id} not found`, 404);
     }
   } catch (error) {
-    console.error('Error fetching shop:', error);
+    log.error('Error fetching shop:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch shop', 500);
   }
 });
@@ -50,7 +52,7 @@ router.get('/:id/items', async (req, res) => {
     const items = await getListingsByShopId(req.params.id);
     return res.success(items.map((item) => item.raw()));
   } catch (error) {
-    console.error('Error fetching shop items:', error);
+    log.error('Error fetching shop items:', error);
     return res.error('INTERNAL_ERROR', 'Failed to fetch shop items', 500);
   }
 });
@@ -61,8 +63,8 @@ router.post('/', authenticateApiKeyTier('shopsync', 'internal'), json(), async (
     const validation = validateShopSyncData(req.body);
 
     if (!validation.isValid) {
-      console.error(`Received invalid response (shop ${req.body?.info?.name})`);
-      console.error(validation.errors);
+      log.error(`Received invalid response (shop ${req.body?.info?.name})`);
+      log.error(validation.errors);
 
       // Record validation failure
       recordValidationFailure(req.body, validation.errors);
@@ -106,7 +108,7 @@ router.post('/', authenticateApiKeyTier('shopsync', 'internal'), json(), async (
 
     return res.success({ message: 'Shop updated successfully' }, 201);
   } catch (error) {
-    console.error('Error updating shop:', error);
+    log.error('Error updating shop:', error);
     return res.error('INTERNAL_ERROR', 'Failed to update shop', 500);
   }
 });
