@@ -5,6 +5,7 @@ export type TransferPayload = {
   itemNbt?: string;
   memo?: string;
   quantity?: number;
+  nonce?: string;
 };
 
 export type TransferNotificationType = 'error' | 'info' | 'success';
