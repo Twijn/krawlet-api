@@ -68,9 +68,7 @@ async function handleAuthMessage(ws: WebSocket, parsed: ClientAuthMessage): Prom
       `${logPrefix(currentState)} authenticated as worker key=${apiKey.name} tier=${apiKey.tier} requestId=${parsed.id}`,
     );
 
-    apiKey
-      .incrementUsage()
-      .catch((err) => log.error('Failed to increment API key usage:', err));
+    apiKey.incrementUsage().catch((err) => log.error('Failed to increment API key usage:', err));
 
     sendJson(ws, {
       id: parsed.id,
@@ -103,9 +101,7 @@ async function handleAuthMessage(ws: WebSocket, parsed: ClientAuthMessage): Prom
       `${logPrefix(currentState)} authenticated as client key=${apiKey.name} tier=${apiKey.tier} requestId=${parsed.id}`,
     );
 
-    apiKey
-      .incrementUsage()
-      .catch((err) => log.error('Failed to increment API key usage:', err));
+    apiKey.incrementUsage().catch((err) => log.error('Failed to increment API key usage:', err));
 
     sendJson(ws, {
       id: parsed.id,
@@ -114,6 +110,7 @@ async function handleAuthMessage(ws: WebSocket, parsed: ClientAuthMessage): Prom
         tier: apiKey.tier,
         name: apiKey.name,
         role: 'client',
+        clientEntityId: currentState.clientEntityId,
       },
     });
   } else {
