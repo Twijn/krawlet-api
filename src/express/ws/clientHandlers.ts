@@ -82,6 +82,10 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
       return;
     }
 
+    // Accept a nonce for client-side request tracking (WebSocket only)
+    const nonce =
+      typeof payload.nonce === 'string' && payload.nonce.length > 0 ? payload.nonce : undefined;
+
     const timeout =
       typeof (payload as any).timeout === 'number' && (payload as any).timeout > 0
         ? (payload as any).timeout
@@ -129,7 +133,10 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
       );
 
       const [serializedTransfer] = await attachMinecraftShorthand([transfer]);
-
+      // Echo nonce if present (WebSocket only)
+      if (nonce) {
+        (serializedTransfer as any).nonce = nonce;
+      }
       sendJson(ws, {
         id: message.id,
         type: 'create_transfer_ok',
