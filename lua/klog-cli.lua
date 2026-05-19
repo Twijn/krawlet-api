@@ -269,38 +269,40 @@ local function drawTransferStatus(transfer)
   if not transferWindow then
     local width, height = mainWindow.getSize()
     transferWindow = window.create(mainWindow, 1, height - 3, width, 4)
+    if not transferWindow then
+      printError("Failed to create transfer status window")
+      return end
   end
 
-  local last = term.redirect(transferWindow)
-
-  local w,h = term.getSize()
+  local w,h = transferWindow.getSize()
 
   local function cl(x, y)
-    term.setCursorPos(x, y or 1)
-    term.clearLine()
+    transferWindow.setCursorPos(x, y)
+    transferWindow.clearLine()
   end
 
-  term.setBackgroundColor(colors.gray)
+  transferWindow.setBackgroundColor(colors.gray)
 
   cl(2, 1)
-  term.setTextColor(colors.blue)
-  term.write("Transfer")
+  transferWindow.setTextColor(colors.blue)
+  transferWindow.write("Transfer")
 
   if transfer then
     cl(2, 2)
-    term.setTextColor(colors.lightGray)
-    term.write(string.format("%s -> %s", transfer.fromName or "unknown", transfer.toName or "unknown"))
+    transferWindow.setTextColor(colors.lightGray)
+    transferWindow.write(string.format("%s -> %s", transfer.fromName or "unknown", transfer.toName or "unknown"))
     
     cl(2, 3)
-    term.setTextColor(colors.white)
-    term.write(string.format("Item: %s", transfer.itemDisplayName or transfer.itemName or "unknown"))
+    transferWindow.setTextColor(colors.white)
+    transferWindow.write(string.format("Item: %s", transfer.itemDisplayName or transfer.itemName or "unknown"))
     if transfer.memo then
-      term.setTextColor(colors.lightBlue)
-      term.write("  Memo: " .. transfer.memo)
+      transferWindow.setTextColor(colors.lightBlue)
+      transferWindow.write("  Memo: " .. transfer.memo)
     end
 
     cl(2, 4)
-    term.write(string.format("Quantity: %d/%d", transfer.quantityTransferred or 0, transfer.quantity or 0))
+    transferWindow.setTextColor(colors.white)
+    transferWindow.write(string.format("Quantity: %d/%d", transfer.quantityTransferred or 0, transfer.quantity or 0))
 
     if transfer.status then
       local statusColor = colors.white
@@ -314,32 +316,30 @@ local function drawTransferStatus(transfer)
         statusColor = colors.blue
       end
       
-      term.setTextColor(statusColor)
-      term.setCursorPos(w - 1 - #transfer.status, 1)
-      term.write(transfer.status)
+      transferWindow.setTextColor(statusColor)
+      transferWindow.setCursorPos(w - 1 - #transfer.status, 1)
+      transferWindow.write(transfer.status)
 
       if transfer.status == "failed" or transfer.status == "cancelled" or transfer.status == "completed" then
         local txt = "Press any key or wait to close"
-        term.setTextColor(colors.white)
-        term.setCursorPos(w - 1 - #txt, 4)
-        term.write(txt)
+        transferWindow.setTextColor(colors.white)
+        transferWindow.setCursorPos(w - 1 - #txt, 4)
+        transferWindow.write(txt)
       end
     end
 
     if transfer.error then
-      term.setCursorPos(w - 1 - #transfer.error, 2)
-      term.setTextColor(colors.red)
-      term.write(transfer.error)
+      transferWindow.setCursorPos(w - 1 - #transfer.error, 2)
+      transferWindow.setTextColor(colors.red)
+      transferWindow.write(transfer.error)
     end
   else
     cl(2, 2)
-    term.setTextColor(colors.red)
-    term.write("No active transfer")
+    transferWindow.setTextColor(colors.red)
+    transferWindow.write("No active transfer")
   end
 
-  term.setTextColor(colors.white)
-
-  term.redirect(last)
+  transferWindow.setTextColor(colors.white)
 end
 
 local function closeTransferWindow()
