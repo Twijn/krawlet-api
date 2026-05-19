@@ -83,8 +83,8 @@ export function completeTransfer(transfer: RawTransfer, error: string | null = n
   }
 
   if (transfer.memo) {
-    fromMessage += `<gray><italic><bold>Memo:</bold> ${transfer.memo}</italic></gray>`;
-    toMessage += `<gray><italic><bold>Memo:</bold> ${transfer.memo}</italic></gray>`;
+    fromMessage += `<br><bold>Memo:</bold> <gray><italic>${transfer.memo}</italic></gray>`;
+    toMessage += `<br><bold>Memo:</bold> <gray><italic>${transfer.memo}</italic></gray>`;
   }
 
   if (error) {

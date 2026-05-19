@@ -87,7 +87,7 @@ const command: Command = {
       rcc
         .tell(
           cmd.user,
-          `<red>Failed to get player or address ${cmd.args[0]}: ${(e as Error)?.message ?? 'Internal error'}</red>`,
+          `<red>Failed to get player or address <gray>${cmd.args[0]}</gray>: <white>${(e as Error)?.message ?? 'Internal error'}</white></red>`,
         )
         .catch(console.error);
       return;

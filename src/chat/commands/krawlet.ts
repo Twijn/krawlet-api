@@ -13,15 +13,6 @@ const PREFIX = '\\' + (process.env.PREFIX ?? '');
 
 const NOTIFICATION_SETTINGS = ['all', 'self', 'none'];
 
-async function findLatestApiKeyForPlayer(uuid: string): Promise<ApiKey | null> {
-  return ApiKey.findOne({
-    where: {
-      mcUuid: uuid,
-    },
-    order: [['createdAt', 'DESC']],
-  });
-}
-
 async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
   const uuid = cmd.user.uuid;
   const mcName = cmd.user.name;
@@ -66,80 +57,11 @@ async function handleApiKeyGeneration(cmd: ChatboxCommand): Promise<void> {
   }
 }
 
-async function handleApiKeyRegeneration(cmd: ChatboxCommand, confirmed: boolean): Promise<void> {
-  const uuid = cmd.user.uuid;
-
-  try {
-    const existingKey = await findLatestApiKeyForPlayer(uuid);
-
-    if (!existingKey) {
-      rcc
-        .tell(
-          cmd.user,
-          `<red>You don't have an API key to regenerate!</red> Use <yellow>${PREFIX}krawlet api</yellow> to generate one.`,
-        )
-        .catch(console.error);
-      return;
-    }
-
-    if (!confirmed) {
-      rcc
-        .tell(
-          cmd.user,
-          `<yellow><bold>Warning:</bold></yellow> Regenerating your newest API key will <red>invalidate its current token</red>.`,
-        )
-        .catch(console.error);
-      rcc
-        .tell(
-          cmd.user,
-          `<gray>Any applications using that key will stop working until updated.</gray>`,
-        )
-        .catch(console.error);
-      rcc
-        .tell(
-          cmd.user,
-          `<green><click:suggest_command:${PREFIX}krawlet api regen confirm>[Click here]</click></green> or run <yellow>${PREFIX}krawlet api regen confirm</yellow> to proceed.`,
-        )
-        .catch(console.error);
-      return;
-    }
-
-    // Generate a quick code instead of returning raw key
-    const quickCode = await existingKey.setQuickCode();
-
-    rcc
-      .tell(
-        cmd.user,
-        `<green>Ready to regenerate your newest key!</green> Use this quick code:<br><gold><bold>${quickCode}</bold></gold> <gray>(expires in 15 min)</gray>`,
-      )
-      .catch(console.error);
-    rcc
-      .tell(
-        cmd.user,
-        `Import to Krawlet: [Click Here](https://www.kromer.club/settings/advanced#${quickCode})`,
-        undefined,
-        'markdown',
-      )
-      .catch(console.error);
-    rcc
-      .tell(
-        cmd.user,
-        `<red>Note:</red> <gray>That key's current token will be invalidated when you redeem!</gray>`,
-      )
-      .catch(console.error);
-  } catch (err) {
-    log.error('Error regenerating API key via chatbox:', err);
-    rcc
-      .tell(cmd.user, `<red>Error regenerating API key. Try again later.</red>`)
-      .catch(console.error);
-  }
-}
-
 const command: Command = {
   name: 'krawlet',
   aliases: ['kromer', 'kro', 'klog'],
   description: 'Shows this menu!',
-  usage: 'krawlet [notif [all/self/none] | api [regen [confirm]] | optIn | optOut]',
+  usage: 'krawlet [notif [all/self/none] | optIn | optOut]',
   execute: async (cmd: ChatboxCommand) => {
     if (cmd.args.length > 0) {
       if (['optin', 'optout'].includes(cmd.args[0].toLowerCase())) {
@@ -162,14 +84,8 @@ const command: Command = {
         return;
       }
 
-      // Handle API key generation/regeneration subcommand
+      // Handle API key generation subcommand
       if (['api', 'apikey', 'key'].includes(cmd.args[0].toLowerCase())) {
-        // Check for regeneration subcommand
-        if (cmd.args.length >= 2 && ['regen', 'regenerate'].includes(cmd.args[1].toLowerCase())) {
-          const confirmed = cmd.args.length >= 3 && cmd.args[2].toLowerCase() === 'confirm';
-          await handleApiKeyRegeneration(cmd, confirmed);
-          return;
-        }
         await handleApiKeyGeneration(cmd);
         return;
       }
@@ -204,6 +120,19 @@ const command: Command = {
       if (command.aliases) {
         result += `\n     <dark_gray>Aliases: ${command.aliases.join(', ')}</dark_gray>`;
       }
+    }
+
+    if (cmd.command.toLowerCase().includes('klog')) {
+      // Print klog-specific help
+      const response =
+        `<blue>Klog Commands:</blue>` +
+        `\n <gray>${PREFIX}klog <optIn/optOut></gray> <dark_gray>-</dark_gray> Enable or disable transfer notifications` +
+        `\n <gray>${PREFIX}klog api</gray> <dark_gray>-</dark_gray> Generate a new API key for Krawlet/Klog` +
+        `\n\n<gray>To get started with Klog, visit a Krawlet kiosk at <white>/warp mall</white> or at <white>OmniStore</white>.</gray>` +
+        `\n<gray>Then, download and run <white>https://krawlet.cc/klog-cli.lua</white> to start sending items!</gray>`;
+
+      rcc.tell(cmd.user, response).catch(console.error);
+      return;
     }
 
     rcc.tell(cmd.user, result).catch(console.error);

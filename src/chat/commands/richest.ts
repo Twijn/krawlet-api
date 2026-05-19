@@ -37,9 +37,9 @@ const command: Command = {
       const player = playerManager.getPlayerFromAddress(addr.address);
       const paddedNum = (i + offset + 1).toString().padStart(2, '0');
       if (player) {
-        message += `\n<gray>${paddedNum}.</gray> <hover:show_text:'<gray>${addr.address}'>${player.minecraftName}</hover><gray>:</gray> ${formatKromerBalance(addr.balance)}`;
+        message += `\n<gray>${paddedNum}.</gray> <hover:show_text:'<gray>${addr.address}'>${player.minecraftName}</hover><gray>:</gray> ${formatKromerBalance(addr.balance, 2)}`;
       } else {
-        message += `\n<gray>${paddedNum}.</gray> ${addr.address}<gray>:</gray> ${formatKromerBalance(addr.balance)}`;
+        message += `\n<gray>${paddedNum}.</gray> ${addr.address}<gray>:</gray> ${formatKromerBalance(addr.balance, 2)}`;
       }
     }
 
