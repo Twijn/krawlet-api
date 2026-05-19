@@ -583,6 +583,7 @@ return function(estorageName, options)
   ---@param opts KlogTransferOptions
   ---@return KlogTransfer|false transfer Transfer data on success, false on failure.
   ---@return string|nil err Error message when transfer is false.
+  ---@return KlogTransfer|nil transfer Raw transfer data (returned on failure)
   function klog.transfer(opts)
     local err = checkTransferOpts(opts)
     if err then
@@ -594,7 +595,7 @@ return function(estorageName, options)
         memo = opts and opts.memo,
         error = err,
       })
-      return false, err
+      return false, err, nil
     end
 
     if opts.itemName then
@@ -611,7 +612,7 @@ return function(estorageName, options)
           memo = opts.memo,
           error = errMsg,
         })
-        return false, errMsg
+        return false, errMsg, nil
       end
     end
 
@@ -810,14 +811,14 @@ return function(estorageName, options)
     parallel.waitForAll(transferItems, sendTransfer)
 
     if sendTransferError then
-      return false, sendTransferError
+      return false, sendTransferError, transfer
     end
 
     if not transfer then
-      return false, "Transfer failed"
+      return false, "Transfer failed", nil
     end
 
-    return transfer, nil
+    return transfer, nil, nil
   end
 
   ---Use klog.transfer directly instead, listening to events for lifecycle updates.
