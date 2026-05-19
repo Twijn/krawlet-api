@@ -161,37 +161,29 @@ export const safe = (str: string): string => {
 export const formatListing = (listing: RawListing): string => {
   let displayName = safe(listing.itemDisplayName ?? listing.itemName);
 
-  if (listing.itemName) {
-    displayName = `<hover:show_item:"${listing.itemName}":${Math.max(listing.stock, 1)}${listing.itemNbt ? ':' + listing.itemNbt : ''}>${displayName}</hover>`;
-  }
-
   const prices =
     listing?.prices
       ?.map(
         (x) =>
-          `${Number(x.value)
-            .toFixed(5)
-            .replace(/\.?0+$/, '')} ${safe(x.currency)}`,
+          `${Number(x.value).toLocaleString(undefined, {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 5,
+          })} ${safe(x.currency)}`,
       )
       .join(', ') ?? '';
-  let result = `${displayName} <gray>|</gray> ${safe(listing?.shop?.name ?? '')} <gray>|</gray> ${safe(prices)}`;
+  let result = `&r${displayName} &7#${listing?.shopId} &9${safe(listing?.shop?.name ?? '<unknown shop>')} &7|&f ${safe(prices)}`;
 
   if (listing.stock === 0) {
-    result += ` <red><bold>[OOS]</bold></red>`;
+    result += ` &c&l[OOS]&r`;
   } else {
-    result += ` <green>[x${listing.stock}]</green>`;
+    result += ` &a[x${listing.stock}]&r`;
   }
 
   if (listing.shopBuysItem) {
-    result += ` <red>[S]</red>`;
+    result += ` &c[Sell]&r`;
   }
   if (listing.dynamicPrice) {
-    result += ` <blue>[D]</blue>`;
-  }
-
-  if (listing.shop?.locationCoordinates || listing.shop?.locationDescription) {
-    const location = `${listing.shop?.locationCoordinates ?? ''} ${listing.shop?.locationDescription ?? ''}`;
-    result += `\n    <gray>@ ${location}</gray> <gray>|</gray> ${listing.shop?.locationDimension ?? ''}`;
+    result += ` &9[Dynamic]&r`;
   }
 
   return result;

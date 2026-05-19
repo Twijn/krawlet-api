@@ -55,15 +55,15 @@ export function completeTransfer(transfer: RawTransfer, error: string | null = n
     quantityDisplay += `/${transfer.quantity.toLocaleString()}`;
   }
 
-  let fromMessage = `<blue>Your transfer to ${transfer.toName} has been completed</blue>`;
-  let toMessage = `<blue>You have received a transfer from ${transfer.fromName}</blue>`;
+  let fromMessage = `<blue>Your transfer to <white>${transfer.toName}</white> has been completed</blue>`;
+  let toMessage = `<blue>You have received a transfer from <white>${transfer.fromName}</white></blue>`;
 
   if (transfer.status === 'cancelled') {
-    fromMessage = `<yellow>Your transfer to ${transfer.toName} was cancelled</yellow>`;
-    toMessage = `<yellow>A transfer from ${transfer.fromName} was cancelled</yellow>`;
+    fromMessage = `<yellow>Your transfer to <white>${transfer.toName}</white> was cancelled</yellow>`;
+    toMessage = `<yellow>A transfer from <white>${transfer.fromName}</white> was cancelled</yellow>`;
   } else if (transfer.status === 'failed' || error) {
-    fromMessage = `<red>Your transfer to ${transfer.toName} has failed</red>`;
-    toMessage = `<red>A transfer from ${transfer.fromName} has failed</red>`;
+    fromMessage = `<red>Your transfer to <gray>${transfer.toName}</gray> has failed</red>`;
+    toMessage = `<red>A transfer from <gray>${transfer.fromName}</gray> has failed</red>`;
   }
 
   let wrapItem = transfer.itemDisplayName ?? transfer.itemName;
@@ -83,13 +83,13 @@ export function completeTransfer(transfer: RawTransfer, error: string | null = n
   }
 
   if (transfer.memo) {
-    fromMessage += `<br><gray><italic><bold>Memo:</bold> ${transfer.memo}</italic></gray>`;
-    toMessage += `<br><gray><italic><bold>Memo:</bold> ${transfer.memo}</italic></gray>`;
+    fromMessage += `<gray><italic><bold>Memo:</bold> ${transfer.memo}</italic></gray>`;
+    toMessage += `<gray><italic><bold>Memo:</bold> ${transfer.memo}</italic></gray>`;
   }
 
   if (error) {
-    fromMessage += `<br><red>(${error})</red>`;
-    toMessage += `<br><red>(${error})</red>`;
+    fromMessage += `<br><red>Error: ${error}</red>`;
+    toMessage += `<br><red>Error: ${error}</red>`;
   }
 
   if (from && fromPlayer?.transferNotificationsEnabled) {
