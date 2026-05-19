@@ -1,6 +1,7 @@
 local g        = string.gsub
 -- Compact sha256
-sha256         = loadstring(g(
+---@diagnostic disable-next-line
+local sha256         = loadstring(g(
   g(
     g(
       g(
@@ -12,6 +13,11 @@ sha256         = loadstring(g(
                 "S", " local "), "T", ",0x"), "U", " return "), "V", " end "), "W", "or "), "X", "bit32."), "Y",
     "function "), "Z",
   " do "))()
+
+local ca = peripheral.find("cryptographic_accelerator")
+if ca and ca.sha256 then
+  sha256 = ca.sha256
+end
 
 local updateDomain = "https://krawlet.cc/"
 
@@ -34,7 +40,7 @@ local function downloadFile(url, filename)
       file.close()
       print(filename .. " downloaded successfully!")
     else
-      printError("Failed to download " .. filename .. ": No response from server.")
+      printError("Failed to download " .. filename)
     end
   end)
   term.setTextColor(colors.white)
@@ -57,6 +63,9 @@ for path, url in pairs(libraries) do
     downloadFile(url, path)
   end
 end
+
+local mainWindow = window.create(term.current(), 1, 1, term.getSize())
+term.redirect(mainWindow)
 
 local function checkForUpdates()
   local response = http.get(updateDomain .. "sha256")
@@ -107,6 +116,22 @@ local cmd = require("cmd")
 local createKlog = require("klog")
 
 local enderStorage = nil
+local outputInventory = nil
+
+local function getOutputInventory()
+  if outputInventory and outputInventory.getInventory then
+    local success, inv = pcall(outputInventory.getInventory, outputInventory)
+    if success and inv then
+      return inv
+    else
+      return false, inv or "Failed to get inventory from output peripheral"
+    end
+  elseif outputInventory.pullItems or outputInventory.pushItems or (outputInventory.list and outputInventory.size) then
+    return outputInventory
+  else
+    return false, "Output peripheral does not appear to be an inventory"
+  end
+end
 
 local enderStorages = table.pack(peripheral.find("ender_storage"))
 if enderStorages.n == 1 then
@@ -119,7 +144,11 @@ elseif enderStorages.n > 1 then
     term.setCursorPos(1, 1)
     print("Select an ender storage:")
     for i = 1, enderStorages.n do
-      print((selectedIndex == i and ">" or " ") .. peripheral.getName(enderStorages[i]))
+      local _, ownerName = enderStorages[i].getOwner()
+      if ownerName == "Retests" and selectedIndex == 1 then
+        selectedIndex = i
+      end
+      print((selectedIndex == i and ">" or " ") .. peripheral.getName(enderStorages[i]) .. " [" .. ownerName .. "]")
     end
     local event, key = os.pullEvent("key")
     if event == "key" then
@@ -136,6 +165,13 @@ elseif enderStorages.n > 1 then
 else
   printError("No ender storages attached")
   return
+end
+
+if settings.get("klog.outputInv") then
+  outputInventory = peripheral.wrap(settings.get("klog.outputInv"))
+  if not outputInventory then
+    printError("klog.outputInv set but peripheral could not be resolved")
+  end
 end
 
 local klog = createKlog(peripheral.getName(enderStorage), {
@@ -168,6 +204,13 @@ local function rescanItems()
   items = newItems
 end
 
+local function rescanItemLoop()
+  while true do
+    rescanItems()
+    sleep(60)
+  end
+end
+
 local function getItemNames()
   local itemNames = {}
   for itemName, _ in pairs(items) do
@@ -176,287 +219,236 @@ local function getItemNames()
   return itemNames
 end
 
-local function runTransferWithEvents(opts, ctx)
-  local transferResult = nil
-  local transferErr = nil
-  local runnerDone = false
-  local sawTerminalEvent = false
-  local defaultTextColor = term.getTextColor()
-  local lastRenderedLines = 0
-  local progress = {
-    id = nil,
-    status = "queued",
-    quantity = opts.quantity,
-    quantityTransferred = 0,
-    error = nil,
-    to = opts.to,
-    toEntityId = nil,
-    toUsername = nil,
-    itemDisplayName = nil,
-    itemName = opts.itemName,
-  }
+local function emptyEstorageToOutput()
+  local outputInv, outputInvErr = getOutputInventory()
 
-  local function clamp(value, minValue, maxValue)
-    return math.max(minValue, math.min(maxValue, value))
+  if not outputInv then
+    -- if outputInventory is set but we failed to get a valid inventory interface, print an error. If outputInventory isn't set, we can just skip this without an error
+    if outputInventory then
+      printError("Unable to get output inventory: " .. (outputInvErr or "Unknown error"))
+    end
+    return
   end
 
-  local function clearAndHome()
-    term.setCursorPos(1, 1)
-    term.clear()
+  local estorageSize = enderStorage.size()
+  local estorageName = peripheral.getName(enderStorage)
+  local outputName = settings.get("klog.outputInv") -- outputInventory may not always be a peripheral
+  local outputIsInventory = type(outputInv.list) == "function" or type(outputInv.size) == "function"
+  local supportsPull = type(outputInv.pullItems) == "function"
+  local supportsPush = outputName and outputIsInventory and type(enderStorage.pushItems) == "function"
+
+  if not supportsPull and not supportsPush then
+    printError("Configured output peripheral cannot move items (missing pullItems/pushItems support)")
+    outputInventory = nil
+    settings.set("klog.outputInv", nil)
+    return
   end
 
-  local function updateProgress(payload, status, errorMessage)
-    if payload then
-      progress.id = payload.id or progress.id
-      progress.quantity = payload.quantity or progress.quantity
-      progress.quantityTransferred = payload.quantityTransferred or progress.quantityTransferred
-      progress.to = payload.to or progress.to
-      progress.toUsername = payload.toUsername or progress.toUsername
-      progress.toEntityId = payload.toEntityId or progress.toEntityId
-      progress.itemDisplayName = payload.itemDisplayName or progress.itemDisplayName
-      progress.itemName = payload.itemName or progress.itemName
-      progress.status = payload.status or status or progress.status
-      progress.error = payload.error or errorMessage or progress.error
+  local function moveItemsToOutput(fromSlot)
+    return function()
+      if supportsPull then
+        outputInv.pullItems(estorageName, fromSlot)
+      elseif supportsPush then
+        enderStorage.pushItems(outputName, fromSlot)
+      end
+    end
+  end
+
+  local movements = {}
+  for slot = 1, estorageSize do
+    table.insert(movements, moveItemsToOutput(slot))
+  end
+  parallel.waitForAll(table.unpack(movements))
+end
+
+local transferWindow = nil
+local incomingTransfer = nil -- this really doesn't need to track the transaction itself as it's only used as a boolean to activate emptyEstorageToOutput
+local returnCursorX, returnCursorY, returnCursorBlink
+
+local function drawTransferStatus(transfer)
+  if not transferWindow then
+    local width, height = mainWindow.getSize()
+    transferWindow = window.create(mainWindow, 1, height - 3, width, 4)
+  end
+
+  local last = term.redirect(transferWindow)
+
+  local w,h = term.getSize()
+
+  local function cl(x, y)
+    term.setCursorPos(x, y or 1)
+    term.clearLine()
+  end
+
+  term.setBackgroundColor(colors.gray)
+
+  cl(2, 1)
+  term.setTextColor(colors.blue)
+  term.write("Transfer")
+
+  if transfer then
+    cl(2, 2)
+    term.setTextColor(colors.lightGray)
+    term.write(string.format("%s -> %s", transfer.fromName or "unknown", transfer.toName or "unknown"))
+    
+    cl(2, 3)
+    term.setTextColor(colors.white)
+    term.write(string.format("Item: %s", transfer.itemDisplayName or transfer.itemName or "unknown"))
+    if transfer.memo then
+      term.setTextColor(colors.lightBlue)
+      term.write("  Memo: " .. transfer.memo)
+    end
+
+    cl(2, 4)
+    term.write(string.format("Quantity: %d/%d", transfer.quantityTransferred or 0, transfer.quantity or 0))
+
+    if transfer.status then
+      local statusColor = colors.white
+      if transfer.status == "failed" then
+        statusColor = colors.red
+      elseif transfer.status == "completed" then
+        statusColor = colors.lime
+      elseif transfer.status == "cancelled" then
+        statusColor = colors.orange
+      elseif transfer.status == "in_progress" then
+        statusColor = colors.blue
+      end
+      
+      term.setTextColor(statusColor)
+      term.setCursorPos(w - 1 - #transfer.status, 1)
+      term.write(transfer.status)
+
+      if transfer.status == "failed" or transfer.status == "cancelled" or transfer.status == "completed" then
+        local txt = "Press any key or wait to close"
+        term.setTextColor(colors.white)
+        term.setCursorPos(w - 1 - #txt, 4)
+        term.write(txt)
+      end
+    end
+
+    if transfer.error then
+      term.setCursorPos(w - 1 - #transfer.error, 2)
+      term.setTextColor(colors.red)
+      term.write(transfer.error)
+    end
+  else
+    cl(2, 2)
+    term.setTextColor(colors.red)
+    term.write("No active transfer")
+  end
+
+  term.setTextColor(colors.white)
+
+  term.redirect(last)
+end
+
+local function closeTransferWindow()
+  if transferWindow then
+    transferWindow.setBackgroundColor(colors.black)
+    transferWindow.clear()
+    transferWindow = nil
+  end
+  term.setCursorPos(returnCursorX, returnCursorY)
+  term.setCursorBlink(returnCursorBlink)
+  mainWindow.redraw()
+end
+
+local function incomingTransferLoop()
+  while true do
+    if incomingTransfer then
+      emptyEstorageToOutput()
+      sleep()
     else
-      progress.status = status or progress.status
-      progress.error = errorMessage or progress.error
+      sleep(0.25)
     end
   end
+end
 
-  local function wrapText(text, width)
-    local wrapped = {}
-    local remaining = tostring(text or "")
-
-    if width <= 0 then
-      return { "" }
-    end
-
-    while #remaining > width do
-      local chunk = remaining:sub(1, width)
-      local breakPos = chunk:match("^.*() %S*$")
-
-      if breakPos and breakPos > 1 then
-        table.insert(wrapped, remaining:sub(1, breakPos - 1))
-        remaining = remaining:sub(breakPos + 1)
-      else
-        table.insert(wrapped, chunk)
-        remaining = remaining:sub(width + 1)
-      end
-
-      remaining = remaining:gsub("^%s+", "")
-    end
-
-    if #remaining > 0 then
-      table.insert(wrapped, remaining)
-    end
-
-    if #wrapped == 0 then
-      table.insert(wrapped, "")
-    end
-
-    return wrapped
-  end
-
-  local function renderProgressLine()
-    local width, height = term.getSize()
-
-    local barWidth = clamp(width - 40, 10, 28)
-    local quantity = tonumber(progress.quantity) or 0
-    local transferred = tonumber(progress.quantityTransferred) or 0
-    local ratio = quantity > 0 and clamp(transferred / quantity, 0, 1) or 0
-    local percent = quantity > 0 and math.floor(ratio * 100 + 0.5) or 0
-    local filled = math.floor(ratio * barWidth)
-    local bar = string.rep("#", filled) .. string.rep("-", barWidth - filled)
-
-    local color = defaultTextColor
-    if progress.status == "completed" then
-      color = colors.lime
-    elseif progress.status == "failed" then
-      color = colors.red
-    elseif progress.status == "cancelled" then
-      color = colors.orange
-    else
-      color = colors.yellow
-    end
-
-    local countText = quantity > 0 and string.format("%d/%d", transferred, quantity) or string.format("%d/?", transferred)
-    local statusText = progress.error and (progress.status .. ": " .. progress.error) or progress.status
-    local headerText = string.format("[%s] %3d%% %s", bar, percent, countText)
-    local idValue = progress.id
-    if not idValue then
-      idValue = (progress.status == "failed" or progress.status == "cancelled") and "not-assigned" or "pending"
-    end
-    local itemValue = progress.itemDisplayName or progress.itemName or "any"
-    local qtyValue = quantity > 0 and tostring(quantity) or "any"
-    local targetValue = progress.toUsername or progress.to or progress.toEntityId or "?"
-    local idLine = string.format("id=%s to=%s", idValue, tostring(targetValue))
-    local itemLine = string.format("item=%s qty=%s", itemValue, qtyValue)
-
-    local lines = { headerText }
-    local wrappedStatus = wrapText(statusText, width)
-    for _, line in ipairs(wrappedStatus) do
-      table.insert(lines, line)
-    end
-    table.insert(lines, idLine)
-    table.insert(lines, itemLine)
-
-    local maxRenderableLines = math.max(1, height - 1)
-    if #lines > maxRenderableLines then
-      local trimmed = {}
-      for i = 1, maxRenderableLines do
-        trimmed[i] = lines[i]
-      end
-      lines = trimmed
-    end
-
-    clearAndHome()
-    term.setTextColor(color)
-    for i, line in ipairs(lines) do
-      local displayLine = line
-      if #displayLine > width then
-        displayLine = displayLine:sub(1, width)
-      end
-      term.setCursorPos(1, i)
-      term.clearLine()
-      write(displayLine)
-    end
-
-    for i = #lines + 1, lastRenderedLines do
-      term.setCursorPos(1, i)
-      term.clearLine()
-    end
-
-    lastRenderedLines = #lines
-
-    term.setCursorPos(1, 1)
-    term.setTextColor(defaultTextColor)
-  end
-
-  local function finishProgressLine()
-    local _, height = term.getSize()
-    local nextLine = clamp(lastRenderedLines + 1, 1, height)
-    term.setTextColor(defaultTextColor)
-    term.setCursorPos(1, nextLine)
-  end
-
-  local unsubscribers = {}
-
-  local function addSubscription(eventType, handler)
-    local unsubscribe = klog.on(eventType, handler)
-    table.insert(unsubscribers, unsubscribe)
-  end
-
-  local function clearSubscriptions()
-    for _, unsubscribe in ipairs(unsubscribers) do
-      unsubscribe()
-    end
-    unsubscribers = {}
-  end
-
-  local activeTransferId = nil
-
-  local function matchesActiveTransfer(payload)
-    if type(payload) ~= "table" or type(payload.id) ~= "string" then
+local function keyPressOrWait(time)
+  local timerId = os.startTimer(time)
+  while true do
+    local event, param = os.pullEvent()
+    if event == "key" then
+      sleep() -- prevent key press from entering cmd
+      return true
+    elseif event == "timer" and param == timerId then
       return false
     end
+  end
+end
 
-    if not activeTransferId then
-      activeTransferId = payload.id
-      return true
+local function transferStart(isIncoming)
+  return function(xfr)
+    returnCursorX, returnCursorY = term.getCursorPos()
+    returnCursorBlink = term.getCursorBlink()
+    if isIncoming then
+      incomingTransfer = xfr
+    end
+    drawTransferStatus(xfr)
+  end
+end
+
+local function transferUpdate(isIncoming)
+  return function(xfr)
+    if isIncoming then
+      incomingTransfer = xfr
+    end
+    drawTransferStatus(xfr)
+  end
+end
+
+local function transferStop(waitTime, isIncoming)
+  return function(xfr)
+    drawTransferStatus(xfr)
+    if isIncoming then
+      incomingTransfer = nil
+    end
+    keyPressOrWait(waitTime)
+    closeTransferWindow()
+  end
+end
+
+-- Incoming transfer events
+-- Start transfer
+klog.on("transfer_incoming_started", transferStart(true))
+-- Transfer updated
+klog.on("transfer_incoming_update", transferUpdate(true))
+-- Cancel/fail/complete (completion) events
+klog.on("transfer_incoming_cancelled", transferStop(20, true))
+klog.on("transfer_incoming_failed", transferStop(20, true))
+klog.on("transfer_incoming_completed", transferStop(5, true))
+
+-- Outgoing transfer events
+-- Start transfer
+klog.on("transfer_started", transferStart(false))
+-- Transfer updated
+klog.on("transfer_update", transferUpdate(false))
+-- Cancel/fail/complete (completion) events
+klog.on("transfer_cancelled", transferStop(20, false))
+klog.on("transfer_failed", transferStop(20, false))
+klog.on("transfer_completed", transferStop(5, false))
+
+local function websocketListenerLoop()
+  while true do
+    local ok, err = klog.listen({
+      reconnect = true,
+      reconnectDelay = 1,
+    })
+
+    if not ok and err and err ~= "" then
+      printError("Klog listener stopped: " .. err)
     end
 
-    return payload.id == activeTransferId
+    sleep(0.25)
   end
+end
 
-  local function transferRunner()
-    transferResult, transferErr = klog.transfer(opts)
-    runnerDone = true
-    os.queueEvent("klog_cli_transfer_runner_done")
+local manipulators = {}
+
+for _, m in pairs({peripheral.find("manipulator")}) do
+  if m.hasModule("plethora:introspection") then
+    table.insert(manipulators, peripheral.getName(m))
   end
-
-  local function eventListener()
-    updateProgress(nil, "queued", nil)
-    renderProgressLine()
-
-    addSubscription("transfer_started", function(payload)
-      if not matchesActiveTransfer(payload) then
-        return
-      end
-      updateProgress(payload, "started", nil)
-      renderProgressLine()
-    end)
-
-    addSubscription("transfer_update", function(payload)
-      if not matchesActiveTransfer(payload) then
-        return
-      end
-      updateProgress(payload, payload and payload.status or "updating", nil)
-      renderProgressLine()
-    end)
-
-    addSubscription("transfer_completed", function(payload)
-      if not matchesActiveTransfer(payload) then
-        return
-      end
-      updateProgress(payload, "completed", nil)
-      renderProgressLine()
-      sawTerminalEvent = true
-    end)
-
-    addSubscription("transfer_failed", function(payload)
-      if not matchesActiveTransfer(payload) then
-        return
-      end
-      updateProgress(payload, "failed", (payload and payload.error) or "unknown error")
-      renderProgressLine()
-      sawTerminalEvent = true
-    end)
-
-    addSubscription("transfer_cancelled", function(payload)
-      if not matchesActiveTransfer(payload) then
-        return
-      end
-      updateProgress(payload, "cancelled", payload and payload.error or nil)
-      renderProgressLine()
-      sawTerminalEvent = true
-    end)
-
-    while true do
-      local event = os.pullEvent()
-
-      if event == "klog_cli_transfer_runner_done" then
-        runnerDone = true
-      end
-
-      if runnerDone and sawTerminalEvent then
-        clearSubscriptions()
-        finishProgressLine()
-        return
-      end
-
-      if runnerDone and transferResult == false and not sawTerminalEvent then
-        clearSubscriptions()
-        updateProgress(nil, "failed", transferErr or "Unknown error")
-        renderProgressLine()
-        finishProgressLine()
-        return
-      end
-    end
-  end
-
-  parallel.waitForAll(transferRunner, eventListener)
-
-  if transferResult then
-    if not sawTerminalEvent then
-      ctx.succ("Transfer completed! ID:", transferResult.id)
-    end
-    return true
-  end
-
-  if not sawTerminalEvent then
-    ctx.err("Transfer failed: " .. (transferErr or "Unknown error"))
-  end
-  return false
 end
 
 local commands = {
@@ -491,7 +483,7 @@ local commands = {
         return
       end
 
-      runTransferWithEvents({
+      klog.transfer({
         to = target,
         itemName = item,
         quantity = quantity,
@@ -512,6 +504,7 @@ local commands = {
     category = "general",
     aliases = { "list", "ls" },
     execute = function(args, ctx)
+      rescanItems()
       local p = ctx.pager("Items in Inputs + Klog Estorage")
       for itemName, quantity in pairs(items) do
         p.print(" x" .. quantity .. " - " .. itemName)
@@ -526,10 +519,48 @@ local commands = {
     execute = function(args, ctx)
       downloadFile(updateDomain .. "klog.lua", "/lib/klog.lua")
       downloadFile(updateDomain .. "klog-cli.lua", "/klog-cli.lua")
+      if not cmd.VERSION then
+        fs.delete("lib/cmd.lua")
+      end
       ctx.succ("Items updated!")
       ctx.mess("Please restart the program to apply updates.")
     end,
-  }
+  },
+  output = {
+    description = "Specify where to output received items.",
+    category = "system",
+    usage = "output <manipulator/peripheral name>",
+    complete = function(args)
+      if #args == 1 then
+        return manipulators
+      end
+      return {}
+    end,
+    execute = function(args, ctx)
+      local peripheralName = args[1]
+
+      if not peripheralName then
+        ctx.err("Usage: output <manipulator/peripheral name>")
+        return
+      end
+
+      if not peripheral.isPresent(peripheralName) then
+        ctx.err(string.format("Peripheral %s is not present!", peripheralName))
+        return
+      end
+
+      local selected = peripheral.wrap(peripheralName)
+      if not selected then
+        ctx.err(string.format("Failed to wrap peripheral %s", peripheralName))
+        return
+      end
+
+      outputInventory = selected
+      settings.set("klog.outputInv", peripheralName)
+      settings.save()
+      ctx.succ("Output inventory saved successfully!")
+    end
+  },
 }
 
 local disableMotdValue = settings.get("klog.disableMotd")
@@ -543,14 +574,29 @@ if not disableMotdValue and disableMotdValue ~= "false" then
   term.setTextColor(colors.white)
 end
 
-parallel.waitForAny(
-  function()
-    while true do
-      rescanItems()
-      sleep(30)
+if outputInventory then
+  emptyEstorageToOutput()
+end
+
+local function safe(fn, name)
+  return function()
+    local ok, err = pcall(fn)
+    if not ok then
+      printError("Error in " .. tostring(name) .. ": " .. tostring(err))
     end
-  end,
-  function()
-    cmd("klog-cli", "1.2.0", commands)
   end
+end
+
+local function initCmd()
+  cmd("klog-cli", "1.3.0", commands)
+end
+
+
+parallel.waitForAny(
+  safe(initCmd, "initCmd"),
+  safe(rescanItemLoop, "rescanItemLoop"),
+  safe(incomingTransferLoop, "incomingTransferLoop"),
+  safe(websocketListenerLoop, "websocketListenerLoop")
 )
+
+klog.close()

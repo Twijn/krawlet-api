@@ -32,9 +32,9 @@
 ---@field id string Transfer id.
 ---@field status KlogTransferStatus Current transfer status.
 ---@field fromEntityId? string Sender entity id.
----@field fromUsername? string Sender username when available.
+---@field fromName? string Sender name when available.
 ---@field toEntityId? string Recipient entity id.
----@field toUsername? string Recipient username when available.
+---@field toName? string Recipient name when available.
 ---@field to? string Destination target.
 ---@field quantity? number Requested quantity.
 ---@field quantityTransferred? number Quantity moved so far.
@@ -73,12 +73,15 @@ return function(estorageName, options)
 
   local ws = nil
   local authenticated = false
+  local clientEntityId = nil
   local nextMessageId = 1
   local pendingWsMessages = {}
   local localTransferIds = {}
   local incomingTransferState = {}
+  local listenerActive = false
   local emitIncomingTransferEvents
   local emitIncomingTransferNotificationEvents
+  local processWebSocketData
 
   local function getNextMessageId()
     local id = tostring(nextMessageId)
@@ -94,6 +97,7 @@ return function(estorageName, options)
       ws = nil
     end
     authenticated = false
+    clientEntityId = nil
   end
 
   local function sendWebSocketMessage(message)
@@ -147,13 +151,14 @@ return function(estorageName, options)
       elseif event == "websocket_message" then
         if url == wsUrl then
           local data = textutils.unserializeJSON(message)
-          if data and data.type == "transfer_update" and data.payload then
-            emitIncomingTransferEvents(data.payload)
-          elseif data and data.type == "transfer_notification" and data.payload then
-            emitIncomingTransferNotificationEvents(data.payload)
-          end
+          processWebSocketData(data)
           if data and data.id == authId then
             if data.type == "auth_ok" then
+              if type(data.payload) == "table" and type(data.payload.clientEntityId) == "string" then
+                clientEntityId = data.payload.clientEntityId
+              else
+                clientEntityId = nil
+              end
               authenticated = true
               os.cancelTimer(timeout)
               return true
@@ -190,6 +195,24 @@ return function(estorageName, options)
       end
     end
     return nil
+  end
+
+  processWebSocketData = function(data)
+    if not data then
+      return
+    end
+
+    if data.type == "transfer_update" and data.payload then
+      if type(emitIncomingTransferEvents) == "function" then
+        emitIncomingTransferEvents(data.payload)
+      end
+    elseif data.type == "transfer_notification" and data.payload then
+      if type(emitIncomingTransferNotificationEvents) == "function" then
+        emitIncomingTransferNotificationEvents(data.payload)
+      end
+    end
+
+    queuePendingWsMessage(data)
   end
 
   if not apiKey then
@@ -279,21 +302,17 @@ return function(estorageName, options)
         end
       elseif event == "websocket_message" then
         if url == wsUrl then
-          local data = textutils.unserializeJSON(message)
-          if data and data.type == "transfer_update" and data.payload then
-            emitIncomingTransferEvents(data.payload)
-          elseif data and data.type == "transfer_notification" and data.payload then
-            emitIncomingTransferNotificationEvents(data.payload)
-          end
-          if data and data.id == msgId then
-            os.cancelTimer(timeout)
-            if data.type == "error" then
-              return false, data.payload and data.payload.message or "Unknown error"
-            elseif data.type == resultType then
-              return true, data.payload
+          if not listenerActive then
+            local data = textutils.unserializeJSON(message)
+            processWebSocketData(data)
+            if data and data.id == msgId then
+              os.cancelTimer(timeout)
+              if data.type == "error" then
+                return false, data.payload and data.payload.message or "Unknown error"
+              elseif data.type == resultType then
+                return true, data.payload
+              end
             end
-          elseif data then
-            queuePendingWsMessage(data)
           end
         end
       elseif event == "websocket_closed" then
@@ -327,17 +346,13 @@ return function(estorageName, options)
         end
       elseif event == "websocket_message" then
         if url == wsUrl then
-          local data = textutils.unserializeJSON(message)
-          if data and data.type == "transfer_update" and data.payload then
-            emitIncomingTransferEvents(data.payload)
-          elseif data and data.type == "transfer_notification" and data.payload then
-            emitIncomingTransferNotificationEvents(data.payload)
-          end
-          if data and data.type == "transfer_update" and data.payload and data.payload.id == transferId then
-            os.cancelTimer(timeout)
-            return true, data.payload
-          elseif data then
-            queuePendingWsMessage(data)
+          if not listenerActive then
+            local data = textutils.unserializeJSON(message)
+            processWebSocketData(data)
+            if data and data.type == "transfer_update" and data.payload and data.payload.id == transferId then
+              os.cancelTimer(timeout)
+              return true, data.payload
+            end
           end
         end
       elseif event == "websocket_closed" then
@@ -352,7 +367,7 @@ return function(estorageName, options)
 
   local klog = {
     _handlers = {},
-    _VERSION = "1.3.0",
+    _VERSION = "1.4.0",
   }
 
   local function emitEvent(eventType, payload)
@@ -371,15 +386,7 @@ return function(estorageName, options)
     end
   end
 
-  local function copyTransferPayload(payload)
-    local copied = {}
-    for key, value in pairs(payload) do
-      copied[key] = value
-    end
-    return copied
-  end
-
-  local function copyTransferNotificationPayload(payload)
+  local function normalizePayload(payload)
     local copied = {}
     for key, value in pairs(payload) do
       copied[key] = value
@@ -396,8 +403,19 @@ return function(estorageName, options)
       return
     end
 
+    -- If this transfer id is in localTransferIds, treat as local (outgoing)
     if localTransferIds[payload.id] then
       return
+    end
+
+    -- If we know who this client is, classify by transfer direction directly.
+    if type(clientEntityId) == "string" and clientEntityId ~= "" then
+      if payload.fromEntityId == clientEntityId then
+        return
+      end
+      if payload.toEntityId ~= clientEntityId then
+        return
+      end
     end
 
     local previous = incomingTransferState[payload.id]
@@ -409,24 +427,24 @@ return function(estorageName, options)
         status = status,
         quantityTransferred = quantityTransferred,
       }
-      emitEvent("transfer_incoming_started", copyTransferPayload(payload))
+      emitEvent("transfer_incoming_started", normalizePayload(payload))
     elseif previous.status ~= status or previous.quantityTransferred ~= quantityTransferred then
       incomingTransferState[payload.id] = {
         status = status,
         quantityTransferred = quantityTransferred,
       }
-      emitEvent("transfer_incoming_updated", copyTransferPayload(payload))
+      emitEvent("transfer_incoming_updated", normalizePayload(payload))
     end
 
     if status == "completed" then
       incomingTransferState[payload.id] = nil
-      emitEvent("transfer_incoming_completed", copyTransferPayload(payload))
+      emitEvent("transfer_incoming_completed", normalizePayload(payload))
     elseif status == "failed" then
       incomingTransferState[payload.id] = nil
-      emitEvent("transfer_incoming_failed", copyTransferPayload(payload))
+      emitEvent("transfer_incoming_failed", normalizePayload(payload))
     elseif status == "cancelled" then
       incomingTransferState[payload.id] = nil
-      emitEvent("transfer_incoming_cancelled", copyTransferPayload(payload))
+      emitEvent("transfer_incoming_cancelled", normalizePayload(payload))
     end
   end
 
@@ -439,14 +457,14 @@ return function(estorageName, options)
       return
     end
 
-    emitEvent("transfer_notification", copyTransferNotificationPayload(payload))
+    emitEvent("transfer_notification", normalizePayload(payload))
 
     if payload.type == "error" then
-      emitEvent("transfer_notification_error", copyTransferNotificationPayload(payload))
+      emitEvent("transfer_notification_error", normalizePayload(payload))
     elseif payload.type == "success" then
-      emitEvent("transfer_notification_success", copyTransferNotificationPayload(payload))
+      emitEvent("transfer_notification_success", normalizePayload(payload))
     else
-      emitEvent("transfer_notification_info", copyTransferNotificationPayload(payload))
+      emitEvent("transfer_notification_info", normalizePayload(payload))
     end
   end
 
@@ -802,8 +820,8 @@ return function(estorageName, options)
     return transfer, nil
   end
 
-  ---Compatibility wrapper around klog.transfer.
-  ---This needs to be reworked.
+  ---Use klog.transfer directly instead, listening to events for lifecycle updates.
+  ---@deprecated Use klog.transfer directly instead, listening to events for lifecycle updates.
   ---@param opts KlogTransferOptions Same options as klog.transfer.
   ---@param callback? function Callback invoked as callback(transfer, err) when finished.
   ---@return KlogTransfer|false transfer Transfer data on success, false on failure.
@@ -1106,7 +1124,78 @@ return function(estorageName, options)
   ---Close the websocket connection.
   ---No automatic reconnect is attempted after close.
   function klog.close()
+    listenerActive = false
+    os.queueEvent("klog_listener_stop")
     closeWebSocket()
+  end
+
+  ---Listen for incoming WebSocket events and emit Klog events continuously.
+  ---Run this in parallel with your main loop to receive incoming transfer events while idle.
+  ---Example: parallel.waitForAny(function() klog.listen() end, mainLoop)
+  ---@param opts? { reconnect?: boolean, reconnectDelay?: number }
+  ---@return boolean ok
+  ---@return string|nil err
+  function klog.listen(opts)
+    opts = opts or {}
+
+    if listenerActive then
+      return false, "Listener already running"
+    end
+
+    local reconnect = opts.reconnect ~= false
+    local reconnectDelay = tonumber(opts.reconnectDelay) or 1
+    if reconnectDelay < 0 then
+      reconnectDelay = 0
+    end
+
+    listenerActive = true
+
+    if not ws or not authenticated then
+      local ok, err = connectWebSocket()
+      if not ok then
+        listenerActive = false
+        return false, err
+      end
+    end
+
+    while listenerActive do
+      local event, url, message = os.pullEvent()
+
+      if event == "websocket_message" and url == wsUrl then
+        local data = textutils.unserializeJSON(message)
+        processWebSocketData(data)
+      elseif event == "websocket_closed" and url == wsUrl then
+        closeWebSocket()
+
+        if not reconnect then
+          listenerActive = false
+          return false, "WebSocket disconnected"
+        end
+
+        while listenerActive and (not ws or not authenticated) do
+          if reconnectDelay > 0 then
+            sleep(reconnectDelay)
+          end
+
+          local ok, err = connectWebSocket()
+          if ok then
+            break
+          end
+
+          if err and err ~= "" then
+            printError("Klog listener reconnect failed: " .. err)
+          end
+        end
+      end
+    end
+
+    return true
+  end
+
+  ---Stop a running klog.listen loop.
+  function klog.stopListening()
+    listenerActive = false
+    os.queueEvent("klog_listener_stop")
   end
 
   return klog
