@@ -1,4 +1,4 @@
-import { Server as HttpServer } from 'http';
+import { IncomingMessage, Server as HttpServer } from 'http';
 import { RawData, WebSocketServer } from 'ws';
 import { handleMessage } from './messageHandlers';
 import { logPrefix, sendJson } from './protocol';
@@ -9,6 +9,43 @@ import { rejectStorageQueriesForWorker } from './storageQuery';
 import { createLogger } from '../../lib/logger';
 
 const log = createLogger('WS');
+
+const TRUSTED_PROXY_ADDRESSES = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
+function firstHeaderValue(value: string | string[] | undefined): string | null {
+  if (!value) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    return value[0] || null;
+  }
+
+  return value;
+}
+
+function resolveClientIp(req: IncomingMessage): string {
+  const remoteAddress = req.socket.remoteAddress || 'unknown';
+
+  if (!TRUSTED_PROXY_ADDRESSES.has(remoteAddress)) {
+    return remoteAddress;
+  }
+
+  const realIp = firstHeaderValue(req.headers['x-real-ip']);
+  if (realIp) {
+    return realIp;
+  }
+
+  const forwardedFor = firstHeaderValue(req.headers['x-forwarded-for']);
+  if (forwardedFor) {
+    const firstHop = forwardedFor.split(',')[0]?.trim();
+    if (firstHop) {
+      return firstHop;
+    }
+  }
+
+  return remoteAddress;
+}
 
 function createWebSocketServer(server: HttpServer, path: string): WebSocketServer {
   const wss = new WebSocketServer({ noServer: true, perMessageDeflate: false });
@@ -34,7 +71,7 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
   wss.on('connection', (ws: RoutedWebSocket, req) => {
     const resolvedPath = ws.routePath ?? path;
     const connectionId = getNextConnectionId();
-    const remoteAddress = req.socket.remoteAddress;
+    const clientIp = resolveClientIp(req);
 
     const timeoutHandle = setTimeout(() => {
       const state = authState.get(ws);
@@ -60,10 +97,10 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
       currentTask: null,
       currentTaskCancelRequested: false,
       connectionId,
-      remoteAddress,
+      remoteAddress: clientIp,
     });
 
-    log.info(`[ws:${connectionId} ip=${remoteAddress}] connected path=${resolvedPath}`);
+    log.info(`[ws:${connectionId} ip=${clientIp}] connected path=${resolvedPath}`);
 
     sendJson(ws, {
       type: 'hello',
@@ -137,7 +174,7 @@ function createWebSocketServer(server: HttpServer, path: string): WebSocketServe
     });
 
     ws.on('error', (err: Error) => {
-      log.error(`WebSocket error (${resolvedPath}) from ${req.socket.remoteAddress}:`, err);
+      log.error(`WebSocket error (${resolvedPath}) from ${clientIp}:`, err);
     });
   });
 
