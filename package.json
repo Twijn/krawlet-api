@@ -42,16 +42,21 @@
   "dependencies": {
     "@scalar/express-api-reference": "^0.9.7",
     "cors": "^2.8.5",
-    "discord.js": "^14.24.0",
+    "discord.js": "^14.26.4",
     "dotenv": "^17.2.1",
-    "express": "^5.1.0",
+    "express": "^5.2.1",
     "kromer": "^1.5.1",
     "mysql2": "^3.14.3",
     "object-hash": "^3.0.0",
     "reconnectedchat": "^3.4.1",
-    "sequelize": "^6.37.7",
-    "ws": "^8.20.0",
-    "yaml": "^2.8.2"
+    "sequelize": "^6.37.8",
+    "ws": "^8.21.0",
+    "yaml": "^2.9.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "uuid": "^11.1.1"
+    }
   },
   "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319"
 }
