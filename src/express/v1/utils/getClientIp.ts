@@ -1,11 +1,22 @@
 import { Request } from 'express';
 
+const TRUSTED_PROXY_ADDRESSES = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1']);
+
+function getRemoteAddress(req: Request): string | null {
+  return req.socket.remoteAddress || null;
+}
+
+function isTrustedProxy(req: Request): boolean {
+  const remoteAddress = getRemoteAddress(req);
+  return remoteAddress !== null && TRUSTED_PROXY_ADDRESSES.has(remoteAddress);
+}
+
 /**
  * Extract the real client IP address, handling proxies
  *
  * Priority order:
- * 1. X-Real-IP (nginx/other reverse proxies)
- * 2. X-Forwarded-For (standard proxy header, uses first IP)
+ * 1. X-Real-IP (trusted reverse proxies only)
+ * 2. X-Forwarded-For (trusted reverse proxies only, uses first IP)
  * 3. req.ip (Express default)
  * 4. req.socket.remoteAddress (fallback)
  *
@@ -13,19 +24,21 @@ import { Request } from 'express';
  * @returns Client IP address
  */
 export function getClientIp(req: Request): string {
-  // Check X-Real-IP (used by nginx and others)
-  const realIp = req.get('x-real-ip');
-  if (realIp) {
-    return realIp;
-  }
+  if (isTrustedProxy(req)) {
+    // Check X-Real-IP only when the immediate peer is our trusted reverse proxy.
+    const realIp = req.get('x-real-ip');
+    if (realIp) {
+      return realIp;
+    }
 
-  // Check X-Forwarded-For (standard header, comma-separated list)
-  // The first IP is the original client, rest are proxies
-  const forwardedFor = req.get('x-forwarded-for');
-  if (forwardedFor) {
-    const ips = forwardedFor.split(',').map((ip) => ip.trim());
-    if (ips[0]) {
-      return ips[0];
+    // Check X-Forwarded-For only when the immediate peer is our trusted reverse proxy.
+    // The first IP is the original client, rest are proxies.
+    const forwardedFor = req.get('x-forwarded-for');
+    if (forwardedFor) {
+      const ips = forwardedFor.split(',').map((ip) => ip.trim());
+      if (ips[0]) {
+        return ips[0];
+      }
     }
   }
 
@@ -35,5 +48,5 @@ export function getClientIp(req: Request): string {
   }
 
   // Last resort: socket remote address
-  return req.socket.remoteAddress || 'unknown';
+  return getRemoteAddress(req) || 'unknown';
 }

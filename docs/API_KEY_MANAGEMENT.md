@@ -348,6 +348,8 @@ curl -H "Authorization: Bearer kraw_your_key" \
 # Get recent request logs (default 50, max 100)
 curl -H "Authorization: Bearer kraw_your_key" \
   "https://api.krawlet.cc/v1/apikey/logs?limit=25"
+
+# Request logs are retained for a configurable period with a minimum of 7 days
 ```
 
 #### API Key Info Response
@@ -370,12 +372,7 @@ curl -H "Authorization: Bearer kraw_your_key" \
       "last24h": 50,
       "last7d": 350,
       "last30d": 1200,
-      "blockedRequests": 5,
-      "avgResponseTimeMs": 45.23,
-      "topEndpoints": [
-        { "path": "/v1/players", "count": 500 },
-        { "path": "/v1/shops", "count": 300 }
-      ]
+      "blockedRequests": 5
     }
   }
 }

@@ -30,43 +30,19 @@ async function getUsageStats(apiKeyId: string): Promise<{
   last7d: number;
   last30d: number;
   blockedRequests: number;
-  avgResponseTime: number | null;
-  topEndpoints: { path: string; count: number }[];
 }> {
   const now = new Date();
   const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const [totalRequests, last24h, last7d, last30d, blockedRequests, avgResponseTime, topEndpoints] =
-    await Promise.all([
-      RequestLog.count({ where: { apiKeyId } }),
-      RequestLog.count({ where: { apiKeyId, timestamp: { [Op.gte]: oneDayAgo } } }),
-      RequestLog.count({ where: { apiKeyId, timestamp: { [Op.gte]: sevenDaysAgo } } }),
-      RequestLog.count({ where: { apiKeyId, timestamp: { [Op.gte]: thirtyDaysAgo } } }),
-      RequestLog.count({ where: { apiKeyId, wasBlocked: true } }),
-      sequelize.query(
-        `SELECT AVG(response_time_ms) as avgTime 
-         FROM request_logs 
-         WHERE api_key_id = :apiKeyId AND response_time_ms IS NOT NULL`,
-        {
-          replacements: { apiKeyId },
-          type: 'SELECT',
-        },
-      ) as Promise<{ avgTime: number | null }[]>,
-      sequelize.query(
-        `SELECT path, COUNT(*) as count 
-         FROM request_logs 
-         WHERE api_key_id = :apiKeyId 
-         GROUP BY path 
-         ORDER BY count DESC 
-         LIMIT 5`,
-        {
-          replacements: { apiKeyId },
-          type: 'SELECT',
-        },
-      ) as Promise<{ path: string; count: number }[]>,
-    ]);
+  const [totalRequests, last24h, last7d, last30d, blockedRequests] = await Promise.all([
+    RequestLog.count({ where: { apiKeyId } }),
+    RequestLog.count({ where: { apiKeyId, timestamp: { [Op.gte]: oneDayAgo } } }),
+    RequestLog.count({ where: { apiKeyId, timestamp: { [Op.gte]: sevenDaysAgo } } }),
+    RequestLog.count({ where: { apiKeyId, timestamp: { [Op.gte]: thirtyDaysAgo } } }),
+    RequestLog.count({ where: { apiKeyId, wasBlocked: true } }),
+  ]);
 
   return {
     totalRequests,
@@ -74,11 +50,6 @@ async function getUsageStats(apiKeyId: string): Promise<{
     last7d,
     last30d,
     blockedRequests,
-    avgResponseTime:
-      avgResponseTime?.[0]?.avgTime != null
-        ? Math.round(Number(avgResponseTime[0].avgTime) * 100) / 100
-        : null,
-    topEndpoints,
   };
 }
 
@@ -108,16 +79,6 @@ async function displayApiKey(apiKey: ApiKey, showUsage: boolean): Promise<void> 
     console.log(`   Last 7 days:        ${stats.last7d.toLocaleString()}`);
     console.log(`   Last 30 days:       ${stats.last30d.toLocaleString()}`);
     console.log(`   Blocked Requests:   ${stats.blockedRequests.toLocaleString()}`);
-    console.log(
-      `   Avg Response Time:  ${stats.avgResponseTime !== null ? `${stats.avgResponseTime}ms` : 'N/A'}`,
-    );
-
-    if (stats.topEndpoints.length > 0) {
-      console.log('\n   Top Endpoints:');
-      stats.topEndpoints.forEach((ep, i) => {
-        console.log(`     ${i + 1}. ${ep.path} (${Number(ep.count).toLocaleString()} requests)`);
-      });
-    }
   }
   console.log();
 }

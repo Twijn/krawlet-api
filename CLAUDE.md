@@ -160,32 +160,6 @@ Wallet listeners process transactions sent TO Krawlet and return:
 - Krawlet auto-refunds sender with the message unless `ignore: true`
 - `ignore: true` means transaction was processed successfully (no refund needed)
 
-## Admin Dashboard
-
-The admin dashboard provides a comprehensive web interface for managing API keys and monitoring usage at `/admin`.
-
-**Setup:**
-
-1. Set `ADMIN_PASSWORD` in `.env` to enable the dashboard
-2. Navigate to `http://localhost:3000/admin` (or your configured PORT)
-3. Login with the password set in `ADMIN_PASSWORD`
-
-**Features:**
-
-- **Overview Statistics**: Total keys, requests, blocked requests, most active key
-- **Charts**: 7-day request trends (line chart) and requests by tier (doughnut chart) using Chart.js
-- **API Key Management**:
-  - View all keys with filtering by tier, status, and search
-  - Create new API keys directly from the dashboard
-  - View detailed key information with recent activity
-  - Enable/disable keys
-  - Delete keys (with confirmation)
-- **Request Logs**: Pagination, filtering, and search with color-coded blocked requests
-- **Export Functionality**: Export API keys and request logs to CSV
-- **Real-time Updates**: Auto-refreshes stats and charts every 30 seconds
-
-The dashboard is located at `src/express/admin/index.ts` and uses a single-file HTML/CSS/JS design with Chart.js loaded via CDN - no build step required.
-
 ## Environment Variables
 
 Required (see `.env` file):
@@ -196,8 +170,8 @@ Required (see `.env` file):
 - `KRAWLET_PKEY` - Krawlet wallet private key for transaction operations
 - `PORT` - Express server port (default: 3000)
 - `PREFIX` - Optional command prefix for RCC chat commands
-- `ADMIN_PASSWORD` - Optional password to enable admin dashboard at `/admin`
 - `RATE_LIMIT_IGNORE_IPS` - Optional comma-separated list of IP addresses to bypass rate limiting and abuse blocking (e.g., `192.168.1.100,10.0.0.1`)
+- `REQUEST_LOG_RETENTION_DAYS` - Optional retention window for request logs; minimum enforced is 7 days (default: 7)
 
 ## Important Implementation Details
 
@@ -206,4 +180,4 @@ Required (see `.env` file):
 - Shop sync validates item listings against actual Kromer blockchain data
 - Transaction metadata entries with names in `STRIPPED_META_ENTRIES` are hidden from Discord messages
 - Discord embeds use standard footer via `getStandardFooter()` utility
-- Request logs track all API usage including blocks for rate limiting and invalid keys
+- Request logs are intentionally minimal and only store fields needed for rate-limit and API-key abuse tracking

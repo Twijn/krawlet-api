@@ -441,15 +441,13 @@ local code, err = krawlet.generateQuickCode()
 
 **API Key Usage Object:**
 
-| Field               | Type    | Description                 |
-| ------------------- | ------- | --------------------------- |
-| `totalRequests`     | number  | Total logged requests       |
-| `last24h`           | number  | Requests in last 24 hours   |
-| `last7d`            | number  | Requests in last 7 days     |
-| `last30d`           | number  | Requests in last 30 days    |
-| `blockedRequests`   | number  | Blocked request count       |
-| `avgResponseTimeMs` | number? | Average response time in ms |
-| `topEndpoints`      | table[] | Top 5 endpoints used        |
+| Field             | Type   | Description               |
+| ----------------- | ------ | ------------------------- |
+| `totalRequests`   | number | Total logged requests     |
+| `last24h`         | number | Requests in last 24 hours |
+| `last7d`          | number | Requests in last 7 days   |
+| `last30d`         | number | Requests in last 30 days  |
+| `blockedRequests` | number | Blocked request count     |
 
 ```lua
 {
@@ -457,13 +455,27 @@ local code, err = krawlet.generateQuickCode()
     last24h = 50,
     last7d = 200,
     last30d = 500,
-    blockedRequests = 0,
-    avgResponseTimeMs = 45.5,
-    topEndpoints = {
-        { endpoint = "/v1/shops", count = 200 },
-        { endpoint = "/v1/items", count = 150 },
-        ...
-    }
+    blockedRequests = 0
+}
+```
+
+Request logs and usage stats are retention-limited by server configuration, with a minimum of 7 days.
+
+**Request Log Object:**
+
+| Field         | Type    | Description                     |
+| ------------- | ------- | ------------------------------- |
+| `timestamp`   | string  | Request timestamp               |
+| `tier`        | string  | Request tier used for this call |
+| `wasBlocked`  | boolean | Whether the request was blocked |
+| `blockReason` | string? | Block reason when blocked       |
+
+```lua
+{
+    timestamp = "2026-01-25T10:30:00.000Z",
+    tier = "free",
+    wasBlocked = false,
+    blockReason = nil
 }
 ```
 

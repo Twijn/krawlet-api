@@ -94,11 +94,7 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
 
   const ip = getClientIp(request);
   const userAgent = request.get('user-agent');
-  const referer = request.get('referer') || request.get('referrer');
-  const ccServer = request.get('x-cc-srv');
-  const ccComputerId = request.get('x-cc-id')
-    ? parseInt(request.get('x-cc-id') as string, 10)
-    : undefined;
+  let wasRateLimited = false;
   const tier = (request.apiKey?.tier || 'anonymous') as
     | 'anonymous'
     | 'free'
@@ -107,9 +103,6 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
     | 'enderstorage'
     | 'worker'
     | 'internal';
-
-  // Track request start time
-  const startTime = Date.now();
 
   // Only track IP-level abuse for unauthenticated (anonymous) requests.
   // Authenticated API key users have their own per-key rate limit, so their
@@ -121,32 +114,19 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
   // Log to database after response finishes
   const originalEnd = res.end;
   res.end = function (this: Response, ...args: any[]): Response {
-    const responseTimeMs = Date.now() - startTime;
-
-    // Log to database (async, don't wait)
-    RequestLog.logRequest({
-      requestId: request.requestId,
-      method: req.method,
-      path: req.originalUrl,
-      ipAddress: ip,
-      userAgent,
-      referer,
-      ccServer,
-      ccComputerId: Number.isNaN(ccComputerId) ? undefined : ccComputerId,
-      apiKeyId: request.apiKey?.id,
-      tier,
-      rateLimitCount: current.count,
-      rateLimitLimit: limit,
-      rateLimitRemaining: remaining,
-      rateLimitResetAt: new Date(current.resetAt),
-      wasBlocked: false,
-      responseStatus: res.statusCode,
-      responseTimeMs,
-    }).catch((err) => log.error('Failed to log request:', err));
+    if (!wasRateLimited) {
+      // Log to database (async, don't wait)
+      RequestLog.logRequest({
+        ipAddress: ip,
+        apiKeyId: request.apiKey?.id,
+        tier,
+        wasBlocked: false,
+      }).catch((err) => log.error('Failed to log request:', err));
+    }
 
     // Check for abuse patterns after request (async, don't wait)
     // Skip for authenticated API key users — their high rate limits are intentional.
-    if (!request.apiKey) {
+    if (!request.apiKey && !wasRateLimited) {
       checkAbuseAfterRequest(ip).catch((err) =>
         log.error('Failed to check abuse after request:', err),
       );
@@ -157,28 +137,17 @@ export const rateLimiterMiddleware = (req: Request, res: Response, next: NextFun
 
   // Check if limit exceeded
   if (current.count > limit) {
+    wasRateLimited = true;
     const retryAfter = Math.ceil((current.resetAt - now) / 1000);
     res.setHeader('Retry-After', retryAfter.toString());
 
     // Log blocked request to database
     RequestLog.logRequest({
-      requestId: request.requestId,
-      method: req.method,
-      path: req.originalUrl,
       ipAddress: ip,
-      userAgent,
-      referer,
-      ccServer,
-      ccComputerId: Number.isNaN(ccComputerId) ? undefined : ccComputerId,
       apiKeyId: request.apiKey?.id,
       tier,
-      rateLimitCount: current.count,
-      rateLimitLimit: limit,
-      rateLimitRemaining: remaining,
-      rateLimitResetAt: new Date(current.resetAt),
       wasBlocked: true,
       blockReason: 'RATE_LIMIT_EXCEEDED',
-      responseStatus: 429,
     }).catch((err) => log.error('Failed to log blocked request:', err));
 
     // Track rate limit exceeded for abuse detection (async, don't wait)

@@ -2,7 +2,6 @@ import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
 import { RequestLog } from '../../../lib/models/requestlog.model';
 import { ApiKey } from '../../../lib/models/apikey.model';
-import { sequelize } from '../../../lib/models/database';
 import { RequestWithRateLimit } from '../types/request';
 import { createLogger } from '../../../lib/logger';
 
@@ -15,8 +14,6 @@ interface UsageStats {
   last7d: number;
   last30d: number;
   blockedRequests: number;
-  avgResponseTimeMs: number | null;
-  topEndpoints: { path: string; count: number }[];
 }
 
 async function getUsageStats(apiKeyId: string): Promise<UsageStats> {
@@ -25,35 +22,13 @@ async function getUsageStats(apiKeyId: string): Promise<UsageStats> {
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-  const [totalRequests, last24h, last7d, last30d, blockedRequests, avgResponseTime, topEndpoints] =
-    await Promise.all([
-      RequestLog.count({ where: { apiKeyId } }),
-      RequestLog.count({ where: { apiKeyId, timestamp: { [Op.gte]: oneDayAgo } } }),
-      RequestLog.count({ where: { apiKeyId, timestamp: { [Op.gte]: sevenDaysAgo } } }),
-      RequestLog.count({ where: { apiKeyId, timestamp: { [Op.gte]: thirtyDaysAgo } } }),
-      RequestLog.count({ where: { apiKeyId, wasBlocked: true } }),
-      sequelize.query(
-        `SELECT AVG(response_time_ms) as avgTime 
-         FROM request_logs 
-         WHERE api_key_id = :apiKeyId AND response_time_ms IS NOT NULL`,
-        {
-          replacements: { apiKeyId },
-          type: 'SELECT',
-        },
-      ) as Promise<{ avgTime: number | null }[]>,
-      sequelize.query(
-        `SELECT path, COUNT(*) as count 
-         FROM request_logs 
-         WHERE api_key_id = :apiKeyId 
-         GROUP BY path 
-         ORDER BY count DESC 
-         LIMIT 5`,
-        {
-          replacements: { apiKeyId },
-          type: 'SELECT',
-        },
-      ) as Promise<{ path: string; count: number }[]>,
-    ]);
+  const [totalRequests, last24h, last7d, last30d, blockedRequests] = await Promise.all([
+    RequestLog.count({ where: { apiKeyId } }),
+    RequestLog.count({ where: { apiKeyId, timestamp: { [Op.gte]: oneDayAgo } } }),
+    RequestLog.count({ where: { apiKeyId, timestamp: { [Op.gte]: sevenDaysAgo } } }),
+    RequestLog.count({ where: { apiKeyId, timestamp: { [Op.gte]: thirtyDaysAgo } } }),
+    RequestLog.count({ where: { apiKeyId, wasBlocked: true } }),
+  ]);
 
   return {
     totalRequests,
@@ -61,14 +36,6 @@ async function getUsageStats(apiKeyId: string): Promise<UsageStats> {
     last7d,
     last30d,
     blockedRequests,
-    avgResponseTimeMs:
-      avgResponseTime?.[0]?.avgTime != null
-        ? Math.round(Number(avgResponseTime[0].avgTime) * 100) / 100
-        : null,
-    topEndpoints: topEndpoints.map((ep) => ({
-      path: ep.path,
-      count: Number(ep.count),
-    })),
   };
 }
 
@@ -155,29 +122,16 @@ router.get('/logs', async (req: Request, res: Response) => {
       where: { apiKeyId: request.apiKey.id },
       order: [['timestamp', 'DESC']],
       limit,
-      attributes: [
-        'requestId',
-        'timestamp',
-        'method',
-        'path',
-        'responseStatus',
-        'responseTimeMs',
-        'wasBlocked',
-        'blockReason',
-      ],
+      attributes: ['timestamp', 'wasBlocked', 'blockReason', 'tier'],
     });
 
     return res.success({
       count: logs.length,
       logs: logs.map((log) => ({
-        requestId: log.requestId,
         timestamp: log.timestamp,
-        method: log.method,
-        path: log.path,
-        responseStatus: log.responseStatus,
-        responseTimeMs: log.responseTimeMs,
         wasBlocked: log.wasBlocked,
         blockReason: log.blockReason,
+        tier: log.tier,
       })),
     });
   } catch (error) {

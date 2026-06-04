@@ -11,7 +11,6 @@ import { getPackageName, getPackageVersion } from '../lib/packageData';
 // Import V1 router
 import v1Router from './v1';
 import docsRouter from './docs';
-import adminRouter from './admin';
 import { initWebSockets } from './ws';
 import { createLogger } from '../lib/logger';
 
@@ -20,6 +19,9 @@ const log = createLogger('Express');
 const PORT = process.env.PORT ?? 3000;
 
 const app = express();
+
+// Trust only a local reverse proxy such as Caddy bound on the same host.
+app.set('trust proxy', 'loopback');
 
 app.use(cors());
 
@@ -67,9 +69,6 @@ apiRouter.use('/turtles', turtles);
 // Mount the /api router
 app.use('/api', apiRouter);
 
-// Mount admin dashboard
-app.use('/admin', adminRouter);
-
 app.use((req, res) => {
   res.status(404).json({
     ok: false,
@@ -83,9 +82,6 @@ const server = app.listen(PORT, () => {
   log.info(`V1 API available at http://localhost:${PORT}/api/v1`);
   log.info(`V1 WebSocket available at ws://localhost:${PORT}/api/v1/ws`);
   log.info(`Legacy WebSocket alias available at ws://localhost:${PORT}/api/ws`);
-  if (process.env.ADMIN_PASSWORD) {
-    log.info(`Admin dashboard available at http://localhost:${PORT}/admin`);
-  }
 });
 
 initWebSockets(server);

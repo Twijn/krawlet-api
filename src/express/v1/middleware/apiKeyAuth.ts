@@ -21,28 +21,11 @@ export const optionalApiKeyAuth = async (req: Request, res: Response, next: Next
 
   if (!providedKey.startsWith('kraw_')) {
     // Log blocked request to database
-    const ccServer = req.get('x-cc-srv');
-    const ccComputerId = req.get('x-cc-id')
-      ? parseInt(req.get('x-cc-id') as string, 10)
-      : undefined;
-
     RequestLog.logRequest({
-      requestId: request.requestId,
-      method: req.method,
-      path: req.originalUrl,
       ipAddress: ip,
-      userAgent: req.get('user-agent'),
-      referer: req.get('referer') || req.get('referrer'),
-      ccServer,
-      ccComputerId: Number.isNaN(ccComputerId) ? undefined : ccComputerId,
       tier: 'anonymous',
-      rateLimitCount: 0,
-      rateLimitLimit: 100,
-      rateLimitRemaining: 100,
-      rateLimitResetAt: new Date(Date.now() + 60 * 60 * 1000),
       wasBlocked: true,
       blockReason: 'INVALID_API_KEY_FORMAT',
-      responseStatus: 401,
     }).catch((err) => log.error('Failed to log blocked request:', err));
 
     return res.error('INVALID_API_KEY', 'API key must start with "kraw_"', 401);
@@ -59,28 +42,11 @@ export const optionalApiKeyAuth = async (req: Request, res: Response, next: Next
 
     if (!apiKey) {
       // Log blocked request to database
-      const ccServer = req.get('x-cc-srv');
-      const ccComputerId = req.get('x-cc-id')
-        ? parseInt(req.get('x-cc-id') as string, 10)
-        : undefined;
-
       RequestLog.logRequest({
-        requestId: request.requestId,
-        method: req.method,
-        path: req.originalUrl,
         ipAddress: ip,
-        userAgent: req.get('user-agent'),
-        referer: req.get('referer') || req.get('referrer'),
-        ccServer,
-        ccComputerId: Number.isNaN(ccComputerId) ? undefined : ccComputerId,
         tier: 'anonymous',
-        rateLimitCount: 0,
-        rateLimitLimit: 100,
-        rateLimitRemaining: 100,
-        rateLimitResetAt: new Date(Date.now() + 60 * 60 * 1000),
         wasBlocked: true,
         blockReason: 'INVALID_API_KEY',
-        responseStatus: 401,
       }).catch((err) => log.error('Failed to log blocked request:', err));
 
       return res.error('INVALID_API_KEY', 'Invalid or inactive API key', 401);
