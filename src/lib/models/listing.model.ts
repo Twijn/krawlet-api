@@ -216,9 +216,7 @@ export async function updatePrices(
 }
 
 export async function updateListings(data: ShopSyncData): Promise<void> {
-  console.time('updateListings');
   const shopId = getShopId(data);
-  log.info(`Starting update for shop ${shopId} with ${data.items.length} items`);
 
   const t = await sequelize.transaction();
   try {
@@ -256,7 +254,7 @@ export async function updateListings(data: ShopSyncData): Promise<void> {
 
     // After committing all upserts/prices, delete obsolete listings separately
     const currentHashes = data.items.map((item) => hashListing(shopId, item));
-    const deleted = await Listing.destroy({
+    await Listing.destroy({
       where: {
         shopId,
         hash: {
@@ -264,13 +262,10 @@ export async function updateListings(data: ShopSyncData): Promise<void> {
         },
       },
     });
-    log.info(`Cleaned up ${deleted} obsolete listings`);
   } catch (err) {
     log.error('Error occurred, rolling back transaction:', err);
     await t.rollback();
     throw err;
-  } finally {
-    console.timeEnd('updateListings');
   }
 }
 

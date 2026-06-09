@@ -8,8 +8,10 @@ import {
   trackStorageQueryStarted,
 } from './workerActivity';
 import { ApiKeyTier } from '../../lib/models/apikey.model';
+import { createLogger } from '../../lib/logger';
 
 const STORAGE_QUERY_TIMEOUT_MS = 5000;
+const log = createLogger('WS');
 
 export type StorageItem = {
   name: string;
@@ -52,6 +54,9 @@ export function rejectStorageQueriesForWorker(ws: WebSocket): void {
 
   for (const [requestId, pending] of pendingStorageQueries.entries()) {
     if (pending.workerId === state.workerId) {
+      log.warn(
+        `${logPrefix(state)} rejecting pending storage query requestId=${requestId} reason=worker_disconnected`,
+      );
       clearPendingStorageQuery(requestId)?.reject(
         new Error('Worker disconnected before storage query completed'),
       );
@@ -93,11 +98,19 @@ export async function queryWorkerStorage({
 
   return new Promise<StorageItem[]>((resolve, reject) => {
     const timeoutHandle = setTimeout(() => {
+      log.warn(
+        `${logPrefix(targetState!)} storage_list timeout requestId=${requestId} requester=${requesterUuid} timeoutMs=${STORAGE_QUERY_TIMEOUT_MS}`,
+      );
       clearPendingStorageQuery(requestId)?.reject(new Error('STORAGE_QUERY_TIMEOUT'));
     }, STORAGE_QUERY_TIMEOUT_MS);
 
     pendingStorageQueries.set(requestId, {
-      resolve,
+      resolve: (items) => {
+        log.info(
+          `${logPrefix(targetState!)} storage_list resolved requestId=${requestId} requester=${requesterUuid} itemSlots=${items.length}`,
+        );
+        resolve(items);
+      },
       reject,
       timeoutHandle,
       workerId: targetState!.workerId,
@@ -106,7 +119,7 @@ export async function queryWorkerStorage({
     trackStorageQueryStarted(requesterUuid);
     releaseReservedWorkerSlot();
 
-    console.log(
+    log.info(
       `${logPrefix(targetState!)} storage_list requestId=${requestId} colors=[${colors.join(',')}]`,
     );
 
@@ -117,6 +130,10 @@ export async function queryWorkerStorage({
         payload: { colors },
       });
     } catch (error) {
+      log.error(
+        `${logPrefix(targetState!)} storage_list dispatch_failed requestId=${requestId} requester=${requesterUuid}`,
+        error,
+      );
       clearPendingStorageQuery(requestId);
       reject(error instanceof Error ? error : new Error('Failed to dispatch storage query'));
     }
