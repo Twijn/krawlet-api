@@ -127,6 +127,10 @@ rcc.on('join', async (join) => {
   await playerManager.getPlayerFromUser(join.user);
 });
 
+rcc.on('leave', async (leave) => {
+  await playerManager.updateSeenAt(leave.user.uuid);
+});
+
 rcc.on('ready', () => {
   log.info('Connected to RCC chat!');
   chatConnectionStatus = 'connected';

@@ -60,10 +60,22 @@ class PlayerManager {
         if (address && address.data.length > 0) {
           if (player) {
             log.info('Updating player ' + user.name);
-            player.minecraftName = user.name;
-            player.kromerAddress = address.data[0].address;
+            if (player.minecraftName !== user.name) {
+              log.info(
+                `Player ${player.minecraftName} has changed their Minecraft name to ${user.name}, updating...`,
+              );
+              player.minecraftName = user.name;
+              player.updatedAt = new Date();
+            }
+            const kromerAddress = address.data[0].address;
+            if (player.kromerAddress.toLowerCase() !== kromerAddress.toLowerCase()) {
+              log.info(
+                `Player ${user.name} has changed their Kromer address from ${player.kromerAddress} to ${kromerAddress}, updating...`,
+              );
+              player.kromerAddress = kromerAddress;
+              player.updatedAt = new Date();
+            }
             player.lastSeenAt = now;
-            player.updatedAt = new Date();
             await player.save();
             shouldPersistLastSeen = false;
           } else {
@@ -89,6 +101,14 @@ class PlayerManager {
     }
 
     return player;
+  }
+
+  public async updateSeenAt(uuid: string): Promise<void> {
+    const player = this.players.find((p) => p.minecraftUUID === uuid);
+    if (player) {
+      player.lastSeenAt = new Date();
+      await player.save();
+    }
   }
 
   private wrapPlayer(player: Player): PlayerWithStatus {

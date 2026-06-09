@@ -77,7 +77,7 @@ export async function queryWorkerStorage({
   let targetState = null;
 
   for (const [ws, state] of authState.entries()) {
-    if (state.authenticated && !state.currentTask) {
+    if (state.authenticated && state.role === 'worker' && !state.currentTask) {
       targetWs = ws;
       targetState = state;
       break;
