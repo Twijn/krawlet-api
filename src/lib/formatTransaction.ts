@@ -235,7 +235,7 @@ export function formatRefundForDiscord(refund: RefundData): string {
 }
 
 export function formatListingForChat(match: ListingMatch): string {
-  let message = `<gold>${match.listing.itemDisplayName ?? match.listing.itemName}</gold> <gray>(x${match.matchQuantity})</gray>\n  at <gray>${formatKromerBalance(match.price.value)}</gray> each`;
+  let message = `<dark_gray>x${match.matchQuantity}</dark_gray> <gold>${match.listing.itemDisplayName ?? match.listing.itemName}</gold>\n  at <gray>${formatKromerBalance(match.price.value)}</gray> each`;
   if (match.usingKlog) {
     message += ` <blue>Klog Delivery</blue>`;
   }
@@ -243,7 +243,7 @@ export function formatListingForChat(match: ListingMatch): string {
 }
 
 export function formatListingForDiscord(match: ListingMatch): string {
-  let message = `\n> **${match.listing.itemDisplayName ?? match.listing.itemName}** (x${match.matchQuantity})\n> Price: ${formatKromerBalance(match.price.value)} each`;
+  let message = `\n> x${match.matchQuantity} **${match.listing.itemDisplayName ?? match.listing.itemName}**\n> Price: ${formatKromerBalance(match.price.value)} each`;
   if (match.usingKlog) {
     message += `\n> :incoming_envelope: Klog Delivery`;
   }

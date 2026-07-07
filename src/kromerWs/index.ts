@@ -102,8 +102,10 @@ function sendDiscordMessage(transaction: TransactionWithMeta, data: TransactionD
     .catch(console.error);
 }
 
-function sendInGameMessage(transaction: TransactionWithMeta, data: TransactionData) {
+async function sendInGameMessage(transaction: TransactionWithMeta, data: TransactionData) {
   let sentNames: string[] = [];
+
+  const formattedTx = await formatTransaction(transaction, data);
 
   playerManager.getNotifiedPlayers().forEach((player) => {
     const fromSelf = transaction.from === player.kromerAddress;
@@ -113,10 +115,7 @@ function sendInGameMessage(transaction: TransactionWithMeta, data: TransactionDa
       (player.notifications === 'self' && (fromSelf || toSelf))
     ) {
       rcc
-        .tell(
-          player.minecraftName,
-          `<gray>New transaction:</gray>\n ${formatTransaction(transaction, data)}`,
-        )
+        .tell(player.minecraftName, `<gray>New transaction:</gray>\n ${formattedTx}`)
         .catch(console.error);
       sentNames.push(player.minecraftName);
     }

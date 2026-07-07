@@ -5,7 +5,7 @@
  * @returns The formatted amount string (e.g., "1,234.56")
  */
 export function formatKromerAmount(amount: number, maxPrecision: number = 5): string {
-  return amount.toLocaleString('en-US', {
+  return Number(amount).toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: maxPrecision,
   });
