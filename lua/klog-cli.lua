@@ -119,18 +119,19 @@ local enderStorage = nil
 local outputInventory = nil
 
 local function getOutputInventory()
-  if outputInventory and outputInventory.getInventory then
-    local success, inv = pcall(outputInventory.getInventory, outputInventory)
-    if success and inv then
-      return inv
-    else
-      return false, inv or "Failed to get inventory from output peripheral"
+  if outputInventory then
+    if outputInventory.getInventory then
+      local success, inv = pcall(outputInventory.getInventory, outputInventory)
+      if success and inv then
+        return inv
+      else
+        return false, inv or "Failed to get inventory from output peripheral"
+      end
+    elseif outputInventory.pullItems or outputInventory.pushItems or (outputInventory.list and outputInventory.size) then
+      return outputInventory
     end
-  elseif outputInventory.pullItems or outputInventory.pushItems or (outputInventory.list and outputInventory.size) then
-    return outputInventory
-  else
-    return false, "Output peripheral does not appear to be an inventory"
   end
+  return false, "Output peripheral does not appear to be an inventory"
 end
 
 local enderStorages = table.pack(peripheral.find("ender_storage"))
@@ -188,6 +189,10 @@ end
 local items = {}
 
 local function rescanItems()
+  if not enderStorage then
+    return false, "Ender storage not available"
+  end
+
   local newItems = {}
 
   local stagedItems = enderStorage.list()
@@ -201,12 +206,18 @@ local function rescanItems()
       newItems[item.name] = (newItems[item.name] or 0) + item.count
     end
   end
+
   items = newItems
+
+  return true
 end
 
 local function rescanItemLoop()
   while true do
-    rescanItems()
+    local success, error = rescanItems()
+    if not success then
+      printError("Failed to rescan items: " .. (error or "Unknown error"))
+    end
     sleep(60)
   end
 end
@@ -227,6 +238,11 @@ local function emptyEstorageToOutput()
     if outputInventory then
       printError("Unable to get output inventory: " .. (outputInvErr or "Unknown error"))
     end
+    return
+  end
+
+  if not enderStorage then
+    printError("Ender storage not available")
     return
   end
 
@@ -291,7 +307,7 @@ local function drawTransferStatus(transfer)
     cl(2, 2)
     transferWindow.setTextColor(colors.lightGray)
     transferWindow.write(string.format("%s -> %s", transfer.fromName or "unknown", transfer.toName or "unknown"))
-    
+
     cl(2, 3)
     transferWindow.setTextColor(colors.white)
     transferWindow.write(string.format("Item: %s", transfer.itemDisplayName or transfer.itemName or "unknown"))
@@ -315,7 +331,7 @@ local function drawTransferStatus(transfer)
       elseif transfer.status == "in_progress" then
         statusColor = colors.blue
       end
-      
+
       transferWindow.setTextColor(statusColor)
       transferWindow.setCursorPos(w - 1 - #transfer.status, 1)
       transferWindow.write(transfer.status)
@@ -495,8 +511,12 @@ local commands = {
     description = "Rescan input storages for items",
     category = "general",
     execute = function(args, ctx)
-      rescanItems()
-      ctx.succ("Rescan complete!")
+      local success, error = rescanItems()
+      if success then
+        ctx.succ("Rescan complete!")
+      else
+        printError("Failed to rescan items: " .. (error or "Unknown error"))
+      end
     end,
   },
   ["list-items"] = {
@@ -504,7 +524,11 @@ local commands = {
     category = "general",
     aliases = { "list", "ls" },
     execute = function(args, ctx)
-      rescanItems()
+      local success, error = rescanItems()
+      if not success then
+        printError("Failed to rescan items: " .. (error or "Unknown error"))
+        return
+      end
       local p = ctx.pager("Items in Inputs + Klog Estorage")
       for itemName, quantity in pairs(items) do
         p.print(" x" .. quantity .. " - " .. itemName)
