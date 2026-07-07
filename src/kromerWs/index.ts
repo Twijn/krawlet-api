@@ -11,6 +11,7 @@ import formatTransaction, {
   formatRefundForDiscord,
   formatKBCForDiscord,
   formatItemReturnForDiscord,
+  formatListingForDiscord,
 } from '../lib/formatTransaction';
 import walletListeners from './walletListeners';
 import { formatKromerBalance } from '../lib/formatKromer';
@@ -68,6 +69,9 @@ function sendDiscordMessage(transaction: TransactionWithMeta, data: TransactionD
   } else if (data.refund) {
     // Check for refund data (more specific, cleaner display)
     metadata += formatRefundForDiscord(data.refund);
+  } else if (data.listing) {
+    // Check for listing data
+    metadata += formatListingForDiscord(data.listing);
   } else {
     if (data.entries.error) {
       metadata += `\n> :x: *${data.entries.error}*`;
@@ -127,8 +131,8 @@ const handlers: Handler[] = [sendDiscordMessage, sendInGameMessage];
 
 const haTransactions = new HATransactions(kromer);
 
-haTransactions.on((transaction: TransactionWithMeta) => {
-  const data = parseTransactionData(transaction);
+haTransactions.on(async (transaction: TransactionWithMeta) => {
+  const data = await parseTransactionData(transaction);
   handlers.forEach((handler) => {
     try {
       handler(transaction, data);

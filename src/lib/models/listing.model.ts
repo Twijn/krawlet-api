@@ -12,6 +12,7 @@ import { ShopSyncData, ShopSyncListing } from '../shopSyncValidate';
 import objectHash from 'object-hash';
 import { getShopId, Shop } from './shop.model';
 import { createLogger } from '../logger';
+import { TransactionWithMeta } from 'kromer';
 
 const log = createLogger('Listings');
 
@@ -102,6 +103,81 @@ export async function getListingsByShopId(shopId: string): Promise<Listing[]> {
   });
   console.timeEnd('getListingsByShopId');
   return listings;
+}
+
+type TransactionSearch = {
+  currency: string;
+  address: string;
+  requiredMeta: Record<string, unknown> | null;
+};
+
+export type ListingMatch = {
+  listing: Listing;
+  price: ListingPrice;
+  matchQuantity: number;
+  usingKlog: boolean;
+};
+
+export async function getListingFromTransaction(
+  transaction: TransactionWithMeta,
+): Promise<ListingMatch | null> {
+  const potentialMeta = transaction.meta?.entries
+    ?.filter((entry) => !entry.value)
+    ?.map((entry) => entry.name);
+
+  const usingKlog = transaction.meta?.entries?.some((entry) => entry.name === 'klog') ?? false;
+
+  let search: TransactionSearch[] = [
+    {
+      currency: 'KRO',
+      address: transaction.to,
+      requiredMeta: {
+        [Op.in]: potentialMeta ?? [],
+      },
+    },
+  ];
+
+  if (transaction.sent_metaname && transaction.sent_name) {
+    search.push({
+      currency: 'KRO',
+      address: `${transaction.sent_metaname}@${transaction.sent_name}.kro`,
+      requiredMeta: null,
+    });
+  }
+
+  const listingPrices = await ListingPrice.findAll({
+    where: {
+      [Op.or]: search,
+    },
+  });
+
+  let distinctListings = new Map<string, ListingPrice>();
+  for (const price of listingPrices) {
+    distinctListings.set(price.listingId, price);
+  }
+
+  if (distinctListings.size === 1) {
+    const distinctListing = distinctListings.keys().next().value;
+    if (!distinctListing) return null;
+
+    const matchedPrice = distinctListings.get(distinctListing);
+    if (matchedPrice) {
+      const listing = await Listing.findByPk(distinctListing);
+      if (listing) {
+        return {
+          listing,
+          price: matchedPrice,
+          matchQuantity: Math.trunc(transaction.value / matchedPrice.value),
+          usingKlog,
+        };
+      }
+    }
+    return null;
+  } else if (distinctListings.size === 0) {
+    return null;
+  }
+
+  throw new Error(`Multiple listings found: ${distinctListings.size}`);
 }
 
 export function hashListing(shopId: string, listing: ShopSyncListing): string {

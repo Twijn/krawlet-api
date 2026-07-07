@@ -1,8 +1,9 @@
-import { Transaction } from 'kromer';
+import { Transaction, TransactionWithMeta } from 'kromer';
 import playerManager from './managers/playerManager';
 import kromer from './kromer';
 import { formatKromerBalance } from './formatKromer';
 import { getKnownAddresses } from './models/knownaddress.model';
+import { getListingFromTransaction, ListingMatch } from './models';
 
 export interface RefundData {
   ref: string;
@@ -35,6 +36,7 @@ export interface TransactionData {
   refund?: RefundData;
   kbc?: KBCData;
   itemReturn?: ItemReturnData;
+  listing?: ListingMatch;
 }
 
 /**
@@ -136,7 +138,7 @@ export function parseStructuredMetadata(metadata: string): RefundData | null {
     if (key === 'ref') parsed.ref = value;
     else if (key === 'type') parsed.type = value;
     else if (key === 'original') parsed.original = value;
-    else if (key === 'message') parsed.message = value;
+    else if (key === 'message' || key === 'error') parsed.message = value;
   }
 
   if (parsed.ref && parsed.type) {
@@ -146,7 +148,15 @@ export function parseStructuredMetadata(metadata: string): RefundData | null {
   return null;
 }
 
-export const parseTransactionData = (transaction: Transaction): TransactionData => {
+export async function parseListingMetadata(
+  transaction: TransactionWithMeta,
+): Promise<ListingMatch | null> {
+  return await getListingFromTransaction(transaction);
+}
+
+export const parseTransactionData = async (
+  transaction: TransactionWithMeta,
+): Promise<TransactionData> => {
   let from = transaction.from ?? 'unknown';
   let to = transaction.to;
 
@@ -186,6 +196,9 @@ export const parseTransactionData = (transaction: Transaction): TransactionData 
   // Try to parse item return metadata
   const itemReturn = parseItemReturnMetadata(transaction.metadata ?? '');
 
+  // Try to parse listing metadata
+  const listing = await parseListingMetadata(transaction);
+
   return {
     from,
     to,
@@ -197,6 +210,7 @@ export const parseTransactionData = (transaction: Transaction): TransactionData 
     refund: refund ?? undefined,
     kbc: kbc ?? undefined,
     itemReturn: itemReturn ?? undefined,
+    listing: listing ?? undefined,
   };
 };
 
@@ -220,15 +234,31 @@ export function formatRefundForDiscord(refund: RefundData): string {
   return result;
 }
 
+export function formatListingForChat(match: ListingMatch): string {
+  let message = `<gold>${match.listing.itemDisplayName ?? match.listing.itemName}</gold> <gray>(x${match.matchQuantity})</gray>\n  at <gray>${formatKromerBalance(match.price.value)}</gray> each`;
+  if (match.usingKlog) {
+    message += ` <blue>Klog Delivery</blue>`;
+  }
+  return message;
+}
+
+export function formatListingForDiscord(match: ListingMatch): string {
+  let message = `\n> **${match.listing.itemDisplayName ?? match.listing.itemName}** (x${match.matchQuantity})\n> Price: ${formatKromerBalance(match.price.value)} each`;
+  if (match.usingKlog) {
+    message += `\n> :incoming_envelope: Klog Delivery`;
+  }
+  return message;
+}
+
 /**
- * Format KBC (Kromer Ball Championship) data for in-game chat display
+ * Format KBC (Kromer Ball Copy) data for in-game chat display
  */
 export function formatKBCForChat(kbc: KBCData): string {
   return `<gold>KBC Round #${kbc.round}</gold> <gray>|</gray> <green>Winner:</green> <white>${kbc.winner}</white> <gray>(ticket #${kbc.winnerTicket})</gray>`;
 }
 
 /**
- * Format KBC (Kromer Ball Championship) data for Discord display
+ * Format KBC (Kromer Ball Copy) data for Discord display
  */
 export function formatKBCForDiscord(kbc: KBCData): string {
   return `\n> **Kromer Ball Round #${kbc.round}**\n> Winner: **${kbc.winner}** (ticket #${kbc.winnerTicket})`;
@@ -250,9 +280,9 @@ export function formatItemReturnForDiscord(itemReturn: ItemReturnData): string {
   return `\n> **Item Return:** ${itemReturn.quantity}x ${itemReturn.name}${leftText}`;
 }
 
-export default (transaction: Transaction, data?: TransactionData): string => {
+export default async (transaction: Transaction, data?: TransactionData): Promise<string> => {
   if (!data) {
-    data = parseTransactionData(transaction);
+    data = await parseTransactionData(transaction);
   }
 
   let message = '';
@@ -264,6 +294,8 @@ export default (transaction: Transaction, data?: TransactionData): string => {
     message = formatItemReturnForChat(data.itemReturn);
   } else if (data.refund) {
     message = formatRefundForChat(data.refund);
+  } else if (data.listing) {
+    message = formatListingForChat(data.listing);
   } else if (data.entries.error) {
     message = `<dark_red>Error:</dark_red> <red>${data.entries.error}</red>`;
   } else if (data.entries.message) {
