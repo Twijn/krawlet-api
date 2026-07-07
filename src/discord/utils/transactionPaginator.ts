@@ -9,7 +9,6 @@ import {
 } from 'discord.js';
 import { formatKromerBalance } from '../../lib/formatKromer';
 import createTextTable from '../textTable';
-import { parseTransactionData } from '../../lib/formatTransaction';
 import { Transaction } from 'kromer';
 import { getStandardFooter } from './embedFooter';
 import { InteractionHelper } from '../commands/helpers/DiscordCommand';
@@ -99,10 +98,12 @@ export class TransactionPaginator {
         name: 'Transactions',
         value: createTextTable(
           ['ID', 'From', 'To', 'Amount'],
-          pageTransactions.map((tx) => {
-            const data = parseTransactionData(tx);
-            return [`#${tx.id}`, data.from, data.to, formatKromerBalance(tx.value)];
-          }),
+          pageTransactions.map((tx) => [
+            `#${tx.id}`,
+            tx.from ?? 'unknown',
+            tx.to ?? 'unknown',
+            formatKromerBalance(tx.value),
+          ]),
           ['right', 'left', 'left', 'right'],
         ),
         inline: false,

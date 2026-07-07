@@ -10,7 +10,6 @@ import {
 import kromer from '../../lib/kromer';
 import { formatKromerBalance } from '../../lib/formatKromer';
 import createTextTable from '../textTable';
-import { parseTransactionData } from '../../lib/formatTransaction';
 import { addStandardFooter } from './embedFooter';
 
 export async function sendAddressMessage(
@@ -51,16 +50,18 @@ export async function sendAddressMessage(
   const transactionsResponse = await kromer.addresses.getTransactions(addressString, {
     limit: 10,
   });
+
   if (transactionsResponse.transactions.length > 0) {
     embed.addFields({
       name: 'Recent Transactions',
       value: createTextTable(
         ['ID', 'From', 'To', 'Amt'],
-        transactionsResponse.transactions.map((tx) => {
-          const data = parseTransactionData(tx);
-
-          return [`#${tx.id}`, data.from, data.to, formatKromerBalance(tx.value)];
-        }),
+        transactionsResponse.transactions.map((tx) => [
+          `#${tx.id}`,
+          tx.from ?? 'unknown',
+          tx.to ?? 'unknown',
+          formatKromerBalance(tx.value),
+        ]),
         ['right', 'left', 'left', 'right'],
       ),
       inline: false,
