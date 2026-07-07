@@ -6,6 +6,7 @@
 ---@field wsUrl? string WebSocket URL (default: derived from apiUrl)
 ---@field apiKey? string API key; if omitted, settings key klog.apiKey is used.
 ---@field inputExcludes? string[] Inventory peripheral name patterns to exclude. Supports * wildcard.
+---@field countItemBatchSize? number Number of chest item count tasks to run in parallel (default: 50).
 
 ---@class KlogTransferOptions
 ---@field to string Destination ender storage target (entity id, configured link, or entity name).
@@ -68,6 +69,7 @@ return function(estorageName, options)
   local apiUrl = options.apiUrl or "https://api.krawlet.cc/v1/"
   local wsUrl = options.wsUrl or apiUrl:gsub("^http", "ws") .. "ws"
   local apiKey = options.apiKey or settings.get("klog.apiKey")
+  local countItemBatchSize = options.countItemBatchSize or 50
 
   assert(estorage, "Peripheral not found: " .. estorageName)
 
@@ -521,18 +523,36 @@ return function(estorageName, options)
   ---Count matching items across all input inventories.
   ---@param itemName string Item id to match (for example minecraft:diamond).
   ---@param itemNbt? string Optional exact NBT to match.
-  ---@return number total Total matching item count.
+  ---@return number total Total matching item count
   function klog.countItem(itemName, itemNbt)
     local total = 0
-    local chests = klog.getInputChests()
-    for _, chest in ipairs(chests) do
-      local items = chest.list()
-      for _, item in pairs(items) do
-        if item.name == itemName and (not itemNbt or item.nbt == itemNbt) then
-          total = total + item.count
+
+    local function countChestItems(chest)
+      return function()
+        local items = chest.list()
+        for _, item in pairs(items) do
+          if item.name == itemName and (not itemNbt or item.nbt == itemNbt) then
+            total = total + item.count
+          end
         end
       end
     end
+
+    local handles = {}
+
+    local chests = klog.getInputChests()
+    for _, chest in ipairs(chests) do
+      table.insert(handles, countChestItems(chest))
+    end
+
+    for i = 1, #handles, countItemBatchSize do
+      local batch = {}
+      for j = i, math.min(i + countItemBatchSize - 1, #handles) do
+        table.insert(batch, handles[j])
+      end
+      parallel.waitForAll(table.unpack(batch))
+    end
+
     return total
   end
 
