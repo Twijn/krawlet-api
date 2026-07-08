@@ -313,6 +313,7 @@ export async function updateListings(data: ShopSyncData): Promise<void> {
         madeOnDemand: item.madeOnDemand,
         requiresInteraction: item.requiresInteraction,
         stock: item.stock ?? 0,
+        featuresList: item.features ? item.features.join(';') : null,
         updatedAt: new Date(),
       };
 
@@ -362,6 +363,8 @@ export interface RawListing {
   requiresInteraction: boolean;
   stock: number;
 
+  features?: string[] | null;
+
   prices?: RawListingPrice[];
   shop?: Shop;
   addresses?: string[];
@@ -395,6 +398,8 @@ export class Listing
   declare madeOnDemand: CreationOptional<boolean>;
   declare requiresInteraction: CreationOptional<boolean>;
   declare stock: CreationOptional<number>;
+
+  declare featuresList?: CreationOptional<string | null>;
 
   declare prices?: ListingPrice[];
   declare shop?: Shop;
@@ -432,6 +437,7 @@ export class Listing
       madeOnDemand: this.madeOnDemand,
       requiresInteraction: this.requiresInteraction,
       stock: this.stock,
+      features: this.featuresList === '' ? [] : (this.featuresList?.split(';') ?? null),
       prices,
       addresses,
       shop: this.shop,
@@ -504,6 +510,10 @@ Listing.init(
       type: DataTypes.INTEGER,
       allowNull: false,
       defaultValue: 0,
+    },
+    featuresList: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
   },
   {

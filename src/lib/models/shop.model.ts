@@ -21,6 +21,8 @@ export interface RawShop {
   locationDescription: string | null;
   locationDimension: string | null;
 
+  features?: string[] | null;
+
   hidden: boolean;
   sourceType: ShopSourceType;
 
@@ -114,6 +116,7 @@ export async function updateShop(data: ShopSyncData, sourceType?: ShopSourceType
     locationCoordinates,
     locationDescription: data.info.location?.description || null,
     locationDimension: data.info.location?.dimension || null,
+    featuresList: data.info.features ? data.info.features.join(';') : null,
     hidden: false, // New shops are not hidden by default
     sourceType: finalSourceType,
   });
@@ -152,6 +155,8 @@ export class Shop
   declare locationDescription: string | null;
   declare locationDimension: string | null;
 
+  declare featuresList?: string | null;
+
   declare hidden: boolean;
   declare sourceType: ShopSourceType;
 
@@ -184,6 +189,7 @@ export class Shop
       locationCoordinates: this.locationCoordinates,
       locationDescription: this.locationDescription,
       locationDimension: this.locationDimension,
+      features: this.featuresList === '' ? [] : (this.featuresList?.split(';') ?? null),
       hidden: this.hidden,
       sourceType: this.sourceType,
       items,
@@ -233,6 +239,10 @@ Shop.init(
       allowNull: true,
     },
     locationDimension: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    featuresList: {
       type: DataTypes.TEXT,
       allowNull: true,
     },

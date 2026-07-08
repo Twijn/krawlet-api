@@ -15,6 +15,7 @@ export interface ShopSyncItem {
 export interface ShopSyncListing {
   prices: ShopSyncPrice[];
   item: ShopSyncItem;
+  features?: string[];
   dynamicPrice?: boolean;
   stock?: number | null;
   madeOnDemand?: boolean;
@@ -39,6 +40,7 @@ export interface ShopSyncInfo {
   description?: string;
   owner?: string;
   computerID: number;
+  features?: string[];
   multiShop?: number | null;
   software?: ShopSyncSoftware;
   location?: ShopSyncLocation;
@@ -150,6 +152,22 @@ export function validateShopSyncData(data: any): { isValid: boolean; errors: str
         const locationErrors = validateLocation(location, `info.otherLocations[${index}]`);
         errors.push(...locationErrors);
       });
+    }
+  }
+
+  // Validate features
+  if (data.info.features !== undefined) {
+    if (
+      typeof data.info.features === 'object' &&
+      !Array.isArray(data.info.features) &&
+      Object.keys(data.info.features).length === 0
+    ) {
+      data.info.features = [];
+    } else if (
+      !Array.isArray(data.info.features) ||
+      !data.info.features.every((f: any) => typeof f === 'string')
+    ) {
+      errors.push("Field 'info.features' must be an array of strings when provided");
     }
   }
 
@@ -268,6 +286,22 @@ function validateItem(item: any, fieldPath: string): string[] {
       typeof item.item.description !== 'string'
     ) {
       errors.push(`Field '${fieldPath}.item.description' must be a string or null when provided`);
+    }
+  }
+
+  // Validate features
+  if (item.features !== undefined) {
+    if (
+      typeof item.features === 'object' &&
+      !Array.isArray(item.features) &&
+      Object.keys(item.features).length === 0
+    ) {
+      item.features = [];
+    } else if (
+      !Array.isArray(item.features) ||
+      !item.features.every((f: any) => typeof f === 'string')
+    ) {
+      errors.push(`Field '${fieldPath}.features' must be an array of strings when provided`);
     }
   }
 

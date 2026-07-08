@@ -9,7 +9,7 @@ router.get('/', async (req, res) => {
   try {
     res.json({
       ok: true,
-      data: await getListings(),
+      data: (await getListings()).map((item) => item.raw()),
     });
   } catch (err) {
     log.error(err);

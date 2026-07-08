@@ -6,7 +6,7 @@ info:
     REST API for the Krawlet Minecraft economy tracking system.
 
     ## Authentication
-    Most endpoints support optional API key authentication via Bearer token. 
+    Most endpoints support optional API key authentication via Bearer token.
     Include your API key in the `Authorization` header:
     ```
     Authorization: Bearer kraw_your_api_key_here
@@ -194,23 +194,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          version:
-                            type: string
-                          endpoints:
-                            type: array
-                            items:
-                              type: string
-                          documentation:
-                            type: string
-                          github:
-                            type: string
+                $ref: "#/components/schemas/ApiVersionResponse"
   /v1/health:
     get:
       tags:
@@ -245,21 +229,27 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SuccessResponse"
+                $ref: "#/components/schemas/HealthCheckResponse"
               example:
                 success: true
                 data:
-                  status: ok
+                  status: healthy
                   timestamp: 2026-01-12T10:30:00.000Z
+                  uptime: 12345.67
+                  version: 1.0.0
+                  name: krawlet-api
+                  services:
+                    kromerWs:
+                      status: connected
+                    chatbox:
+                      status: connected
+                    discord:
+                      status: connected
                 meta:
                   timestamp: 2026-01-12T10:30:00.000Z
                   elapsed: 5
                   version: 1.0.0
                   requestId: abc-123
-                  rateLimit:
-                    limit: 1000
-                    remaining: 999
-                    reset: 1736686200
   /v1/health/detailed:
     get:
       tags:
@@ -279,13 +269,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SuccessResponse"
+                $ref: "#/components/schemas/DetailedHealthResponse"
         "503":
           description: Detailed health data (degraded)
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/SuccessResponse"
+                $ref: "#/components/schemas/DetailedHealthResponse"
   /v1/players:
     get:
       tags:
@@ -381,14 +371,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/Player"
+                $ref: "#/components/schemas/PlayersResponse"
               examples:
                 byAddress:
                   summary: Player by address
@@ -466,14 +449,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/Shop"
+                $ref: "#/components/schemas/ShopsResponse"
     post:
       tags:
         - Shops
@@ -554,12 +530,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/Shop"
+                $ref: "#/components/schemas/ShopResponse"
         "404":
           description: Shop not found
           content:
@@ -592,14 +563,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/Item"
+                $ref: "#/components/schemas/ItemsResponse"
   /v1/items:
     get:
       tags:
@@ -634,14 +598,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/Item"
+                $ref: "#/components/schemas/ItemsResponse"
   /v1/addresses:
     get:
       tags:
@@ -676,14 +633,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/KnownAddress"
+                $ref: "#/components/schemas/KnownAddressesResponse"
   /v1/storage:
     get:
       tags:
@@ -718,18 +668,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          data:
-                            type: object
-                          retrievedAt:
-                            type: string
-                            format: date-time
+                $ref: "#/components/schemas/StorageResponse"
         "404":
           description: No storage data available
           content:
@@ -817,17 +756,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          items:
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/StorageSlotItem"
+                $ref: "#/components/schemas/TransferContentsResponse"
               example:
                 success: true
                 data:
@@ -898,41 +827,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                            name:
-                              type: string
-                            type:
-                              type: string
-                              enum:
-                                - player
-                                - shop
-                            mcUuid:
-                              type: string
-                              nullable: true
-                              description: Player UUID linked to this target when the target represents a player
-                            mcName:
-                              type: string
-                              nullable: true
-                              description: Player name linked to this target when the target represents a player
-                            links:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  type:
-                                    type: string
-                                  value:
-                                    type: string
+                $ref: "#/components/schemas/TransferTargetsResponse"
         "401":
           description: Unauthorized
           content:
@@ -1197,23 +1092,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          count:
-                            type: integer
-                            description: Number of logs returned in this response
-                          total:
-                            type: integer
-                            description: Total number of logs matching the query
-                          logs:
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/ShopChangeLog"
+                $ref: "#/components/schemas/ShopChangeLogsResponse"
   /v1/reports/item-change-logs:
     get:
       tags:
@@ -1271,23 +1150,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          count:
-                            type: integer
-                            description: Number of logs returned in this response
-                          total:
-                            type: integer
-                            description: Total number of logs matching the query
-                          logs:
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/ItemChangeLog"
+                $ref: "#/components/schemas/ItemChangeLogsResponse"
   /v1/reports/price-change-logs:
     get:
       tags:
@@ -1345,23 +1208,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          count:
-                            type: integer
-                            description: Number of logs returned in this response
-                          total:
-                            type: integer
-                            description: Total number of logs matching the query
-                          logs:
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/PriceChangeLog"
+                $ref: "#/components/schemas/PriceChangeLogsResponse"
   /v1/reports/{id}:
     get:
       tags:
@@ -1450,12 +1297,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/ApiKeyInfo"
+                $ref: "#/components/schemas/ApiKeyInfoResponse"
               example:
                 success: true
                 data:
@@ -1532,12 +1374,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/ApiKeyUsage"
+                $ref: "#/components/schemas/ApiKeyUsageResponse"
               example:
                 success: true
                 data:
@@ -1607,19 +1444,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          count:
-                            type: integer
-                          logs:
-                            type: array
-                            items:
-                              $ref: "#/components/schemas/RequestLog"
+                $ref: "#/components/schemas/ApiKeyLogsResponse"
               example:
                 success: true
                 data:
@@ -1666,7 +1491,7 @@ paths:
             local code = krawlet.generateQuickCode()
             -- code.quickCode, code.expiresIn, code.message
       description: |
-        Generate a 6-digit quick code for your API key. Quick codes are short-lived (15 minutes) 
+        Generate a 6-digit quick code for your API key. Quick codes are short-lived (15 minutes)
         and allow easy key retrieval, especially useful for in-game chatbox interactions.
 
         **Warning:** Redeeming a quick code will regenerate your API key, invalidating the old one.
@@ -1687,12 +1512,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/QuickCodeGenerated"
+                $ref: "#/components/schemas/QuickCodeGeneratedResponse"
               example:
                 success: true
                 data:
@@ -1735,7 +1555,7 @@ paths:
             local result = krawlet.redeemQuickCode('123456')
             -- result.apiKey is your new key — save it securely!
       description: |
-        Redeem a 6-digit quick code to receive a full API key. Quick codes are generated via 
+        Redeem a 6-digit quick code to receive a full API key. Quick codes are generated via
         the `\krawlet api` chatbox command or the `/v1/apikey/quickcode/generate` endpoint.
 
         **Important:** Redeeming a quick code will generate a NEW API key, invalidating any previous key.
@@ -1768,12 +1588,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/QuickCodeRedeemed"
+                $ref: "#/components/schemas/QuickCodeRedeemedResponse"
               example:
                 success: true
                 data:
@@ -1831,14 +1646,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: array
-                        items:
-                          $ref: "#/components/schemas/Transfer"
+                $ref: "#/components/schemas/TransfersResponse"
               example:
                 success: true
                 data:
@@ -1958,37 +1766,32 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/Transfer"
-              example:
-                success: true
-                data:
-                  id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-                  status: pending
-                  error: null
-                  fromEntityId: d98440d6-5117-4ac8-bd50-70b086101e3e
-                  fromMcUuid: d98440d6-5117-4ac8-bd50-70b086101e3e
-                  fromMcName: Twijn
-                  fromName: Twijn
-                  toEntityId: a1234567-89ab-cdef-0123-456789abcdef
-                  toMcUuid: a1234567-89ab-cdef-0123-456789abcdef
-                  toMcName: Player2
-                  toName: Player2
-                  itemName: minecraft:diamond
-                  itemNbt: null
-                  memo: Weekly stipend
-                  quantity: 64
-                  quantityTransferred: 0
-                  timestamp: 2026-04-12T10:30:00.000Z
-                meta:
-                  timestamp: 2026-04-12T10:30:00.000Z
-                  elapsed: 18
-                  version: 1.0.0
-                  requestId: def-456
+                $ref: "#/components/schemas/TransferResponse"
+            example:
+              success: true
+              data:
+                id: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                status: pending
+                error: null
+                fromEntityId: d98440d6-5117-4ac8-bd50-70b086101e3e
+                fromMcUuid: d98440d6-5117-4ac8-bd50-70b086101e3e
+                fromMcName: Twijn
+                fromName: Twijn
+                toEntityId: a1234567-89ab-cdef-0123-456789abcdef
+                toMcUuid: a1234567-89ab-cdef-0123-456789abcdef
+                toMcName: Player2
+                toName: Player2
+                itemName: minecraft:diamond
+                itemNbt: null
+                memo: Weekly stipend
+                quantity: 64
+                quantityTransferred: 0
+                timestamp: 2026-04-12T10:30:00.000Z
+              meta:
+                timestamp: 2026-04-12T10:30:00.000Z
+                elapsed: 18
+                version: 1.0.0
+                requestId: def-456
         "400":
           description: Invalid payload or player data missing
           content:
@@ -2071,31 +1874,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        type: object
-                        properties:
-                          transfer:
-                            $ref: "#/components/schemas/Transfer"
-                          sourceEntity:
-                            type: object
-                            properties:
-                              id:
-                                type: string
-                              name:
-                                type: string
-                              type:
-                                type: string
-                                enum:
-                                  - player
-                                  - shop
-                                  - service
-                                  - public
-                              alias:
-                                type: string
+                $ref: "#/components/schemas/PublicStorageRequestResponse"
         "400":
           description: Invalid payload or API key player is not linked to an entity
           content:
@@ -2125,10 +1904,7 @@ paths:
       tags:
         - Transfers
       summary: Get transfer by ID
-      description: |
-        Retrieve details for a specific transfer. Only accessible by the sender or recipient.
-
-        **Requires authentication:** This endpoint requires a valid API key with an associated Minecraft account.
+      description: Retrieve a single transfer if the authenticated player is the sender or recipient.
       security:
         - ApiKeyAuth: []
       parameters:
@@ -2152,12 +1928,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/Transfer"
+                $ref: "#/components/schemas/TransferResponse"
         "401":
           description: Unauthorized
           content:
@@ -2225,12 +1996,7 @@ paths:
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: "#/components/schemas/SuccessResponse"
-                  - type: object
-                    properties:
-                      data:
-                        $ref: "#/components/schemas/Transfer"
+                $ref: "#/components/schemas/TransferResponse"
               example:
                 success: true
                 data:
@@ -2311,6 +2077,29 @@ components:
       scheme: bearer
       description: Ender storage authentication token
   schemas:
+    ResponseMeta:
+      type: object
+      required:
+        - timestamp
+        - elapsed
+        - version
+        - requestId
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Server timestamp
+        elapsed:
+          type: integer
+          description: Request processing time in milliseconds
+        version:
+          type: string
+          description: API version
+          example: 1.0.0
+        requestId:
+          type: string
+          format: uuid
+          description: Unique request identifier
     SuccessResponse:
       type: object
       required:
@@ -2325,41 +2114,544 @@ components:
           type: object
           description: Response data (varies by endpoint)
         meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ApiVersionResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
           type: object
           required:
-            - timestamp
-            - elapsed
             - version
-            - requestId
+            - endpoints
+            - documentation
+            - github
           properties:
+            version:
+              type: string
+            endpoints:
+              type: array
+              items:
+                type: string
+            documentation:
+              type: string
+            github:
+              type: string
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    HealthCheckResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - status
+            - timestamp
+            - uptime
+            - version
+            - name
+            - services
+          properties:
+            status:
+              type: string
+              enum: [healthy]
             timestamp:
               type: string
               format: date-time
-              description: Server timestamp
-            elapsed:
-              type: integer
-              description: Request processing time in milliseconds
+            uptime:
+              type: number
             version:
               type: string
-              description: API version
-              example: 1.0.0
-            requestId:
+            name:
               type: string
-              format: uuid
-              description: Unique request identifier
-            rateLimit:
+            services:
               type: object
-              description: Rate limit information (when authenticated)
+              required:
+                - kromerWs
+                - chatbox
+                - discord
               properties:
-                limit:
-                  type: integer
-                  description: Maximum requests per hour
-                remaining:
-                  type: integer
-                  description: Remaining requests in window
-                reset:
-                  type: integer
-                  description: Unix timestamp when limit resets
+                kromerWs:
+                  $ref: "#/components/schemas/BasicHealthServiceStatus"
+                chatbox:
+                  $ref: "#/components/schemas/BasicHealthServiceStatus"
+                discord:
+                  $ref: "#/components/schemas/BasicHealthServiceStatus"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    BasicHealthServiceStatus:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+        lastError:
+          type: string
+    DetailedHealthResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          required:
+            - status
+            - checks
+            - details
+            - services
+          properties:
+            status:
+              type: string
+              enum: [healthy, degraded]
+            checks:
+              type: object
+              required:
+                - database
+                - memory
+                - kromerWs
+                - chatbox
+                - discord
+              properties:
+                database:
+                  type: boolean
+                memory:
+                  type: boolean
+                kromerWs:
+                  type: boolean
+                chatbox:
+                  type: boolean
+                discord:
+                  type: boolean
+            details:
+              type: object
+              required:
+                - timestamp
+                - uptime
+                - version
+                - name
+                - memory
+                - node
+                - platform
+              properties:
+                timestamp:
+                  type: string
+                  format: date-time
+                uptime:
+                  type: number
+                version:
+                  type: string
+                name:
+                  type: string
+                memory:
+                  type: object
+                  required:
+                    - heapUsed
+                    - heapTotal
+                    - rss
+                  properties:
+                    heapUsed:
+                      type: string
+                    heapTotal:
+                      type: string
+                    rss:
+                      type: string
+                node:
+                  type: string
+                platform:
+                  type: string
+            services:
+              type: object
+              required:
+                - kromerWs
+                - chatbox
+                - discord
+              properties:
+                kromerWs:
+                  type: object
+                  required:
+                    - status
+                    - lastTransactionId
+                  properties:
+                    status:
+                      type: string
+                    lastError:
+                      type: string
+                    lastConnectedAt:
+                      type: string
+                      format: date-time
+                    failedAttempts:
+                      type: integer
+                    nextReconnectAt:
+                      type: string
+                      format: date-time
+                    lastTransactionId:
+                      type: integer
+                      nullable: true
+                chatbox:
+                  type: object
+                  required:
+                    - status
+                  properties:
+                    status:
+                      type: string
+                    lastError:
+                      type: string
+                    owner:
+                      type: string
+                    playerCount:
+                      type: integer
+                discord:
+                  type: object
+                  required:
+                    - status
+                  properties:
+                    status:
+                      type: string
+                    lastError:
+                      type: string
+                    username:
+                      type: string
+                    commandCount:
+                      type: integer
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    PlayersResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Player"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ShopsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Shop"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ShopResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/Shop"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ItemsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Item"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    KnownAddressesResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/KnownAddress"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    StoragePayload:
+      type: object
+      required: [data, retrievedAt]
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+        retrievedAt:
+          type: string
+          format: date-time
+    StorageResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/StoragePayload"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    TransferContentsPayload:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/StorageSlotItem"
+    TransferContentsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/TransferContentsPayload"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    TransferTargetLink:
+      type: object
+      required: [type, value]
+      properties:
+        type:
+          type: string
+        value:
+          type: string
+    TransferTarget:
+      type: object
+      required: [id, name, type, links]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [player, shop]
+        mcUuid:
+          type: string
+          nullable: true
+          description: Player UUID linked to this target when the target represents a player
+        mcName:
+          type: string
+          nullable: true
+          description: Player name linked to this target when the target represents a player
+        links:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransferTargetLink"
+    TransferTargetsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/TransferTarget"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ShopChangeLogsPayload:
+      type: object
+      required: [count, total, logs]
+      properties:
+        count:
+          type: integer
+        total:
+          type: integer
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ShopChangeLog"
+    ShopChangeLogsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/ShopChangeLogsPayload"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ItemChangeLogsPayload:
+      type: object
+      required: [count, total, logs]
+      properties:
+        count:
+          type: integer
+        total:
+          type: integer
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemChangeLog"
+    ItemChangeLogsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/ItemChangeLogsPayload"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    PriceChangeLogsPayload:
+      type: object
+      required: [count, total, logs]
+      properties:
+        count:
+          type: integer
+        total:
+          type: integer
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriceChangeLog"
+    PriceChangeLogsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/PriceChangeLogsPayload"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ApiKeyInfoResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/ApiKeyInfo"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ApiKeyUsageResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/ApiKeyUsage"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    ApiKeyLogsPayload:
+      type: object
+      required: [count, logs]
+      properties:
+        count:
+          type: integer
+        logs:
+          type: array
+          items:
+            $ref: "#/components/schemas/RequestLog"
+    ApiKeyLogsResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/ApiKeyLogsPayload"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    QuickCodeGeneratedResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/QuickCodeGenerated"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    QuickCodeRedeemedResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/QuickCodeRedeemed"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    TransfersResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Transfer"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    TransferResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/Transfer"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
+    PublicStorageSourceEntity:
+      type: object
+      required: [id, name, type]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [player, shop, service, public]
+        alias:
+          type: string
+    PublicStorageRequestPayload:
+      type: object
+      required: [transfer, sourceEntity]
+      properties:
+        transfer:
+          $ref: "#/components/schemas/Transfer"
+        sourceEntity:
+          $ref: "#/components/schemas/PublicStorageSourceEntity"
+    PublicStorageRequestResponse:
+      type: object
+      required: [success, data, meta]
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: "#/components/schemas/PublicStorageRequestPayload"
+        meta:
+          $ref: "#/components/schemas/ResponseMeta"
     ErrorResponse:
       type: object
       required:
@@ -2465,6 +2757,11 @@ components:
           nullable: true
         computerId:
           type: integer
+        features:
+          type: array
+          items:
+            type: string
+          nullable: true
         softwareName:
           type: string
           nullable: true
@@ -2524,6 +2821,11 @@ components:
           nullable: true
         shopBuysItem:
           type: boolean
+          nullable: true
+        features:
+          type: array
+          items:
+            type: string
           nullable: true
         noLimit:
           type: boolean
@@ -2718,7 +3020,7 @@ components:
             - modem
             - radio_tower
           default: modem
-          description: How the shop is being added (modem=direct connection, radio_tower=CC Radio Tower)
+          description: How the shop is being added (modem=wireless modem, radio_tower=classic peripherals tower)
         info:
           type: object
           required:
