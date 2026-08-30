@@ -5,8 +5,8 @@ import {
 } from 'discord.js';
 import { DiscordCommand, InteractionHelper, AutocompleteHelper } from './helpers/DiscordCommand';
 import { handlePlayerLookup, handleAddressLookup } from '../utils/commandShared';
-import playerManager from '../../lib/managers/playerManager';
-import { createLogger } from '../../lib/logger';
+import playerManager from '#lib/managers/playerManager';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('Discord');
 

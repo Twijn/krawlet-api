@@ -8,7 +8,7 @@ import {
   ComponentType,
 } from 'discord.js';
 import { getStandardFooter } from './embedFooter';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('Discord');
 

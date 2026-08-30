@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import playerManager from '../../lib/managers/playerManager';
+import playerManager from '#lib/managers/playerManager';
 
 const router = Router();
 

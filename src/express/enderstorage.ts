@@ -1,8 +1,8 @@
 import { Router, Request, Response, json } from 'express';
 import { writeFileSync, readFileSync, existsSync } from 'fs';
-import { authenticateApiKeyTier } from '../lib/authenticateApiKeyTier';
-import { EnderStoragePayload, isEnderStoragePayload } from '../lib/types';
-import { createLogger } from '../lib/logger';
+import { authenticateApiKeyTier } from '#lib/authenticateApiKeyTier';
+import { EnderStoragePayload, isEnderStoragePayload } from '#lib/types/EnderStorage';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('EnderStorage');
 const router = Router();

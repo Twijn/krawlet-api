@@ -19,7 +19,7 @@ import {
   getItemChangeLogs,
   getPriceChangeLogs,
 } from './reporter';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('ShopSync');
 const router = Router();

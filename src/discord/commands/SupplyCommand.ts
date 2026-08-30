@@ -1,6 +1,6 @@
 import { SlashCommandBuilder, CommandInteraction, codeBlock } from 'discord.js';
 import { DiscordCommand, InteractionHelper } from './helpers/DiscordCommand';
-import { formatKromerBalance } from '../../lib/formatKromer';
+import { formatKromerBalance } from '#lib/formatKromer';
 
 export default class SupplyCommand implements DiscordCommand {
   data = new SlashCommandBuilder()

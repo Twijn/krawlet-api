@@ -1,4 +1,4 @@
-import { RawTransfer, RawTransferNotification } from '../../lib/models';
+import { RawTransfer, RawTransferNotification } from '#lib/models';
 import { sendJson } from './protocol';
 import { authState } from './state';
 import { resolveClientEntityId } from './clientEntity';

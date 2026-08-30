@@ -7,11 +7,11 @@ import {
   ButtonStyle,
 } from 'discord.js';
 import { DiscordCommand, InteractionHelper } from './helpers/DiscordCommand';
-import { formatKromerBalance } from '../../lib/formatKromer';
+import { formatKromerBalance } from '#lib/formatKromer';
 import createTextTable from '../textTable';
-import playerManager from '../../lib/managers/playerManager';
+import playerManager from '#lib/managers/playerManager';
 import { addStandardFooter } from '../utils/embedFooter';
-import { getRichAddressesExcludingServerwelf } from '../../lib/richAddressesHelper';
+import { getRichAddressesExcludingServerwelf } from '#lib/richAddressesHelper';
 
 export default class BaltopCommand implements DiscordCommand {
   data = new SlashCommandBuilder()

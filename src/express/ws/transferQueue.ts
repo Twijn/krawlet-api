@@ -6,14 +6,14 @@ import {
   RawTransfer,
   Transfer,
   TransferStatus,
-} from '../../lib/models';
+} from '#lib/models';
 import { logPrefix, sendJson } from './protocol';
 import { authState } from './state';
 import { AuthState } from './types';
 import { reserveWorkerSlot, trackTransferFinished, trackTransferStarted } from './workerActivity';
-import { ApiKeyTier } from '../../lib/models/apikey.model';
+import { ApiKeyTier } from '#lib/models/apikey.model';
 import { broadcastTransferUpdate } from './clientBroadcast';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('WS');
 

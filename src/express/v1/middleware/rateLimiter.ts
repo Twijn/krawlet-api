@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { RequestWithRateLimit } from '../types/request';
-import { RequestLog } from '../../../lib/models/requestlog.model';
+import { RequestLog } from '#lib/models/requestlog.model';
 import { getClientIp } from '../utils/getClientIp';
 import { isIgnoredIp } from '../utils/ignoredIps';
-import { createLogger } from '../../../lib/logger';
+import { createLogger } from '#lib/logger';
 import {
   trackRateLimitExceeded,
   trackSuccessfulRequest,

@@ -6,13 +6,13 @@ import enderstorage from './enderstorage';
 import shopsync from './shopsync';
 import knownaddresses from './knownaddresses';
 import turtles from './turtles';
-import { getPackageName, getPackageVersion } from '../lib/packageData';
+import { getPackageName, getPackageVersion } from '#lib/packageData';
 
 // Import V1 router
 import v1Router from './v1';
 import docsRouter from './docs';
 import { initWebSockets } from './ws';
-import { createLogger } from '../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('Express');
 

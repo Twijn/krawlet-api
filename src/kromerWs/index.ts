@@ -1,10 +1,10 @@
-import kromer from '../lib/kromer';
-import playerManager from '../lib/managers/playerManager';
+import kromer from '#lib/kromer';
+import playerManager from '#lib/managers/playerManager';
 import { rcc } from '../chat';
 
-import { hook } from '../lib/webhook';
+import { hook } from '#lib/webhook';
 import { Transaction, TransactionWithMeta } from 'kromer';
-import { HATransactions } from '../lib/HATransactions';
+import { HATransactions } from '#lib/HATransactions';
 import formatTransaction, {
   parseTransactionData,
   TransactionData,
@@ -12,10 +12,10 @@ import formatTransaction, {
   formatKBCForDiscord,
   formatItemReturnForDiscord,
   formatListingForDiscord,
-} from '../lib/formatTransaction';
+} from '#lib/formatTransaction';
 import walletListeners from './walletListeners';
-import { formatKromerBalance } from '../lib/formatKromer';
-import { createLogger } from '../lib/logger';
+import { formatKromerBalance } from '#lib/formatKromer';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('KromerWs');
 

@@ -1,7 +1,7 @@
-import { Command } from '../../lib/types';
+import { Command } from '#lib/types';
 import { ChatboxCommand } from 'reconnectedchat';
 import { rcc } from '../index';
-import { formatListing, getShop, getShops, RawListing, searchListings } from '../../lib/models';
+import { formatListing, getShop, getShops, RawListing, searchListings } from '#lib/models';
 
 const subArguments = ['buy', 'b', 'sell', 's'];
 

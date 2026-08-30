@@ -1,7 +1,7 @@
 import { ChatInputCommandInteraction, SlashCommandBuilder } from 'discord.js';
 import { DiscordCommand, InteractionHelper } from './helpers/DiscordCommand';
 import { TransactionPaginator } from '../utils/transactionPaginator';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('Discord');
 

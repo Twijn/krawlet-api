@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { ApiKey } from '../../../lib/models/apikey.model';
+import { ApiKey } from '#lib/models/apikey.model';
 import { RequestWithRateLimit } from '../types/request';
-import { RequestLog } from '../../../lib/models/requestlog.model';
+import { RequestLog } from '#lib/models/requestlog.model';
 import { getClientIp } from '../utils/getClientIp';
-import { createLogger } from '../../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('Auth');
 

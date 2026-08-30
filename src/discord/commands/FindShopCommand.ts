@@ -7,12 +7,12 @@ import {
   cleanCodeBlockContent,
 } from 'discord.js';
 import { DiscordCommand, InteractionHelper, AutocompleteHelper } from './helpers/DiscordCommand';
-import { getShop, getShops, RawShop } from '../../lib/models/shop.model';
-import { searchListings, RawListing } from '../../lib/models/listing.model';
+import { getShop, getShops, RawShop } from '#lib/models/shop.model';
+import { searchListings, RawListing } from '#lib/models/listing.model';
 import { addStandardFooter } from '../utils/embedFooter';
 import { GenericPaginator, PaginationPage } from '../utils/genericPaginator';
 import createTextTable from '../textTable';
-import { formatKromerAmount } from '../../lib/formatKromer';
+import { formatKromerAmount } from '#lib/formatKromer';
 
 const code = (val: string | number): string => codeBlock(cleanCodeBlockContent(String(val)));
 

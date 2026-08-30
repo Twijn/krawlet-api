@@ -1,8 +1,8 @@
 import { Listener, ListenerResult } from './index';
 import { TransactionWithMeta } from 'kromer';
-import { updateShopAddress } from '../../lib/models';
-import playerManager from '../../lib/managers/playerManager';
-import { createLogger } from '../../lib/logger';
+import { updateShopAddress } from '#lib/models';
+import playerManager from '#lib/managers/playerManager';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('KromerWs');
 

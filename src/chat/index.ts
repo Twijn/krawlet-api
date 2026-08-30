@@ -1,9 +1,9 @@
 import { Client } from 'reconnectedchat';
 
 import commands from './commands';
-import playerManager from '../lib/managers/playerManager';
-import { RawTransfer } from '../lib/models';
-import { createLogger } from '../lib/logger';
+import playerManager from '#lib/managers/playerManager';
+import { RawTransfer } from '#lib/models';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('Chat');
 

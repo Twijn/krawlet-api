@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { sequelize } from '../../../lib/models/database';
-import { getPackageName, getPackageVersion } from '../../../lib/packageData';
+import { sequelize } from '#lib/models/database';
+import { getPackageName, getPackageVersion } from '#lib/packageData';
 import haTransactions from '../../../kromerWs';
 import { getChatStatus } from '../../../chat';
 import { getDiscordStatus } from '../../../discord';

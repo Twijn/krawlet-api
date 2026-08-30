@@ -8,7 +8,7 @@
  * - Item additions/removals
  */
 
-import { ShopSyncData, ShopSyncListing, ShopSyncPrice } from '../../lib/shopSyncValidate';
+import { ShopSyncData, ShopSyncListing, ShopSyncPrice } from '#lib/shopSyncValidate';
 import {
   getShop,
   getShopId,
@@ -23,8 +23,8 @@ import {
   ChangeLogQueryOptions,
   ItemChangeType,
   Listing,
-} from '../../lib/models';
-import { createLogger } from '../../lib/logger';
+} from '#lib/models';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('ShopSync');
 
@@ -769,7 +769,7 @@ export async function getShopChanges(limit?: number, shopId?: string): Promise<S
   }
 
   // Filter out records from hidden or old shops
-  const { Shop } = await import('../../lib/models/shop.model');
+  const { Shop } = await import('#lib/models/shop.model');
   const shopIds = [...new Set(records.map((r) => r.shopId))];
   const shops = await Shop.findAll({
     where: {
@@ -802,7 +802,7 @@ export async function getItemChanges(limit?: number, shopId?: string): Promise<I
   }
 
   // Filter out records from hidden or old shops
-  const { Shop } = await import('../../lib/models/shop.model');
+  const { Shop } = await import('#lib/models/shop.model');
   const shopIds = [...new Set(records.map((r) => r.shopId))];
   const shops = await Shop.findAll({
     where: {

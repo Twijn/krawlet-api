@@ -1,9 +1,9 @@
-import { Command, PlayerAddressResponse } from '../../lib/types';
+import { Command, PlayerAddressResponse } from '#lib/types';
 import { ChatboxCommand, User } from 'reconnectedchat';
 import { rcc } from '../index';
-import { getByName, getByUUID } from '../../lib/playerAddresses';
-import kromer from '../../lib/kromer';
-import { formatKromerBalance } from '../../lib/formatKromer';
+import { getByName, getByUUID } from '#lib/playerAddresses';
+import kromer from '#lib/kromer';
+import { formatKromerBalance } from '#lib/formatKromer';
 
 const command: Command = {
   name: 'balance',

@@ -1,11 +1,11 @@
-import { Command } from '../../lib/types';
+import { Command } from '#lib/types';
 import { ChatboxCommand } from 'reconnectedchat';
 
 import commands from './index';
 import { rcc } from '../index';
-import playerManager from '../../lib/managers/playerManager';
-import { ApiKey } from '../../lib/models/apikey.model';
-import { createLogger } from '../../lib/logger';
+import playerManager from '#lib/managers/playerManager';
+import { ApiKey } from '#lib/models/apikey.model';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('Chat');
 

@@ -7,12 +7,12 @@ import {
   ButtonInteraction,
   ComponentType,
 } from 'discord.js';
-import { formatKromerBalance } from '../../lib/formatKromer';
+import { formatKromerBalance } from '#lib/formatKromer';
 import createTextTable from '../textTable';
 import { Transaction } from 'kromer';
 import { getStandardFooter } from './embedFooter';
 import { InteractionHelper } from '../commands/helpers/DiscordCommand';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('Discord');
 

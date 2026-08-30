@@ -5,7 +5,7 @@ import {
 } from 'discord.js';
 import { DiscordCommand, InteractionHelper, AutocompleteHelper } from './helpers/DiscordCommand';
 import { handlePlayerLookup } from '../utils/commandShared';
-import playerManager from '../../lib/managers/playerManager';
+import playerManager from '#lib/managers/playerManager';
 
 export default class PlayerCommand implements DiscordCommand {
   data = new SlashCommandBuilder()

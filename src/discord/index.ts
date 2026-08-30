@@ -6,7 +6,7 @@ import {
   createAutocompleteHelper,
 } from './commands/helpers/DiscordCommand';
 import { APIError } from 'kromer';
-import { createLogger } from '../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('Discord');
 

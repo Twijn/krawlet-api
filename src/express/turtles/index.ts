@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import express from 'express';
-import { Turtle, TurtleStat } from '../../lib/models/index.js';
-import { createLogger } from '../../lib/logger';
+import { Turtle, TurtleStat } from '#lib/models/index.js';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('Turtles');
 const router = Router();

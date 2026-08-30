@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { Request, Response, NextFunction } from 'express';
-import { createLogger } from '../../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('HTTP');
 

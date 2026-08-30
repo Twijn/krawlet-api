@@ -1,12 +1,12 @@
-import { ApiKey } from '../../lib/models/apikey.model';
+import { ApiKey } from '#lib/models/apikey.model';
 import {
   EstorageEntity,
   EstorageEntityLink,
   findEntityById,
   findEntityByLookup,
   Transfer,
-} from '../../lib/models';
-import { isTransferPayload, isWsTransferNotificationPayload } from '../../lib/types/Transfer';
+} from '#lib/models';
+import { isTransferPayload, isWsTransferNotificationPayload } from '#lib/types/Transfer';
 import { Op } from 'sequelize';
 import { sendError, sendJson, logPrefix } from './protocol';
 import { queueTransferByEntities, cancelTransfer } from './transferQueue';
@@ -16,9 +16,9 @@ import { resolveClientEntityId } from './clientEntity';
 import {
   attachTransferNotifications,
   createTransferNotification,
-} from '../../lib/transferNotifications';
+} from '#lib/transferNotifications';
 import { broadcastTransferNotification } from './clientBroadcast';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('WS');
 

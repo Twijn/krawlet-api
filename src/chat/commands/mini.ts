@@ -1,4 +1,4 @@
-import { Command } from '../../lib/types';
+import { Command } from '#lib/types';
 import { ChatboxCommand } from 'reconnectedchat';
 import { rcc } from '../index';
 

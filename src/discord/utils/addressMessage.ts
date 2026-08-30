@@ -7,8 +7,8 @@ import {
   EmbedBuilder,
   MessageFlagsBitField,
 } from 'discord.js';
-import kromer from '../../lib/kromer';
-import { formatKromerBalance } from '../../lib/formatKromer';
+import kromer from '#lib/kromer';
+import { formatKromerBalance } from '#lib/formatKromer';
 import createTextTable from '../textTable';
 import { addStandardFooter } from './embedFooter';
 

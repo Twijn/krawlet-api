@@ -1,4 +1,4 @@
-import { RawTransfer } from '../../lib/models';
+import { RawTransfer } from '#lib/models';
 import { completeTransfer } from '../../chat';
 import { WebSocket } from 'ws';
 import { sendError, sendJson, logPrefix } from './protocol';
@@ -12,7 +12,7 @@ import {
 } from './types';
 import { updateTransferStatus } from './transferQueue';
 import { clearPendingStorageQuery, pendingStorageQueries } from './storageQuery';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('WS');
 

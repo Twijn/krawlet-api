@@ -1,6 +1,6 @@
-import { Command } from '../../lib/types';
+import { Command } from '#lib/types';
 import { ChatboxCommand } from 'reconnectedchat';
-import kromer from '../../lib/kromer';
+import kromer from '#lib/kromer';
 import { rcc } from '../index';
 
 const limit = 20;

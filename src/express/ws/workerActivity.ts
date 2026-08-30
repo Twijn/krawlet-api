@@ -1,4 +1,4 @@
-import { ApiKeyTier } from '../../lib/models/apikey.model';
+import { ApiKeyTier } from '#lib/models/apikey.model';
 
 const DEFAULT_MAX_CONCURRENT_WORKERS = 3;
 

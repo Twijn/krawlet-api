@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getKnownAddresses } from '../../lib/models';
+import { getKnownAddresses } from '#lib/models';
 
 const router = Router();
 

@@ -1,4 +1,4 @@
-import { RawTransfer } from '../../lib/models';
+import { RawTransfer } from '#lib/models';
 import { WebSocket } from 'ws';
 
 export type ClientMessage = {

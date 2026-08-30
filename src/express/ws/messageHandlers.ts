@@ -1,4 +1,4 @@
-import { ApiKey } from '../../lib/models/apikey.model';
+import { ApiKey } from '#lib/models/apikey.model';
 import { RawData, WebSocket } from 'ws';
 import { parseClientMessage, sendError, sendJson, logPrefix } from './protocol';
 import { authState } from './state';
@@ -6,7 +6,7 @@ import { AuthState, ClientAuthMessage, MessageHandler } from './types';
 import { workerMessageHandlers } from './workerHandlers';
 import { clientMessageHandlers } from './clientHandlers';
 import { resolveClientEntityId } from './clientEntity';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('WS');
 

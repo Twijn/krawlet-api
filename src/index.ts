@@ -1,6 +1,6 @@
 import 'dotenv/config';
-import { createLogger } from './lib/logger';
-import { startRequestLogRetentionJob } from './lib/requestLogRetention';
+import { createLogger } from '#lib/logger';
+import { startRequestLogRetentionJob } from '#lib/requestLogRetention';
 
 const log = createLogger('App');
 

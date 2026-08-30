@@ -1,6 +1,6 @@
 import { Router, json } from 'express';
-import { authenticateApiKeyTier } from '../../lib/authenticateApiKeyTier';
-import { ShopSyncData, validateShopSyncData } from '../../lib/shopSyncValidate';
+import { authenticateApiKeyTier } from '#lib/authenticateApiKeyTier';
+import { ShopSyncData, validateShopSyncData } from '#lib/shopSyncValidate';
 import {
   updateShop,
   getShop,
@@ -8,14 +8,14 @@ import {
   getListingsByShopId,
   ShopSourceType,
   shouldIgnoreModemShopSyncUpdate,
-} from '../../lib/models';
+} from '#lib/models';
 import {
   recordValidationFailure,
   recordSuccessfulPost,
   detectAndRecordShopChanges,
   detectAndRecordItemChanges,
 } from './reporter';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('ShopSync');
 const router = Router();

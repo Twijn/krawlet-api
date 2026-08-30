@@ -1,5 +1,5 @@
 import { EmbedBuilder } from 'discord.js';
-import { getPackageVersion } from '../../lib/packageData';
+import { getPackageVersion } from '#lib/packageData';
 
 /**
  * Centralized footer configuration for all Discord embeds

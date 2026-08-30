@@ -1,6 +1,6 @@
 import { RawData, WebSocket } from 'ws';
 import { AuthState, ClientMessage, ServerMessage } from './types';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('WS');
 

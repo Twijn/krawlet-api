@@ -1,13 +1,8 @@
 import { Router, Request, Response } from 'express';
-import playerManager from '../../../lib/managers/playerManager';
-import {
-  EstorageEntity,
-  EstorageEntityLink,
-  findEntityByLookup,
-  VALID_COLORS,
-} from '../../../lib/models';
-import authenticateApiKeyTier from '../../../lib/authenticateApiKeyTier';
-import { createLogger } from '../../../lib/logger';
+import playerManager from '#lib/managers/playerManager';
+import { EstorageEntity, EstorageEntityLink, findEntityByLookup, VALID_COLORS } from '#lib/models';
+import authenticateApiKeyTier from '#lib/authenticateApiKeyTier';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('API');
 const router = Router();

@@ -1,7 +1,7 @@
 import { ChatInputCommandInteraction } from 'discord.js';
 import { InteractionHelper } from '../commands/helpers/DiscordCommand';
 import { sendAddressMessage } from './addressMessage';
-import playerManager from '../../lib/managers/playerManager';
+import playerManager from '#lib/managers/playerManager';
 
 /**
  * Shared function for displaying player information

@@ -7,7 +7,7 @@
  * Example: RATE_LIMIT_IGNORE_IPS=192.168.1.100,10.0.0.1
  */
 
-import { createLogger } from '../../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('RateLimit');
 

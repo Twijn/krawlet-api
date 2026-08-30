@@ -12,8 +12,8 @@
  */
 
 import 'dotenv/config';
-import { ApiKey, ApiKeyTier } from '../lib/models/apikey.model';
-import { sequelize } from '../lib/models/database';
+import { ApiKey, ApiKeyTier } from '#lib/models/apikey.model';
+import { sequelize } from '#lib/models/database';
 
 const VALID_TIERS: ApiKeyTier[] = [
   'free',

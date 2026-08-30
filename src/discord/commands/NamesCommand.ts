@@ -2,7 +2,7 @@ import { ChatInputCommandInteraction, SlashCommandBuilder, EmbedBuilder } from '
 import { DiscordCommand, InteractionHelper } from './helpers/DiscordCommand';
 import { GenericPaginator, PaginationPage } from '../utils/genericPaginator';
 import createTextTable from '../textTable';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('Discord');
 

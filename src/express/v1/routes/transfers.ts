@@ -1,6 +1,6 @@
 import { Router, json } from 'express';
-import authenticateApiKeyTier from '../../../lib/authenticateApiKeyTier';
-import { isTransferNotificationPayload, isTransferPayload } from '../../../lib/types';
+import authenticateApiKeyTier from '#lib/authenticateApiKeyTier';
+import { isTransferNotificationPayload, isTransferPayload } from '#lib/types';
 import { RequestWithRateLimit } from '../types/request';
 import { queueTransferByEntities, queryWorkerStorage } from '../../ws';
 import { cancelTransfer } from '../../ws/transferQueue';
@@ -13,14 +13,14 @@ import {
   findEntityByPlayerUuid,
   RawTransfer,
   Transfer,
-} from '../../../lib/models';
+} from '#lib/models';
 import { Op } from 'sequelize';
 import { WorkerLimitExceededError } from '../../ws/workerActivity';
 import {
   attachTransferNotifications,
   createTransferNotification,
-} from '../../../lib/transferNotifications';
-import { createLogger } from '../../../lib/logger';
+} from '#lib/transferNotifications';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('API');
 const router = Router();

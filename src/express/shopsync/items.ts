@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { getListings } from '../../lib/models';
-import { createLogger } from '../../lib/logger';
+import { getListings } from '#lib/models';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('ShopSync');
 const router = Router();

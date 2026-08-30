@@ -7,8 +7,8 @@ import {
   trackStorageQueryFinished,
   trackStorageQueryStarted,
 } from './workerActivity';
-import { ApiKeyTier } from '../../lib/models/apikey.model';
-import { createLogger } from '../../lib/logger';
+import { ApiKeyTier } from '#lib/models/apikey.model';
+import { createLogger } from '#lib/logger';
 
 const STORAGE_QUERY_TIMEOUT_MS = 5000;
 const log = createLogger('WS');

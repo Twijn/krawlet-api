@@ -6,7 +6,7 @@ import { AUTH_TIMEOUT_MS, authState, getNextConnectionId } from './state';
 import { RoutedWebSocket } from './types';
 import { requeueTransferForRetry } from './transferQueue';
 import { rejectStorageQueriesForWorker } from './storageQuery';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('WS');
 

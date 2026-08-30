@@ -9,8 +9,8 @@ import {
   getReporterStats,
   getRecordById,
 } from '../../shopsync/reporter';
-import { getShopChangeLogs, getItemChangeLogs, getPriceChangeLogs } from '../../../lib/models';
-import { createLogger } from '../../../lib/logger';
+import { getShopChangeLogs, getItemChangeLogs, getPriceChangeLogs } from '#lib/models';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('API');
 const router = Router();

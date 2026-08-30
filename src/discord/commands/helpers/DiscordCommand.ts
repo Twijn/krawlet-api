@@ -13,7 +13,7 @@ import {
   AutocompleteInteraction,
 } from 'discord.js';
 import { KromerApi } from 'kromer';
-import kromer from '../../../lib/kromer';
+import kromer from '#lib/kromer';
 import { getStandardFooter } from '../../utils/embedFooter';
 
 export interface InteractionHelper {

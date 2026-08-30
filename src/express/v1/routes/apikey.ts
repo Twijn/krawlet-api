@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
 import { Op } from 'sequelize';
-import { RequestLog } from '../../../lib/models/requestlog.model';
-import { ApiKey } from '../../../lib/models/apikey.model';
+import { RequestLog } from '#lib/models/requestlog.model';
+import { ApiKey } from '#lib/models/apikey.model';
 import { RequestWithRateLimit } from '../types/request';
-import { createLogger } from '../../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('API');
 const router = Router();

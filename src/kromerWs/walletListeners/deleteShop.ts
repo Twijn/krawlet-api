@@ -1,6 +1,6 @@
 import { Listener, ListenerResult } from './index';
-import { deleteShopAddress } from '../../lib/models';
-import { createLogger } from '../../lib/logger';
+import { deleteShopAddress } from '#lib/models';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('KromerWs');
 

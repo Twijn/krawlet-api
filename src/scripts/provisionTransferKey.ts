@@ -2,10 +2,10 @@
 
 import 'dotenv/config';
 import { Transaction } from 'sequelize';
-import { ApiKey, ApiKeyTier } from '../lib/models/apikey.model';
-import { sequelize } from '../lib/models/database';
-import { EstorageEntity, VALID_COLORS } from '../lib/models/estorageentity.model';
-import { EstorageEntityLink } from '../lib/models/estoragelink.model';
+import { ApiKey, ApiKeyTier } from '#lib/models/apikey.model';
+import { sequelize } from '#lib/models/database';
+import { EstorageEntity, VALID_COLORS } from '#lib/models/estorageentity.model';
+import { EstorageEntityLink } from '#lib/models/estoragelink.model';
 
 type TargetType = 'shop' | 'service';
 

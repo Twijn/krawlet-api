@@ -1,4 +1,4 @@
-import { ApiKey, findEntityById, findEntityByPlayerUuid } from '../../lib/models';
+import { ApiKey, findEntityById, findEntityByPlayerUuid } from '#lib/models';
 
 export async function resolveClientEntityId(apiKeyId: string): Promise<string | null> {
   const apiKey = await ApiKey.findByPk(apiKeyId);

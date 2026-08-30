@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { getKnownAddresses } from '../../../lib/models';
-import { createLogger } from '../../../lib/logger';
+import { getKnownAddresses } from '#lib/models';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('API');
 const router = Router();

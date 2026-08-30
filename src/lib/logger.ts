@@ -2,7 +2,7 @@
  * Lightweight structured logger.
  *
  * Usage:
- *   import { createLogger } from '../lib/logger';
+ *   import { createLogger } from '#lib/logger';
  *   const log = createLogger('MyModule');
  *   log.info('Server started on port 3000');
  *   log.error('Something broke', err);

@@ -1,5 +1,5 @@
 import { RequestWithId } from '../middleware/requestId';
-import { ApiKeyTier } from '../../../lib/models/apikey.model';
+import { ApiKeyTier } from '#lib/models/apikey.model';
 
 export interface RequestApiKey {
   id: string;

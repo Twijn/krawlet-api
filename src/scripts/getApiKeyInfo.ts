@@ -12,9 +12,9 @@
 
 import 'dotenv/config';
 import { Op } from 'sequelize';
-import { ApiKey } from '../lib/models/apikey.model';
-import { RequestLog } from '../lib/models/requestlog.model';
-import { sequelize } from '../lib/models/database';
+import { ApiKey } from '#lib/models/apikey.model';
+import { RequestLog } from '#lib/models/requestlog.model';
+import { sequelize } from '#lib/models/database';
 
 interface GetKeyOptions {
   id?: string;

@@ -6,7 +6,7 @@ import {
   queueTransferByEntities,
 } from './transferQueue';
 import { queryWorkerStorage } from './storageQuery';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('WS');
 

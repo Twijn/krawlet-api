@@ -1,7 +1,7 @@
 import { REST, Routes } from 'discord.js';
 import { commands } from './commands';
 import dotenv from 'dotenv';
-import { createLogger } from '../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('Discord');
 

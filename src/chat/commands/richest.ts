@@ -1,9 +1,9 @@
-import { Command } from '../../lib/types';
+import { Command } from '#lib/types';
 import { ChatboxCommand } from 'reconnectedchat';
 import { rcc } from '../index';
-import playerManager from '../../lib/managers/playerManager';
-import { formatKromerBalance } from '../../lib/formatKromer';
-import { getRichAddressesExcludingServerwelf } from '../../lib/richAddressesHelper';
+import playerManager from '#lib/managers/playerManager';
+import { formatKromerBalance } from '#lib/formatKromer';
+import { getRichAddressesExcludingServerwelf } from '#lib/richAddressesHelper';
 
 const limit = 5;
 

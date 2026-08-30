@@ -1,5 +1,5 @@
 import { Router, json } from 'express';
-import authenticateApiKeyTier from '../../../lib/authenticateApiKeyTier';
+import authenticateApiKeyTier from '#lib/authenticateApiKeyTier';
 import {
   EstorageEntity,
   EstorageEntityLink,
@@ -7,13 +7,13 @@ import {
   findEntityByLookup,
   findEntityByPlayerUuid,
   VALID_COLORS,
-} from '../../../lib/models';
+} from '#lib/models';
 import { RequestWithRateLimit } from '../types/request';
 import { queueTransferByEntities } from '../../ws';
-import { RawTransfer } from '../../../lib/models/transfer.model';
+import { RawTransfer } from '#lib/models/transfer.model';
 import { WorkerLimitExceededError } from '../../ws/workerActivity';
 import { Op } from 'sequelize';
-import { createLogger } from '../../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('API');
 const router = Router();

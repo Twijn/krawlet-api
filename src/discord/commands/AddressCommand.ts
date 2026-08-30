@@ -5,7 +5,7 @@ import {
 } from 'discord.js';
 import { DiscordCommand, AutocompleteHelper, InteractionHelper } from './helpers/DiscordCommand';
 import { handleAddressLookup } from '../utils/commandShared';
-import { createLogger } from '../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('Discord');
 

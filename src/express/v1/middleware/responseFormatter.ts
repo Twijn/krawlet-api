@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ApiResponse } from '../types/responses';
-import { createLogger } from '../../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('HTTP');
 

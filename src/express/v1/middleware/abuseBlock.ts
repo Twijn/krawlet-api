@@ -1,13 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
-import {
-  isIpBlocked,
-  recordRequest,
-  checkForAbuse,
-  blockIpForAbuse,
-} from '../../../lib/abuseManager';
+import { isIpBlocked, recordRequest, checkForAbuse, blockIpForAbuse } from '#lib/abuseManager';
 import { getClientIp } from '../utils/getClientIp';
 import { isIgnoredIp } from '../utils/ignoredIps';
-import { createLogger } from '../../../lib/logger';
+import { createLogger } from '#lib/logger';
 
 const log = createLogger('AbuseBlock');
 

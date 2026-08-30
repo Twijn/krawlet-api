@@ -1,4 +1,4 @@
-import { Command } from '../../lib/types';
+import { Command } from '#lib/types';
 import balance from './balance';
 import findshop from './findshop';
 import krawlet from './krawlet';

@@ -1,11 +1,11 @@
-import { Command } from '../../lib/types';
+import { Command } from '#lib/types';
 import { ChatboxCommand } from 'reconnectedchat';
-import kromer from '../../lib/kromer';
+import kromer from '#lib/kromer';
 import { rcc } from '../index';
-import playerManager from '../../lib/managers/playerManager';
+import playerManager from '#lib/managers/playerManager';
 import { TransactionsResponse } from 'kromer';
-import { Player } from '../../lib/models';
-import formatTransaction from '../../lib/formatTransaction';
+import { Player } from '#lib/models';
+import formatTransaction from '#lib/formatTransaction';
 
 const limit = 6;
 
