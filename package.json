@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "pnpm run build && pnpm run start",
-    "build": "tsc",
+    "build": "tsc && tsc-alias",
     "start": "node dist/index.js",
     "clean": "rimraf dist",
     "migrate": "npx sequelize-cli db:migrate",
@@ -43,6 +43,7 @@
   },
   "private": true,
   "dependencies": {
+    "tsc-alias": "^1.8.16",
     "@scalar/express-api-reference": "^0.9.7",
     "cors": "^2.8.5",
     "discord.js": "^14.26.4",
