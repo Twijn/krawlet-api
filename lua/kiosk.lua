@@ -113,16 +113,16 @@ end
 
 local function getEnderStorageColors()
   if retrieveAndSelectEnderStorage() then
-    local succ, err = turtle.place()
+    local succ, err = turtle.placeDown()
     if not succ then
       err = "Failed to place ender storage: " .. (err or "Unknown error")
       printError(err)
       return false, err
     end
     sleep(0.25)
-    local estorage = peripheral.wrap("front")
+    local estorage = peripheral.wrap("bottom")
     local color1, color2, color3 = estorage.getFrequency()
-    succ, err = turtle.dig()
+    succ, err = turtle.digDown()
     if not succ then
       err = "Failed to dig ender storage: " .. (err or "Unknown error")
       printError(err)
@@ -145,24 +145,30 @@ local function run()
 
   if command == "kk" .. commandNumber then
     if args[1] == "storage" then
-      local colors, errMsg = getEnderStorageColors()
-      if colors then
-        print("Ender storage colors: " .. table.concat(colors, ", "))
-        local response, errMsg = post("players/" .. pkt.user.uuid .. "/link", { colors = colors })
-        if response then
-          print(textutils.serialize(response))
-          turtle.drop()
-          chatbox.tell(user, "<blue>Here is your private ender storage!</blue><br><gray>Setup a small modem network with input inventories (chests, barrels, etc), the ender storage, and a computer and run <white>wget https://krawlet.cc/klog-cli.lua</white> for a simple Klog request manager.</gray>", BOT_NAME, "minimessage")
+      if args[2] and args[2]:lower() == "confirm" then
+        chatbox.tell(user, "<gray>Registering Klog ender storage...</gray>", BOT_NAME, "minimessage")
+
+        local colors, errMsg = getEnderStorageColors()
+        if colors then
+          print("Ender storage colors: " .. table.concat(colors, ", "))
+          local response, errMsg = post("players/" .. pkt.user.uuid .. "/link", { colors = colors })
+          if response then
+            print(textutils.serialize(response))
+            turtle.drop()
+            chatbox.tell(user, "<blue>Here is your private ender storage!</blue><br><gray>Setup a small modem network with input inventories (chests, barrels, etc), the ender storage, and a computer and run <white>wget https://krawlet.cc/klog-cli.lua</white> for a simple Klog request manager.</gray>", BOT_NAME, "minimessage")
+          else
+            chatbox.tell(user, "<red>" .. errMsg .. "</red>", BOT_NAME, "minimessage")
+          end
         else
-          chatbox.tell(user, "<red>" .. errMsg .. "</red>", BOT_NAME, "minimessage")
+          if errMsg then
+            errMsg = "<red>An error occurred!</red>" .. (errMsg and (" <gray>" .. errMsg .. "</gray>") or "")
+          else
+            errMsg = "<red>We are currently out of ender storages!</red> <gray>Please use a different kiosk or ask Twijn to refill " .. kioskName .. ".</gray>"
+          end
+          chatbox.tell(user, errMsg, BOT_NAME, "minimessage")
         end
       else
-        if errMsg then
-          errMsg = "<red>An error occurred!</red>" .. (errMsg and (" <gray>" .. errMsg .. "</gray>") or "")
-        else
-          errMsg = "<red>We are currently out of ender storages!</red> <gray>Please use a different kiosk or ask Twijn to refill " .. kioskName .. ".</gray>"
-        end
-        chatbox.tell(user, errMsg, BOT_NAME, "minimessage")
+        chatbox.tell(user, string.format("<blue>Confirm Klog registration with:</blue><br><br>    <white>\\kk%s storage confirm</white><br><br>  <gray>You will receive a registered Klog ender storage, if your Minecraft player is not already associated with one.</gray><br><red>Do not continue if you are not near <bold>%s</bold>!</red>", commandNumber, kioskName), BOT_NAME, "minimessage")
       end
     else
       chatbox.tell(user, "<red>Unknown kiosk command.</red> <gray>Usage: \\kk" .. commandNumber .. " storage</gray>", BOT_NAME, "minimessage")
@@ -171,11 +177,11 @@ local function run()
 end
 
 local function drawMonitors()
-  local topMonitor = peripheral.wrap("top")
-  if topMonitor then
-    local monX, monY = topMonitor.getSize()
-    topMonitor.setCursorPos(2, monY)
-    topMonitor.write(string.format("\\kk%s storage", commandNumber))
+  local mon = peripheral.find("monitor")
+  if mon then
+    local monX, monY = mon.getSize()
+    mon.setCursorPos(2, monY)
+    mon.write(string.format("\\kk%s storage", commandNumber))
   end
 end
 
