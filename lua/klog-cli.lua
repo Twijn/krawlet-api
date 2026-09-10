@@ -25,7 +25,6 @@ local motd = {
   {"Welcome to Klog CLI!", colors.blue},
   {"Type 'help' for a list of commands.", colors.lightGray},
   {"Use 'transfer <target> <item> <quantity>' to transfer items to another ender storage target.", colors.lightGray},
-  {"Use '\\klog optIn' in-game to opt in to in-game notifications for transfers", colors.white},
 }
 
 local function downloadFile(url, filename)
@@ -175,6 +174,9 @@ if settings.get("klog.outputInv") then
   end
 end
 
+local CHATBOX_COMMAND_PREFIX = settings.get("klog.chatboxCommandPrefix") or ""
+local BOT_NAME = settings.get("klog.botName") or "&9klog-cli"
+
 local klog = createKlog(peripheral.getName(enderStorage), {
   apiKey = settings.get("klog.apiKey"),
   apiUrl = settings.get("klog.apiUrl") or nil,
@@ -186,6 +188,12 @@ if transferTargets == false then
   transferTargets = {}
 end
 
+---@class ItemCache
+---@field name string The item's registry name (e.g. "minecraft:diamond")
+---@field displayName string The item's human-readable display name (e.g. "Diamond")
+---@field count integer Total count across all scanned inventories
+
+---@type table<string, ItemCache>
 local items = {}
 
 local function rescanItems()
@@ -193,19 +201,36 @@ local function rescanItems()
     return false, "Ender storage not available"
   end
 
+  ---@type table<string, ItemCache>
   local newItems = {}
 
-  local stagedItems = enderStorage.list()
-  for _, item in pairs(stagedItems) do
-    newItems[item.name] = (newItems[item.name] or 0) + item.count
-  end
-
-  for i, chest in pairs(klog.getInputChests()) do
-    local chestItems = chest.list()
-    for slot, item in pairs(chestItems) do
-      newItems[item.name] = (newItems[item.name] or 0) + item.count
+  -- Scan an inventory, counting items and resolving display names for new entries.
+  local function scanInv(inv)
+    if not inv or type(inv.list) ~= "function" then return end
+    local ok, listing = pcall(inv.list, inv)
+    if not ok or not listing then return end
+    for slot, item in pairs(listing) do
+      if not newItems[item.name] then
+        -- Prefer a cached display name from a previous rescan, then try getItemDetail
+        local displayName = (items[item.name] and items[item.name].displayName)
+          or item.displayName
+          or item.name
+        if displayName == item.name and type(inv.getItemDetail) == "function" then
+          local ok2, detail = pcall(inv.getItemDetail, slot)
+          if ok2 and detail and detail.displayName then
+            displayName = detail.displayName
+          end
+        end
+        newItems[item.name] = { name = item.name, displayName = displayName, count = 0 }
+      end
+      newItems[item.name].count = newItems[item.name].count + item.count
     end
   end
+
+  scanInv(enderStorage)
+  for _, chest in pairs(klog.getInputChests()) do scanInv(chest) end
+  local outputInv, _ = getOutputInventory()
+  scanInv(outputInv)
 
   items = newItems
 
@@ -222,9 +247,187 @@ local function rescanItemLoop()
   end
 end
 
+-- Search ender storage, input chests, and output inventory for items matchin-- Search ender storage, input chests, and output inventory for items matching a
+-- name or display name query.
+---@param query string Item registry name or display name to search for
+---@return table<string, ItemCache> foundItems Map keyed by registry name (with optional .nbt suffix)
+local function findItemsAcrossStorages(query)
+  ---@type table<string, ItemCache>
+  local foundItems = {}
+  local queryLower = query:lower()
+
+  local function scanInventory(inv)
+    if not inv or type(inv.list) ~= "function" then return end
+    local ok, listing = pcall(inv.list, inv)
+    if not ok or not listing then return end
+    for slot, item in pairs(listing) do
+      -- Prefer display name from items cache, then getItemDetail, then listing field, then raw name
+      local displayName = (items[item.name] and items[item.name].displayName)
+        or item.displayName
+        or item.name
+      if displayName == item.name and type(inv.getItemDetail) == "function" then
+        local ok2, detail = pcall(inv.getItemDetail, slot)
+        if ok2 and detail and detail.displayName then
+          displayName = detail.displayName
+        end
+      end
+      local nameLower = item.name:lower()
+      local displayLower = displayName:lower()
+      -- Fuzzy: exact match on either field, or query is a substring of either
+      local matches = nameLower == queryLower
+        or displayLower == queryLower
+        or nameLower:find(queryLower, 1, true) ~= nil
+        or displayLower:find(queryLower, 1, true) ~= nil
+      if matches then
+        local key = item.name .. (item.nbt and "." .. item.nbt or "")
+        if not foundItems[key] then
+          foundItems[key] = { name = item.name, displayName = displayName, count = 0 }
+        end
+        foundItems[key].count = foundItems[key].count + item.count
+      end
+    end
+  end
+
+  if enderStorage then scanInventory(enderStorage) end
+  for _, chest in pairs(klog.getInputChests()) do scanInventory(chest) end
+  local outputInv, _ = getOutputInventory()
+  if outputInv then scanInventory(outputInv) end
+
+  return foundItems
+end
+
+-- Build a list of item lines suitable for chatbox (MiniMessage format).
+-- Returns a string or nil if items is empty.
+local function formatItemListForChat()
+  local lines = {}
+  for _, entry in pairs(items) do
+    table.insert(lines, string.format("&7x%d &f%s", entry.count, entry.displayName))
+  end
+  if #lines == 0 then return nil end
+  table.sort(lines)
+  return table.concat(lines, "\n")
+end
+
+-- Move up to `quantity` of `itemName` from the output inventory into the ender
+-- storage so that klog.transfer() can pick them up. Silently does nothing if
+-- the output inventory is unavailable or the item isn't present there.
+local function moveOutputToEstorage(itemName, quantity)
+  local outputInv, _ = getOutputInventory()
+  if not outputInv or not enderStorage then return end
+
+  local estorageName = peripheral.getName(enderStorage)
+  local remaining = quantity
+
+  local ok, listing = pcall(outputInv.list)
+  if not ok or not listing then return end
+
+  local moves = {}
+  for slot, item in pairs(listing) do
+    if remaining <= 0 then break end
+    if item.name == itemName then
+      local toMove = math.min(item.count, remaining)
+      table.insert(moves, function()
+        local ok2, moved = pcall(outputInv.pushItems, estorageName, slot, toMove)
+        if ok2 and type(moved) == "number" then
+          remaining = remaining - moved
+        end
+      end)
+      remaining = remaining - toMove -- optimistic, corrected above if push fails
+    end
+  end
+
+  if #moves > 0 then
+    parallel.waitForAll(table.unpack(moves))
+  end
+end
+
+---@class TransferReporter
+---@field err  fun(msg: string)
+---@field mess fun(msg: string)
+---@field succ fun(msg: string)
+
+---Shared transfer logic used by both the terminal command and chatbox handler.
+---@param target string Transfer target name (exact, case-insensitive matched against transferTargets)
+---@param itemQuery string Item name or display name (fuzzy)
+---@param quantity integer|nil Quantity to transfer, or nil to transfer all available
+---@param memo string|nil Optional memo
+---@param reporter TransferReporter Callbacks for reporting results to the caller
+local function doTransfer(target, itemQuery, quantity, memo, reporter)
+  local resolvedTarget = nil
+  for _, targetName in ipairs(transferTargets) do
+    if targetName:lower() == target:lower() then
+      resolvedTarget = targetName
+      break
+    end
+  end
+
+  if not resolvedTarget then
+    reporter.err("Target '" .. target .. "' not found.")
+    return
+  end
+
+  local foundItems = findItemsAcrossStorages(itemQuery)
+
+  local distinctCount = 0
+  for _ in pairs(foundItems) do distinctCount = distinctCount + 1 end
+
+  if distinctCount == 0 then
+    reporter.err(string.format("No items found matching '%s'.", itemQuery))
+    return
+  elseif distinctCount > 1 then
+    reporter.mess("Multiple items matched:")
+    for _, entry in pairs(foundItems) do
+      reporter.mess(string.format("  x%d - %s (%s)", entry.count, entry.displayName, entry.name))
+    end
+    reporter.err("Be more specific.")
+    return
+  end
+
+  local _, foundItem = next(foundItems)
+
+  if not foundItem then
+    reporter.err(string.format("No items found matching '%s'.", itemQuery))
+    return
+  end
+
+  local transferAmount = quantity or foundItem.count
+
+  if transferAmount <= 0 then
+    reporter.err("Amount must be a positive number.")
+    return
+  end
+
+  if transferAmount > foundItem.count then
+    reporter.err(string.format("Not enough stock. Available: x%d.", foundItem.count))
+    return
+  end
+
+  reporter.mess(string.format("Transferring x%d %s to %s...", transferAmount, foundItem.displayName, resolvedTarget))
+
+  -- Items in the output inventory aren't visible to klog.transfer(), so stage
+  -- them into the ender storage first.
+  moveOutputToEstorage(foundItem.name, transferAmount)
+
+  local xfr, xfrErr = klog.transfer({
+    to       = resolvedTarget,
+    itemName = foundItem.name,
+    quantity = transferAmount,
+    memo     = memo,
+  })
+
+  if not xfr then
+    reporter.err("Transfer failed: " .. (xfrErr or "Unknown error"))
+  else
+    reporter.succ(string.format("Transfer complete! Sent x%d %s to %s.",
+      xfr.quantityTransferred or transferAmount,
+      foundItem.displayName,
+      resolvedTarget))
+  end
+end
+
 local function getItemNames()
   local itemNames = {}
-  for itemName, _ in pairs(items) do
+  for itemName in pairs(items) do
     table.insert(itemNames, itemName)
   end
   return itemNames
@@ -364,8 +567,10 @@ local function closeTransferWindow()
     transferWindow.clear()
     transferWindow = nil
   end
-  term.setCursorPos(returnCursorX, returnCursorY)
-  term.setCursorBlink(returnCursorBlink)
+  if returnCursorX and returnCursorY then
+    term.setCursorPos(returnCursorX, returnCursorY)
+    term.setCursorBlink(returnCursorBlink or false)
+  end
   mainWindow.redraw()
 end
 
@@ -482,14 +687,15 @@ local commands = {
     end,
     execute = function(args, ctx)
       local target = args[1]
-      local item = args[2]
+      local itemQuery = args[2]
       local quantity = tonumber(args[3])
       local memo = args[4] or nil
       for i = 5, #args do
         if not memo then memo = "" end
         memo = memo .. " " .. args[i]
       end
-      if not target or not item then
+
+      if not target or not itemQuery then
         ctx.err("transfer <target> <item> <quantity> [memo]")
         return
       end
@@ -499,12 +705,7 @@ local commands = {
         return
       end
 
-      klog.transfer({
-        to = target,
-        itemName = item,
-        quantity = quantity,
-        memo = memo,
-      }, ctx)
+      doTransfer(target, itemQuery, quantity, memo, ctx)
     end,
   },
   rescan = {
@@ -520,7 +721,7 @@ local commands = {
     end,
   },
   ["list-items"] = {
-    description = "List all items currently in input storages and the Klog ender storage",
+    description = "List all items currently in input storages, the Klog ender storage, and the output inventory",
     category = "general",
     aliases = { "list", "ls" },
     execute = function(args, ctx)
@@ -529,9 +730,9 @@ local commands = {
         printError("Failed to rescan items: " .. (error or "Unknown error"))
         return
       end
-      local p = ctx.pager("Items in Inputs + Klog Estorage")
-      for itemName, quantity in pairs(items) do
-        p.print(" x" .. quantity .. " - " .. itemName)
+      local p = ctx.pager("Items in Inputs + Klog Estorage + Output")
+      for _, entry in pairs(items) do
+        p.print(string.format(" x%d - %s", entry.count, entry.displayName))
       end
       p.show()
     end,
@@ -612,15 +813,84 @@ local function safe(fn, name)
 end
 
 local function initCmd()
-  cmd("klog-cli", "1.3.0", commands)
+  sleep(0.5)
+  cmd("klog-cli", "1.4.0", commands)
 end
 
+local function cbTell(user, message)
+  return chatbox.tell(user, message, BOT_NAME, "format")
+end
+
+local function sendUsage(user, command, args)
+  return cbTell(user, string.format("&cUsage: ^%s %s", CHATBOX_COMMAND_PREFIX .. command, args or ""))
+end
+
+local function handleChatboxCommands()
+  if not chatbox or not chatbox.hasCapability("command") then
+    term.setTextColor(colors.yellow)
+    print("Chatbox not available. Run '/chatbox license' in-game to set up a Chatbox license.")
+    term.setTextColor(colors.white)
+    while true do sleep(600) end
+  end
+
+  local licenseOwner = chatbox.getLicenseOwner()
+  while true do
+    local e, user, command, args = os.pullEvent("command")
+
+    if not licenseOwner then
+        printError("No chatbox license set. Run '/chatbox license' in-game to set up a Chatbox license.")
+        return
+    end
+
+    if user:lower() ~= licenseOwner:lower() then
+        return
+    end
+
+    command = command:lower();
+
+    if command == CHATBOX_COMMAND_PREFIX .. "ls" then
+      local success, err = rescanItems()
+      if not success then
+        cbTell(user, "&cFailed to scan items: " .. (err or "Unknown error"))
+        goto continue
+      end
+      local body = formatItemListForChat()
+      if not body then
+        cbTell(user, "&7No items found.")
+      else
+        cbTell(user, "&9Items in storage:\n" .. body)
+      end
+
+    elseif command == CHATBOX_COMMAND_PREFIX .. "transfer" then
+      if #args < 2 then
+        sendUsage(user, "transfer", "<target> <item> [amount] [memo]")
+        goto continue
+      end
+
+      local target = args[1]
+      local itemQuery = args[2]
+      local amount = args[3] and tonumber(args[3]) or nil
+      ---@type string | nil
+      local memo = ""
+      for i = 4, #args do memo = memo .. " " .. args[i] end
+      memo = memo ~= "" and memo:match("^%s*(.-)%s*$") or nil
+
+      doTransfer(target, itemQuery, amount, memo, {
+        err  = function(msg) cbTell(user, "&c" .. msg) end,
+        mess = function(msg) cbTell(user, "&7" .. msg) end,
+        succ = function(msg) cbTell(user, "&a" .. msg) end,
+      })
+    end
+    ::continue::
+  end
+end
 
 parallel.waitForAny(
   safe(initCmd, "initCmd"),
   safe(rescanItemLoop, "rescanItemLoop"),
   safe(incomingTransferLoop, "incomingTransferLoop"),
-  safe(websocketListenerLoop, "websocketListenerLoop")
+  safe(websocketListenerLoop, "websocketListenerLoop"),
+  safe(handleChatboxCommands, "handleChatboxCommands")
 )
 
 klog.close()
