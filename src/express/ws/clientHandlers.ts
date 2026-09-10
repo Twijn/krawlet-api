@@ -18,6 +18,7 @@ import {
   createTransferNotification,
 } from '#lib/transferNotifications';
 import { broadcastTransferNotification } from './clientBroadcast';
+import { attachMinecraftShorthand, RawTransferWithMinecraftShorthand } from './transferShorthand';
 import { createLogger } from '#lib/logger';
 
 const log = createLogger('WS');
@@ -411,77 +412,8 @@ export const clientMessageHandlers: Record<string, MessageHandler> = {
   },
 };
 
-type PlayerLink = {
-  mcUuid?: string;
-  mcName?: string;
-};
-
-type RawTransferWithMinecraftShorthand = ReturnType<Transfer['raw']> & {
-  fromMcUuid?: string;
-  fromMcName?: string;
-  toMcUuid?: string;
-  toMcName?: string;
-};
-
-function mapPlayerLinks(links: EstorageEntityLink[]): Map<string, PlayerLink> {
-  const byEntity = new Map<string, PlayerLink>();
-
-  for (const link of links) {
-    if (link.linkType !== 'player_uuid') {
-      continue;
-    }
-
-    if (!byEntity.has(link.entityId)) {
-      byEntity.set(link.entityId, {
-        mcUuid: link.linkValue,
-        mcName: link.linkName ?? undefined,
-      });
-    }
-  }
-
-  return byEntity;
-}
-
-async function attachMinecraftShorthand(
-  transfers: ReturnType<Transfer['raw']>[],
-): Promise<RawTransferWithMinecraftShorthand[]> {
-  if (transfers.length === 0) {
-    return [];
-  }
-
-  const entityIds = Array.from(
-    new Set(transfers.flatMap((transfer) => [transfer.fromEntityId, transfer.toEntityId])),
-  );
-
-  const links = await EstorageEntityLink.findAll({
-    where: {
-      entityId: {
-        [Op.in]: entityIds,
-      },
-      linkType: 'player_uuid',
-    },
-    attributes: ['entityId', 'linkType', 'linkValue', 'linkName'],
-    order: [
-      ['isPrimary', 'DESC'],
-      ['createdAt', 'ASC'],
-    ],
-  });
-
-  const playerLinks = mapPlayerLinks(links);
-
-  return transfers.map((transfer) => {
-    const fromLink = playerLinks.get(transfer.fromEntityId);
-    const toLink = playerLinks.get(transfer.toEntityId);
-
-    return {
-      ...transfer,
-      fromMcUuid: fromLink?.mcUuid,
-      fromMcName: fromLink?.mcName,
-      toMcUuid: toLink?.mcUuid,
-      toMcName: toLink?.mcName,
-    };
-  });
-}
+// RawTransferWithMinecraftShorthand and attachMinecraftShorthand are re-exported from transferShorthand.ts
+export type { RawTransferWithMinecraftShorthand };
 
 function serializeTransferTargets(entities: EstorageEntity[]) {
   return entities.map((entity) => {

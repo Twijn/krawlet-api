@@ -2,6 +2,7 @@ import { RawTransfer, RawTransferNotification } from '#lib/models';
 import { sendJson } from './protocol';
 import { authState } from './state';
 import { resolveClientEntityId } from './clientEntity';
+import { attachMinecraftShorthand } from './transferShorthand';
 
 function transferMatchesEntity(transfer: RawTransfer, entityId: string): boolean {
   return transfer.fromEntityId === entityId || transfer.toEntityId === entityId;
@@ -29,9 +30,10 @@ export async function broadcastTransferUpdate(transfer: RawTransfer): Promise<vo
       continue;
     }
 
+    const [serializedTransfer] = await attachMinecraftShorthand([transfer]);
     sendJson(ws, {
       type: 'transfer_update',
-      payload: transfer,
+      payload: serializedTransfer,
     });
   }
 }
