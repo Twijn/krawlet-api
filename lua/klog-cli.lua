@@ -805,7 +805,7 @@ end
 
 local function initCmd()
   sleep(0.5)
-  cmd("klog-cli", "1.4.0", commands)
+  cmd("klog-cli", "1.4.1", commands)
 end
 
 local function cbTell(user, message)
