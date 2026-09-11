@@ -834,16 +834,17 @@ local function handleChatboxCommands()
   end
 
   local licenseOwner = chatbox.getLicenseOwner()
+
+  if not licenseOwner then
+    printError("No chatbox license set. Run '/chatbox license' in-game to set up a Chatbox license.")
+    while true do sleep(600) end
+  end
+
   while true do
     local e, user, command, args = os.pullEvent("command")
 
-    if not licenseOwner then
-        printError("No chatbox license set. Run '/chatbox license' in-game to set up a Chatbox license.")
-        return
-    end
-
     if user:lower() ~= licenseOwner:lower() then
-        return
+      goto continue
     end
 
     command = command:lower();
