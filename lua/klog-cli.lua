@@ -247,7 +247,7 @@ local function rescanItemLoop()
   end
 end
 
--- Search ender storage, input chests, and output inventory for items matchin-- Search ender storage, input chests, and output inventory for items matching a
+-- Search ender storage, input chests, and output inventory for items matching
 -- name or display name query.
 ---@param query string Item registry name or display name to search for
 ---@return table<string, ItemCache> foundItems Map keyed by registry name (with optional .nbt suffix)
@@ -789,7 +789,7 @@ local commands = {
 }
 
 local disableMotdValue = settings.get("klog.disableMotd")
-if not disableMotdValue and disableMotdValue ~= "false" then
+if not disableMotdValue and disableMotdValue == "false" then
   for _, motdLine in pairs(motd) do
     local text = motdLine[1]
     local color = motdLine[2] or colors.white
@@ -801,15 +801,6 @@ end
 
 if outputInventory then
   emptyEstorageToOutput()
-end
-
-local function safe(fn, name)
-  return function()
-    local ok, err = pcall(fn)
-    if not ok then
-      printError("Error in " .. tostring(name) .. ": " .. tostring(err))
-    end
-  end
 end
 
 local function initCmd()
@@ -886,12 +877,27 @@ local function handleChatboxCommands()
   end
 end
 
+local function safe(fn, name, restartable)
+  return function()
+    while true do
+      local ok, err = pcall(fn)
+      if not ok then
+        printError("Error in " .. tostring(name) .. ": " .. tostring(err))
+        sleep(1)
+      else
+        return
+      end
+      if not restartable then return end
+    end
+  end
+end
+
 parallel.waitForAny(
-  safe(initCmd, "initCmd"),
-  safe(rescanItemLoop, "rescanItemLoop"),
-  safe(incomingTransferLoop, "incomingTransferLoop"),
-  safe(websocketListenerLoop, "websocketListenerLoop"),
-  safe(handleChatboxCommands, "handleChatboxCommands")
+  safe(initCmd, "initCmd", false),
+  safe(rescanItemLoop, "rescanItemLoop", true),
+  safe(incomingTransferLoop, "incomingTransferLoop", true),
+  safe(websocketListenerLoop, "websocketListenerLoop", true),
+  safe(handleChatboxCommands, "handleChatboxCommands", true)
 )
 
 klog.close()
