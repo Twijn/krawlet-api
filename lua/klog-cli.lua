@@ -789,7 +789,7 @@ local commands = {
 }
 
 local disableMotdValue = settings.get("klog.disableMotd")
-if not disableMotdValue and disableMotdValue == "false" then
+if not disableMotdValue and disableMotdValue ~= "false" then
   for _, motdLine in pairs(motd) do
     local text = motdLine[1]
     local color = motdLine[2] or colors.white
