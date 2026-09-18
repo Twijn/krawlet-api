@@ -789,7 +789,7 @@ local commands = {
 }
 
 local disableMotdValue = settings.get("klog.disableMotd")
-if not disableMotdValue and disableMotdValue ~= "false" then
+if not disableMotdValue or disableMotdValue ~= "true" then
   for _, motdLine in pairs(motd) do
     local text = motdLine[1]
     local color = motdLine[2] or colors.white
@@ -805,7 +805,7 @@ end
 
 local function initCmd()
   sleep(0.5)
-  cmd("klog-cli", "1.4.1", commands)
+  cmd("klog-cli", "1.4.2", commands)
 end
 
 local function cbTell(user, message)
