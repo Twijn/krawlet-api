@@ -165,7 +165,11 @@ haTransactions.on(async (transaction: TransactionWithMeta) => {
         const type = result.success ? 'message' : 'error';
         const message = result.message || 'No message provided';
 
-        if (!transaction.meta?.entries.find((x) => ['message', 'error'].includes(x.name))) {
+        if (
+          !transaction.meta?.entries.find((x) =>
+            ['message', 'error', 'msg', 'error'].includes(x.name.toLowerCase()),
+          )
+        ) {
           // Transaction was not detected as an automatic refund from Krawlet's transaction
           // Refund the transaction!
 
