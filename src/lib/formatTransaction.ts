@@ -219,7 +219,7 @@ export const parseTransactionData = async (
  */
 export function formatRefundForChat(refund: RefundData): string {
   const typeLabel = refund.type.charAt(0).toUpperCase() + refund.type.slice(1);
-  return `<gold>${typeLabel}</gold> <gray>for tx</gray> <white>#${refund.ref}</white>`;
+  return `<gold>${typeLabel}</gold> <gray>for tx</gray> <white>#${refund.ref}</white> <gray>${refund.message}</gray>`;
 }
 
 /**
