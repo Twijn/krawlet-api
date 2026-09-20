@@ -5,8 +5,17 @@
 
   "formatter": {
     "external": {
-      "command": "prettier",
-      "arguments": ["--stdin-filepath", "{buffer_path}"],
-    },
+      "command": "npx",
+      "arguments": ["prettier", "--stdin-filepath", "{buffer_path}"]
+    }
   },
+
+  "languages": {
+    "Lua": {
+      "format_on_save": "off",
+      "formatter": "language_server",
+      "tab_size": 2,
+      "hard_tabs": false
+    }
+  }
 }
