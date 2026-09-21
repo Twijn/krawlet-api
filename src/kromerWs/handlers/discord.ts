@@ -17,25 +17,26 @@ type QueuedTransaction = {
 let queuedTransactions: QueuedTransaction[] = [];
 
 export function queueDiscordMessage(transaction: TransactionWithMeta, data: TransactionData) {
-  queuedTransactions = [
-    {
-      transaction,
-      data,
-      // omit transactions with 'hide' entry set to 'true'
-      omitted:
-        transaction.meta?.entries.some(
-          (e) => e.name.toLowerCase() === 'hide' && e.value.toLowerCase() == 'true',
-        ) ?? false,
-    },
-    ...queuedTransactions,
-  ];
+  queuedTransactions.push({
+    transaction,
+    data,
+    // omit transactions with 'hide' entry set to 'true'
+    omitted:
+      transaction.meta?.entries.some(
+        (e) => e.name.toLowerCase() === 'hide' && e.value.toLowerCase() == 'true',
+      ) ?? false,
+  });
 }
 
-function getAddressCounts(transactionList: QueuedTransaction[]): Map<string, number> {
+function getAddressCounts(
+  transactionList: QueuedTransaction[],
+  includeOmitted: boolean = false,
+): Map<string, number> {
   const addressCounts = new Map<string, number>();
 
-  for (const { transaction } of transactionList) {
+  for (const { transaction, omitted } of transactionList) {
     if (!transaction.from) continue;
+    if (omitted && !includeOmitted) continue;
     addressCounts.set(transaction.from, (addressCounts.get(transaction.from) ?? 0) + 1);
   }
 
@@ -63,19 +64,6 @@ async function sendQueuedTransactions() {
 
   let message = '';
 
-  // Build omitted transactions message
-  const omittedTransactions = queuedTransactions.filter((t) => t.omitted);
-
-  if (omittedTransactions.length > 0) {
-    const omittedCount = omittedTransactions.length;
-    const omittedAddressCounts = getAddressCounts(omittedTransactions);
-
-    message += `\n-# ${omittedCount} transaction${omittedCount !== 1 ? 's' : ''} omitted. Sending address${omittedAddressCounts.size !== 1 ? 'es' : ''}: `;
-    message += [...omittedAddressCounts.entries()]
-      .map(([k, v]) => `${addressUrl(k)}${omittedAddressCounts.size !== 1 ? ` (${v})` : ''}`)
-      .join(', ');
-  }
-
   // Filter and append non-omitted messages
   const filteredTransactions = queuedTransactions.filter((t) => !t.omitted);
 
@@ -86,6 +74,19 @@ async function sendQueuedTransactions() {
     if (message.length + formattedTransaction.length > 1950) break;
     message += '\n' + formattedTransaction;
     transactionIds.push(transaction.id);
+  }
+
+  // Build omitted transactions message
+  const omittedTransactions = queuedTransactions.filter((t) => t.omitted);
+
+  if (omittedTransactions.length > 0) {
+    const omittedCount = omittedTransactions.length;
+    const omittedAddressCounts = getAddressCounts(omittedTransactions, true);
+
+    message += `\n-# ${omittedCount} transaction${omittedCount !== 1 ? 's' : ''} omitted. Sending address${omittedAddressCounts.size !== 1 ? 'es' : ''}: `;
+    message += [...omittedAddressCounts.entries()]
+      .map(([k, v]) => `${addressUrl(k)}${omittedAddressCounts.size !== 1 ? ` (${v})` : ''}`)
+      .join(', ');
   }
 
   try {
