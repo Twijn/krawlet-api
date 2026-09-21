@@ -280,7 +280,10 @@ export function formatItemReturnForDiscord(itemReturn: ItemReturnData): string {
   return `\n> **Item Return:** ${itemReturn.quantity}x ${itemReturn.name}${leftText}`;
 }
 
-export default async (transaction: Transaction, data?: TransactionData): Promise<string> => {
+export async function formatTransactionForChat(
+  transaction: Transaction,
+  data?: TransactionData,
+): Promise<string> {
   if (!data) {
     data = await parseTransactionData(transaction);
   }
@@ -309,4 +312,84 @@ export default async (transaction: Transaction, data?: TransactionData): Promise
     `${data.to} <gray>|</gray> ` +
     `${formatKromerBalance(transaction.value)} ${message}`.trim()
   );
-};
+}
+
+const STRIPPED_META_ENTRIES = [
+  'error',
+  'message',
+  'return',
+  'ref',
+  'type',
+  'original',
+  'winner_ticket',
+  'winner',
+  'payout',
+  'name',
+  'quantity',
+  'left',
+];
+
+function transactionUrl(transaction: TransactionWithMeta) {
+  return `[#${transaction.id}](https://kromer.club/transactions/${transaction.id})`;
+}
+
+export function addressUrl(address: string, label?: string) {
+  if (!label) {
+    label = address;
+  } else if (label !== address) {
+    label += ` (${address})`;
+  }
+  return `[${label}](https://kromer.club/addresses/${address})`;
+}
+
+export function formatTransactionForDiscord(
+  transaction: TransactionWithMeta,
+  data: TransactionData,
+): string {
+  let metadata = '';
+
+  // Check for KBC data first (most specific, cleanest display)
+  if (data.kbc) {
+    metadata += formatKBCForDiscord(data.kbc);
+  } else if (data.itemReturn) {
+    // Check for item return data
+    metadata += formatItemReturnForDiscord(data.itemReturn);
+  } else if (data.refund) {
+    // Check for refund data (more specific, cleaner display)
+    metadata += formatRefundForDiscord(data.refund);
+  } else if (data.listing) {
+    // Check for listing data
+    metadata += formatListingForDiscord(data.listing);
+  } else {
+    if (data.entries.error) {
+      metadata += `\n> :x: *${data.entries.error}*`;
+    }
+    if (data.entries.message) {
+      metadata += `\n> :speech_balloon: *${data.entries.message}*`;
+    }
+
+    let strippedEntries = transaction?.meta?.entries
+      ? transaction.meta.entries.filter(
+          (x) => !STRIPPED_META_ENTRIES.includes(x.name.toLowerCase()),
+        )
+      : [];
+    if (strippedEntries.length > 0) {
+      metadata +=
+        '\n`' +
+        sanitizeForInlineCode(
+          strippedEntries.map((x) => `${x.name}${x.value ? `=${x.value}` : ''}`).join(';'),
+        ) +
+        '`';
+    }
+  }
+
+  /**
+   * Sanitizes text for use inside Discord inline code blocks.
+   * Backticks cannot be escaped inside code blocks, so we replace them.
+   */
+  function sanitizeForInlineCode(text: string): string {
+    return text.replace(/`/g, "'");
+  }
+
+  return `${transactionUrl(transaction)} | ${transaction.from ? addressUrl(transaction.from, data.from) : 'unknown'} -> ${addressUrl(transaction.to, data.to)} | ${formatKromerBalance(transaction.value)}${metadata}`;
+}

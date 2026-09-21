@@ -5,7 +5,7 @@ import { rcc } from '../index';
 import playerManager from '#lib/managers/playerManager';
 import { TransactionsResponse } from 'kromer';
 import { Player } from '#lib/models';
-import formatTransaction from '#lib/formatTransaction';
+import { formatTransactionForChat } from '#lib/formatTransaction';
 
 const limit = 6;
 
@@ -59,7 +59,7 @@ const command: Command = {
     let message = `<gray>Recent transactions:</gray>`;
 
     response.transactions.forEach((transaction) => {
-      message += '\n' + formatTransaction(transaction);
+      message += '\n' + formatTransactionForChat(transaction);
     });
 
     message += `\n<gray>Page</gray> ${page} <gray>/</gray> ${Math.ceil(response.total / limit)}`;

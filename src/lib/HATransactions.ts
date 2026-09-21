@@ -24,6 +24,8 @@ const RECONNECT_CONFIG = {
   maxDownRetryDelay: 300_000, // 5 minutes max delay when in "down" state
 };
 
+type TransactionSource = 'api' | 'ws';
+
 export class HATransactions {
   private client = this.api.createWsClient(undefined, ['transactions']);
   private lastTransactionId: number | null = null;
@@ -68,7 +70,7 @@ export class HATransactions {
 
       for (const transaction of transactions.transactions.reverse()) {
         if (transaction.type === 'transfer' && transaction.id > this.lastTransactionId) {
-          await this.handleTransaction({
+          await this.handleTransaction('api', {
             ...transaction,
             meta: this.api.transactions.parseMetadata(transaction),
           } as TransactionWithMeta);
@@ -87,7 +89,7 @@ export class HATransactions {
     this.connectionStatus = 'connecting';
     this.client.on('ready', this.handleReady.bind(this));
     this.client.on('error', this.handleError.bind(this));
-    this.client.on('transaction', this.handleTransaction.bind(this));
+    this.client.on('transaction', (tx) => this.handleTransaction('ws', tx).catch(log.error));
     this.client.on('close', this.handleClose.bind(this));
 
     this.attemptConnect();
@@ -171,17 +173,9 @@ export class HATransactions {
     }
   }
 
-  private async handleTransaction(transaction: TransactionWithMeta) {
+  private async handleTransaction(source: TransactionSource, transaction: TransactionWithMeta) {
     // Skip mined (welfare) transactions
     if (transaction.type === 'mined') {
-      return;
-    }
-
-    const hideMetaValue = transaction.meta?.entries?.find(
-      (entry) => entry.name.toLowerCase() === 'hide',
-    );
-
-    if (hideMetaValue?.value?.toLowerCase() === 'true') {
       return;
     }
 
@@ -202,6 +196,10 @@ export class HATransactions {
       );
       toRemove.forEach((id) => this.processedTransactions.delete(id));
     }
+
+    log.info(
+      `Processing transaction ${transaction.id} (${transaction.from} -> ${transaction.to}) from ${source}`,
+    );
 
     this.lastTransactionId = transaction.id;
     for (const handler of this.transactionHandlers) {

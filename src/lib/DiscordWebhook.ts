@@ -1,7 +1,3 @@
-import { createLogger } from './logger';
-
-const log = createLogger('DiscordWebhook');
-
 export interface DiscordWebhookResponse {
   id: string;
   type: number;
@@ -52,63 +48,14 @@ export interface Payload {
   };
 }
 
-export interface BatchMessage {
-  id: number;
-  content: string;
-  tries: number;
-}
-
-const MAX_TRIES = 3;
-
 export class DiscordWebhook {
   private readonly url: string;
-  private batches: BatchMessage[] = [];
-  private batchId = 0;
 
   constructor(
     url: string,
     private defaultOptions: Options = {},
   ) {
     this.url = url;
-
-    setInterval(async () => {
-      this.batches = this.batches.filter(
-        (batch) => batch.content.length < 1950 && batch.tries < MAX_TRIES,
-      );
-
-      if (this.batches.length > 0) {
-        let thisBatch: BatchMessage[] = [];
-        for (const message of this.batches) {
-          if (thisBatch.map((x) => x.content).join('\n').length + message.content.length > 1990)
-            break;
-          thisBatch.push(message);
-        }
-        try {
-          const batch = thisBatch.map((x) => x.content).join('\n');
-          await this.send(batch);
-          this.batches = this.batches.filter((b) => !thisBatch.find((x) => x.id === b.id));
-        } catch (e) {
-          this.batches = this.batches.map((b) => {
-            if (thisBatch.find((x) => x.id === b.id)) {
-              return {
-                ...b,
-                tries: b.tries + 1,
-              };
-            }
-            return b;
-          });
-          log.error('Error sending batch:', e);
-        }
-      }
-    }, 5_000);
-  }
-
-  async batchedSend(message: string): Promise<void> {
-    this.batches.push({
-      id: this.batchId++,
-      content: message,
-      tries: 0,
-    });
   }
 
   async send(

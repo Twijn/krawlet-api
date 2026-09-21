@@ -1,132 +1,17 @@
+import type { TransactionWithMeta } from 'kromer';
 import kromer from '#lib/kromer';
-import playerManager from '#lib/managers/playerManager';
-import { rcc } from '../chat';
-
-import { hook } from '#lib/webhook';
-import { Transaction, TransactionWithMeta } from 'kromer';
 import { HATransactions } from '#lib/HATransactions';
-import formatTransaction, {
-  parseTransactionData,
-  TransactionData,
-  formatRefundForDiscord,
-  formatKBCForDiscord,
-  formatItemReturnForDiscord,
-  formatListingForDiscord,
-} from '#lib/formatTransaction';
-import walletListeners from './walletListeners';
+import { parseTransactionData } from '#lib/formatTransaction';
 import { formatKromerBalance } from '#lib/formatKromer';
 import { createLogger } from '#lib/logger';
+import { Handler } from '#lib/types';
+import walletListeners from './walletListeners';
+import { queueDiscordMessage } from './handlers/discord';
+import { sendInGameMessage } from './handlers/inGame';
 
 const log = createLogger('KromerWs');
 
-const STRIPPED_META_ENTRIES = [
-  'error',
-  'message',
-  'return',
-  'ref',
-  'type',
-  'original',
-  'winner_ticket',
-  'winner',
-  'payout',
-  'name',
-  'quantity',
-  'left',
-];
-
-/**
- * Sanitizes text for use inside Discord inline code blocks.
- * Backticks cannot be escaped inside code blocks, so we replace them.
- */
-function sanitizeForInlineCode(text: string): string {
-  return text.replace(/`/g, "'");
-}
-
-type Handler = (transaction: TransactionWithMeta, data: TransactionData) => void;
-
-function transactionUrl(transaction: Transaction) {
-  return `[#${transaction.id}](https://kromer.club/transactions/${transaction.id})`;
-}
-
-function addressUrl(address: string, label?: string) {
-  if (!label) {
-    label = address;
-  } else if (label !== address) {
-    label += ` (${address})`;
-  }
-  return `[${label}](https://kromer.club/addresses/${address})`;
-}
-
-function sendDiscordMessage(transaction: TransactionWithMeta, data: TransactionData) {
-  let metadata = '';
-
-  // Check for KBC data first (most specific, cleanest display)
-  if (data.kbc) {
-    metadata += formatKBCForDiscord(data.kbc);
-  } else if (data.itemReturn) {
-    // Check for item return data
-    metadata += formatItemReturnForDiscord(data.itemReturn);
-  } else if (data.refund) {
-    // Check for refund data (more specific, cleaner display)
-    metadata += formatRefundForDiscord(data.refund);
-  } else if (data.listing) {
-    // Check for listing data
-    metadata += formatListingForDiscord(data.listing);
-  } else {
-    if (data.entries.error) {
-      metadata += `\n> :x: *${data.entries.error}*`;
-    }
-    if (data.entries.message) {
-      metadata += `\n> :speech_balloon: *${data.entries.message}*`;
-    }
-
-    let strippedEntries = transaction?.meta?.entries
-      ? transaction.meta.entries.filter(
-          (x) => !STRIPPED_META_ENTRIES.includes(x.name.toLowerCase()),
-        )
-      : [];
-    if (strippedEntries.length > 0) {
-      metadata +=
-        '\n`' +
-        sanitizeForInlineCode(
-          strippedEntries.map((x) => `${x.name}${x.value ? `=${x.value}` : ''}`).join(';'),
-        ) +
-        '`';
-    }
-  }
-
-  hook
-    .batchedSend(
-      `${transactionUrl(transaction)} | ${transaction.from ? addressUrl(transaction.from, data.from) : 'unknown'} -> ${addressUrl(transaction.to, data.to)} | ${formatKromerBalance(transaction.value)}${metadata}`,
-    )
-    .catch(console.error);
-}
-
-async function sendInGameMessage(transaction: TransactionWithMeta, data: TransactionData) {
-  let sentNames: string[] = [];
-
-  const formattedTx = await formatTransaction(transaction, data);
-
-  playerManager.getNotifiedPlayers().forEach((player) => {
-    const fromSelf = transaction.from === player.kromerAddress;
-    const toSelf = transaction.to === player.kromerAddress;
-    if (
-      player.notifications === 'all' ||
-      (player.notifications === 'self' && (fromSelf || toSelf))
-    ) {
-      rcc
-        .tell(player.minecraftName, `<gray>New transaction:</gray>\n ${formattedTx}`)
-        .catch(console.error);
-      sentNames.push(player.minecraftName);
-    }
-  });
-
-  if (sentNames.length > 0) {
-    log.info(`Sent transaction (${transaction.id}) notifications to ${sentNames.join(', ')}`);
-  }
-}
-
-const handlers: Handler[] = [sendDiscordMessage, sendInGameMessage];
+const handlers: Handler[] = [queueDiscordMessage, sendInGameMessage];
 
 const haTransactions = new HATransactions(kromer);
 
