@@ -188,6 +188,9 @@ const command: Command = {
     const listings = (await searchListings(query)).map((x) => x.raw());
 
     listings.sort((a, b) => {
+      const outOfStockA = a.stock === 0 && !a.noLimit ? 1 : 0;
+      const outOfStockB = b.stock === 0 && !b.noLimit ? 1 : 0;
+      if (outOfStockA !== outOfStockB) return outOfStockA - outOfStockB;
       const priceA = a.prices?.[0]?.value ?? Infinity;
       const priceB = b.prices?.[0]?.value ?? Infinity;
       return Number(priceA) - Number(priceB);
