@@ -134,6 +134,20 @@ const subcommands: Record<string, Subcommand> = {
         false,
     );
 
+    const softwareCounts = new Map<string, number>();
+    for (const shop of shops) {
+      const name = shop.softwareName;
+      if (name) {
+        softwareCounts.set(name, (softwareCounts.get(name) ?? 0) + 1);
+      }
+    }
+    const distinctSoftwareCount = softwareCounts.size;
+    const top3Software = [...softwareCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([name, count]) => `${name} [${count}]`)
+      .join(', ');
+
     let result = `&7--- &fShop Statistics &7---`;
     result += `\n&7Total Shops: &f${totalShops}`;
     result += `\n&7- Modem Shops: &f${modemShops.length}`;
@@ -145,6 +159,7 @@ const subcommands: Record<string, Subcommand> = {
     result += `\n&7Total Listings: &f${totalListings}`;
     result += `\n&7Average Listings per Shop: &f${averageListingsPerShop}`;
     result += '\n&7&m-------';
+    result += `\n&7Software Versions: &f${distinctSoftwareCount} &7${top3Software}`;
     result += `\n&7Shops With Location Info: &f${shopsWithLocation.length}`;
     result += `\n&7Shops Supporting &9Klog Delivery&7: &f${klogEnabledShops.length} &8&o${klogEnabledShops.map((s) => s.name).join(', ')}`;
 
