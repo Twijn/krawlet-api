@@ -3,6 +3,8 @@ import { ChatboxCommand } from 'reconnectedchat';
 import { rcc } from '../index';
 import { formatListing, getShop, getShops, RawListing, searchListings } from '#lib/models';
 
+const PREFIX = '\\' + (process.env.PREFIX ?? '');
+
 const subArguments = ['buy', 'b', 'sell', 's'];
 
 const PAGE_SIZE = 6;
@@ -24,6 +26,17 @@ const parseListing = (listings: RawListing[], page: number, limit: number = PAGE
 type Subcommand = (cmd: ChatboxCommand) => void | Promise<void>;
 
 const subcommands: Record<string, Subcommand> = {
+  help: async (cmd) => {
+    const result =
+      `&7--- &fFindShop Help &7---` +
+      `\n&f${PREFIX}fs <item> [page]&7 - Search for listings by item name` +
+      `\n&f${PREFIX}fs buy <item> [page]&7 - Show only shops that sell the item` +
+      `\n&f${PREFIX}fs sell <item> [page]&7 - Show only shops that buy the item` +
+      `\n&f${PREFIX}fs shop <id|name>&7 - View details about a specific shop` +
+      `\n&f${PREFIX}fs list [page]&7 - List all registered shops` +
+      `\n&f${PREFIX}fs stats&7 - Show economy statistics`;
+    rcc.tell(cmd.user, result, undefined, 'format').catch(console.error);
+  },
   shop: async (cmd) => {
     if (cmd.args.length === 0) {
       rcc.tell(cmd.user, '<red>You must specify a shop ID!</red>').catch(console.error);
@@ -111,11 +124,15 @@ const subcommands: Record<string, Subcommand> = {
     const shopsWithLocation = shops.filter(
       (s) => Boolean(s.locationCoordinates) || Boolean(s.locationDescription),
     );
-    const klogEnabledShops = shops.filter((s) => {
-      const softwareName = s.softwareName?.toLowerCase() ?? '';
-      const softwareVersion = s.softwareVersion?.toLowerCase() ?? '';
-      return softwareName.includes('+klog') || softwareVersion.includes('+klog');
-    });
+    const klogEnabledShops = shops.filter(
+      (s) =>
+        (s.softwareVersion?.toLowerCase().includes('+klog') ||
+          s
+            .raw()
+            .features?.map((f) => f.toLowerCase())
+            .includes('klog')) ??
+        false,
+    );
 
     let result = `&7--- &fShop Statistics &7---`;
     result += `\n&7Total Shops: &f${totalShops}`;
