@@ -5,6 +5,11 @@ import { Listing, RawListing, updateListings } from './listing.model';
 
 export type ShopSourceType = 'modem' | 'radio_tower';
 
+/**
+ * Currencies that are supported for address resolution
+ */
+const SUPPORTED_CURRENCIES = ['KRO'];
+
 export interface RawShop {
   id: string;
 
@@ -172,7 +177,11 @@ export class Shop
 
     for (const item of items) {
       for (const price of item.prices ?? []) {
-        if (price.address && !addresses.includes(price.address)) {
+        if (
+          price.address &&
+          !addresses.includes(price.address) &&
+          SUPPORTED_CURRENCIES.includes(price.currency.toUpperCase())
+        ) {
           addresses.push(price.address);
         }
       }
