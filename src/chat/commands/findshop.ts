@@ -61,7 +61,7 @@ const subcommands: Record<string, Subcommand> = {
       }
     }
 
-    let result = `&7--- &fShop Information &7---\n&9&l${shop.name}`;
+    let result = `&7--- &fShop Information &7---\n&9&l${shop.name} &8[&7${shop.computerId}&8]`;
     if (shop.description) {
       result += `\n &7Description: &f${shop.description}`;
     }
