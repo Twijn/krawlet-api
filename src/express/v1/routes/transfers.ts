@@ -422,9 +422,10 @@ router.post('/:transferId/notify', authenticateApiKeyTier('free', 'premium'), as
 
 router.post('/:transferId/cancel', authenticateApiKeyTier('free', 'premium'), async (req, res) => {
   const request = req as RequestWithTransfer;
-  const { transferId } = req.params;
+  const params = req.params;
 
   try {
+    const transferId = Array.isArray(params.transferId) ? params.transferId[0] : params.transferId;
     const transfer = await cancelTransfer(transferId, request.requesterEntityId);
 
     if (!transfer) {

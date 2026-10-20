@@ -44,7 +44,8 @@ router.post(
     const { colors } = req.body;
 
     try {
-      const player = await playerManager.getPlayerFromUUID(mcUuid);
+      const uuid = Array.isArray(mcUuid) ? mcUuid[0] : mcUuid;
+      const player = playerManager.getPlayerFromUUID(uuid);
       if (!player) {
         return res.error('NOT_FOUND', 'Player not found', 404);
       }
